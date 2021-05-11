@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="2ea9137e-0d5c-4f1e-a5dd-3c1e36608b96" name="默认变更列表" comment="修改了项目结构,删去了不必要的部分" />
+    <list id="fe79b71d-6e12-4ba4-a87b-5f0fb6bb6fc1" name="修改了项目结构,删去了不必要的部分" comment="修改了项目结构,删去了不必要的部分" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <excluded-from-favorite>
+      <branch-storage>
+        <map>
+          <entry type="LOCAL">
+            <value>
+              <list>
+                <branch-info repo="$PROJECT_DIR$" source="master" />
+              </list>
+            </value>
+          </entry>
+        </map>
+      </branch-storage>
+    </excluded-from-favorite>
+    <favorite-branches>
+      <branch-storage>
+        <map>
+          <entry type="LOCAL">
+            <value>
+              <list>
+                <branch-info repo="$PROJECT_DIR$" source="aidev" />
+              </list>
+            </value>
+          </entry>
+        </map>
+      </branch-storage>
+    </favorite-branches>
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="master" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="ROOT_SYNC" value="DONT_SYNC" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="ProjectId" id="1reeefH8rx1sk3FVEDsawsdRHhV" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="aspect.path.notification.shown" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../ayamea" />
+    <property name="nodejs_package_manager_path" value="npm" />
+    <property name="project.structure.last.edited" value="Modules" />
+    <property name="project.structure.proportion" value="0.0" />
+    <property name="project.structure.side.proportion" value="0.0" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+    <property name="two.files.diff.last.used.file" value="$PROJECT_DIR$/src/antlrsysy/SysYBaseListener.java" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/lib" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/util" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="Compiler" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="Compiler" />
+      <module name="ayame" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="ArquillianTestNG" factoryName="" nameIsGenerated="true">
+      <option name="arquillianRunConfiguration">
+        <value>
+          <option name="containerStateName" value="" />
+        </value>
+      </option>
+      <option name="TEST_OBJECT" value="CLASS" />
+      <properties />
+      <listeners />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.Compiler" />
+        <item itemvalue="Application.Compiler" />
+        <item itemvalue="Application.Compiler" />
+        <item itemvalue="Application.Compiler" />
+        <item itemvalue="Application.Compiler" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="2ea9137e-0d5c-4f1e-a5dd-3c1e36608b96" name="默认变更列表" comment="" />
+      <changelist id="fe79b71d-6e12-4ba4-a87b-5f0fb6bb6fc1" name="修改了项目结构,删去了不必要的部分" comment="" />
+      <created>1619341079677</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1619341079677</updated>
+      <workItem from="1619341081190" duration="5370000" />
+      <workItem from="1619365775640" duration="1303000" />
+      <workItem from="1619537753105" duration="2534000" />
+      <workItem from="1620455826183" duration="602000" />
+      <workItem from="1620637529079" duration="4716000" />
+      <workItem from="1620665878482" duration="1300000" />
+      <workItem from="1620667195769" duration="6866000" />
+      <workItem from="1620733158602" duration="572000" />
+    </task>
+    <task id="LOCAL-00001" summary="solved import err">
+      <created>1619343959782</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1619343959782</updated>
+    </task>
+    <task id="LOCAL-00002" summary="删除多余语句">
+      <created>1619349818711</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1619349818711</updated>
+    </task>
+    <task id="LOCAL-00003" summary="添加argparse4j jar包，添加了项目icon">
+      <created>1619539265063</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1619539265063</updated>
+    </task>
+    <task id="LOCAL-00004" summary="README排版错误">
+      <created>1619539511356</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1619539511356</updated>
+    </task>
+    <task id="LOCAL-00005" summary="README排版错误">
+      <created>1619539539955</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1619539539955</updated>
+    </task>
+    <task id="LOCAL-00006" summary="修改了项目结构,删去了不必要的部分">
+      <created>1620666870656</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1620666870657</updated>
+    </task>
+    <task id="LOCAL-00007" summary="修改了项目结构,删去了不必要的部分">
+      <created>1620667296389</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1620667296389</updated>
+    </task>
+    <task id="LOCAL-00008" summary="修改了项目结构,删去了不必要的部分">
+      <created>1620667436255</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1620667436255</updated>
+    </task>
+    <task id="LOCAL-00009" summary="修改了项目结构,删去了不必要的部分">
+      <created>1620733558136</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1620733558136</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="solved import err" />
+    <MESSAGE value="删除多余语句" />
+    <MESSAGE value="添加argparse4j jar包，添加了项目icon" />
+    <MESSAGE value="README排版错误" />
+    <MESSAGE value="修改了项目结构,删去了不必要的部分" />
+    <option name="LAST_COMMIT_MESSAGE" value="修改了项目结构,删去了不必要的部分" />
+  </component>
+</project>
