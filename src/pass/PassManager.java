@@ -9,10 +9,13 @@ public class PassManager {
     public static PassManager getPassManager() {
         return passManager;
     }
-    //todo
-    public void addpass(){}
 
     //todo
-    public void run(){}
+    public void addpass() {
+    }
+
+    //todo
+    public void run() {
+    }
 
 }
