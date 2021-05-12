@@ -1,5 +1,4 @@
 package frontend;
-
 import ir.Type;
 
 public class Visitor extends SysYBaseVisitor {
@@ -125,6 +124,9 @@ public class Visitor extends SysYBaseVisitor {
 
     @Override
     public Type visitExp(SysYParser.ExpContext ctx) {
+
+        if (ctx.children.size()>1){
+        }
         return visitExp(ctx);
     }
 
