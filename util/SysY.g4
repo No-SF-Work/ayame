@@ -1,5 +1,9 @@
 grammar SysY;
 
+// 1. 表达式部分做了消除左递归
+// 2. 函数调用参数加了字符串（运行时库中有 `void putf(<格式串>, int, ...)` ）
+// 3. 单个数字 0 会被解析成八进制常数，这与文法定义一致
+
 program
    : compUnit
    ;
@@ -153,6 +157,7 @@ unaryOp
    | NOT
    ;
 
+// 不同于语言定义，支持了运行时库的 void putf(<格式串>, int, ...) 的字符串
 funcRParams
    : param (COMMA param)*
    ;
@@ -194,7 +199,7 @@ relOp
 
 eqExp
    : relExp (eqOp relExp)*
-   ;
+   ; // eliminate left-recursive
 
 eqOp
    : EQ
@@ -203,11 +208,11 @@ eqOp
 
 lAndExp
    : eqExp (AND eqExp)*
-   ;
+   ; // eliminate left-recursive
 
 lOrExp
    : lAndExp (OR lAndExp)*
-   ;
+   ; // eliminate left-recursive
 
 constExp
    : addExp
@@ -269,11 +274,15 @@ HEXADECIMAL_CONST
    ;
 
 STRING
-   : DOUBLE_QUOTE REGULAR_CHAR* DOUBLE_QUOTE
+   : DOUBLE_QUOTE (ESC | REGULAR_CHAR)* DOUBLE_QUOTE
    ;
 
 fragment REGULAR_CHAR
    : ~ ["\\]
+   ;
+
+fragment ESC
+   : '\\' ["\\]
    ;
 
 PLUS
