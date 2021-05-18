@@ -66,7 +66,7 @@ public class CompilerDriver {
             visitor.visit(tree);
             /*
              * pass
-             * todo:在这里完成线性IR转换cfg，cfg层面的优化，cdg转ssa，ssa层面的优化，ssa转asm，asm层面的优化
+             * todo:在这里完成线性IR转换cfg，cfg层面的优化，cfg转ssa，ssa层面的优化，ssa转asm，asm层面的优化
              */
             pm.addpass();
             pm.run();
