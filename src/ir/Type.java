@@ -1,4 +1,4 @@
-package frontend;
+package ir;
 
 public class Type {
     public boolean isLeft;
@@ -26,7 +26,7 @@ public class Type {
         }
     }
 
-    public class VoidType extends Type{
+    public class VoidType extends Type {
 
         public VoidType(String name) {
             super(name);

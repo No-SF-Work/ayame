@@ -1,5 +1,7 @@
 package frontend;
 
+import ir.Type;
+
 public class Visitor extends SysYBaseVisitor {
 
     @Override

@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 
 public class Module {
-    //Module是单例的
+    //因为只对单文件进行编译，所有bb都属于这个module，所以Module事实上是单例的
     public static Module getInstance() {
         return module;
     }
