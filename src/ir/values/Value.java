@@ -9,6 +9,10 @@ import java.util.ArrayList;
  * 原因详情可见 https://www.cnblogs.com/Five100Miles/p/14083814.html
  */
 public class Value {
+    enum Tag{
+
+    }
+    Tag tag;
     public Value() {this.usesList = new ArrayList<>();}
 
     public void addUse(Use u) {this.usesList.add(u);}
@@ -17,8 +21,11 @@ public class Value {
 
     public void replaceAllUseWith(Value v) {
         for (Use use : usesList) {
-            //do replace
+            //todo replace
         }
+    }
+    public void deleteValue(){
+            //todo 删除一个value
     }
 
     private ArrayList<Use> usesList;//记录使用这个Value的Use
