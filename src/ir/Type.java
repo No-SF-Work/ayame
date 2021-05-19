@@ -1,5 +1,7 @@
 package ir;
-
+/**
+ * 用来记录某个Value的Type，每一个Value都有一个Type
+ * */
 public class Type {
     public boolean isLeft;
     public String name;

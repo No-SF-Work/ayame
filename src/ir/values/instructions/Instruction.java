@@ -1,15 +1,18 @@
 package ir.values.instructions;
 
+import ir.Type;
 import ir.values.BasicBlock;
+import ir.values.User;
 import ir.values.Value;
 
-public abstract class Instruction extends Value {
-    public enum OPcode{
-
-    }
-    public Instruction() {
+public abstract class Instruction extends User {
+    public enum OPcode {
+        //todo 加上Opcode
     }
 
+    public Instruction(Type type) {
+        super(type);
+    }
 
     BasicBlock parent = null;// 指令所属基本块
     Instruction prev = null;//前驱指令，记住basicBlock中执行流只有一条

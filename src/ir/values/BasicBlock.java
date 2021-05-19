@@ -1,17 +1,28 @@
 package ir.values;
 
+import ir.Type;
 import ir.values.instructions.Instruction;
 
 import java.util.LinkedList;
-
+/**
+ * container基本块，func持有bb，bb不持有inst，只持有inst的引用，inst的引用放在一个链表里
+ * */
 public class BasicBlock extends Value {
+    public BasicBlock(Type type) {
+        super(type);
+    }
+
     public void addInstruction(Instruction inst) { }
 
     public BasicBlock create() {
         return null;
     }
 
-    private LinkedList<Instruction> holdInstructions;
+    public Function getParent() {return parent;}
 
+    public void setParent(Function parent) { this.parent = parent; }
+
+    private LinkedList<Instruction> holdInstructions;
+    private Function parent;
 
 }

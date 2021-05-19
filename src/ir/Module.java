@@ -9,9 +9,11 @@ import ir.values.Value;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-
+/**
+ * IR结构中的顶层container，存有函数，全局变量，符号表，基本块表,指令的表以及其他所有需要的信息
+ * 由于SysY只需要支持单文件编译，所以Module事实上是单例存在的
+ */
 public class Module {
-    //因为只对单文件进行编译，所有bb都属于这个module，所以Module事实上是单例的
     public static Module getInstance() {
         return module;
     }
@@ -32,7 +34,6 @@ public class Module {
         instructionsTables.add(inst);
     }
 
-    //所有的运行时存储数据都应该有引用放在这个类中
     private ArrayList<BasicBlock> Blocks;
     private ArrayList<GlobalVariables> globalVariables;
     private ArrayList<Function> functions;

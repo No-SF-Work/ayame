@@ -9,10 +9,10 @@ import java.util.ArrayList;
  * 借鉴的llvm ir 的设计方式，基本上所有变量/常量/表达式/符号都是 Value
  * 原因详情可见 https://www.cnblogs.com/Five100Miles/p/14083814.html
  */
-public class Value {
+public abstract class Value {
 
 
-    public Value() {}
+    public Value(Type type) {this.type = type;}
 
     public void setName(String name) { this.name = name; }
 
@@ -32,8 +32,10 @@ public class Value {
         //todo 删除一个value
     }
 
+    public Type getType() { return type; }//所有的Value都指明了一个Type的
+
     private Value parent;
     private ArrayList<Use> usesList;//记录使用这个Value的Use
     private String name;
-    private Type type;
+    private final Type type;
 }
