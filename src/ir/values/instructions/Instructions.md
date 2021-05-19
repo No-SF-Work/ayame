@@ -9,21 +9,21 @@ https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/a-quic
 
 ### binaryops
 
-Add
-Sub 
-Rsb  //逆向减法指令，用于把操作数2减去操作数1，并将结果存放到目的寄存器中
-Mul
-Div
-Mod   得做转换
+Add    (add)
+Sub    (sub)
+Rsb    (转换) //逆向减法指令，用于把操作数2减去操作数1，并将结果存放到目的寄存器中
+Mul    (mul)
+Div    (sdiv)
+Mod    (srem) 得做转换
 
-Lt <
-Le <=
-Ge >=
-Gt >
-Eq ==
-Ne !=
-And &&
-Or ||
+Lt <   (icmp slt)
+Le <=  (icmp sle)
+Ge >=  (icmp sge)
+Gt >   (icmp sgt)
+Eq ==  (icmp sq)
+Ne !=  (icmp ne)
+And && (and)
+Or ||  (or)
 
 ### terminator insts
 
