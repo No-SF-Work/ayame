@@ -25,6 +25,7 @@ public class CompilerDriver {
      * @param args:从命令行未处理直接传过来的参数
      */
     public static void run(String[] args) {
+        Debugger dbg = Debugger.getInstance();
         Config config = Config.getInstance();
         PassManager pm = PassManager.getPassManager();
         ArgumentParser argParser =
@@ -40,6 +41,8 @@ public class CompilerDriver {
         try {
             Namespace res = argParser.parseArgs(args);
             config.setConfig(res);
+            dbg.loadConfig(config);
+            dbg.dbg("Params are : " + res);
             String source = res.get("source");
             String target = res.get("target");
 
