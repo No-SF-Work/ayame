@@ -1,5 +1,6 @@
 package ir.values;
 
+import ir.Type;
 import ir.Use;
 
 import java.util.ArrayList;
@@ -9,13 +10,13 @@ import java.util.ArrayList;
  * 原因详情可见 https://www.cnblogs.com/Five100Miles/p/14083814.html
  */
 public class Value {
-    enum Tag {
 
-    }
 
-    Tag tag;
+    public Value() {}
 
-    public Value() {this.usesList = new ArrayList<>();}
+    public void setName(String name) { this.name = name; }
+
+    public String getName() { return name; }
 
     public void addUse(Use u) {this.usesList.add(u);}
 
@@ -31,5 +32,8 @@ public class Value {
         //todo 删除一个value
     }
 
+    private Value parent;
     private ArrayList<Use> usesList;//记录使用这个Value的Use
+    private String name;
+    private Type type;
 }
