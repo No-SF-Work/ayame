@@ -2,7 +2,7 @@ package ir;
 
 import ir.values.BasicBlock;
 import ir.values.Function;
-import ir.values.GlobalVariables;
+import ir.values.GlobalVariable;
 import ir.values.instructions.Instruction;
 import ir.values.Value;
 
@@ -23,7 +23,7 @@ public class Module {
     this.Blocks.add(bb);
   }
 
-  public void addGlobalVariable(GlobalVariables gl) {
+  public void addGlobalVariable(GlobalVariable gl) {
     globalVariables.add(gl);
   }
 
@@ -36,7 +36,7 @@ public class Module {
   }
 
   private ArrayList<BasicBlock> Blocks;
-  private ArrayList<GlobalVariables> globalVariables;
+  private ArrayList<GlobalVariable> globalVariables;
   private ArrayList<Function> functions;
   private LinkedList<Instruction> instructionsTables;
   private HashMap<String, Value> valueMap;
