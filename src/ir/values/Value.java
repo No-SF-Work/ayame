@@ -10,8 +10,8 @@ import java.util.ArrayList;
  */
 public abstract class Value {
 
-
-  public Value(Type type) {
+  public Value(String name, Type type) {
+    this.name = name;
     this.type = type;
   }
 
@@ -38,7 +38,7 @@ public abstract class Value {
   }
 
   public void deleteValue() {
-    //todo 删除一个value
+    //todo 从所有地方删除一个value
   }
 
   public Type getType() {
@@ -46,7 +46,7 @@ public abstract class Value {
   }//所有的Value都指明了一个Type的
 
   private Value parent;
-  private ArrayList<Use> usesList;//记录使用这个Value的User
+  private ArrayList<Use> usesList;//记录使用这个Value的所有User
   private String name;
   private final Type type;
 }

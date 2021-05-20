@@ -10,8 +10,9 @@ import java.util.LinkedList;
  */
 public class BasicBlock extends Value {
 
-  public BasicBlock(Type type) {
-    super(type);
+
+  public BasicBlock(String name, Type type) {
+    super(name, type);
   }
 
   public void addInstruction(Instruction inst) {
