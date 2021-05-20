@@ -1,4 +1,4 @@
-package ir;
+package ir.types;
 
 /**
  * 用来记录某个Value的Type，每一个Value都有一个Type
@@ -14,6 +14,7 @@ public abstract class Type {
     PointerTyID,
   }
 
+  //todo
   public Type(TypeID tid) {
     this.tid = tid;
   }
@@ -38,6 +39,13 @@ public abstract class Type {
     return getTid() == TypeID.FunctionTyID;
   }
 
+  public boolean isArrayTy() {
+    return getTid() == TypeID.ArrayTyID;
+  }
+
+  public boolean isPointerTy() {
+    return getTid() == TypeID.PointerTyID;
+  }
 
   private TypeID tid;
 }

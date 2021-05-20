@@ -1,6 +1,6 @@
 package ir.values;
 
-import ir.Type;
+import ir.types.Type;
 import ir.values.instructions.Instruction;
 
 import java.util.LinkedList;

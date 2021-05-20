@@ -1,7 +1,6 @@
 package ir.values;
 
-import ir.Type;
-import ir.values.Value;
+import ir.types.Type;
 
 public class GlobalVariables extends User {
 

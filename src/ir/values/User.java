@@ -1,6 +1,6 @@
 package ir.values;
 
-import ir.Type;
+import ir.types.Type;
 
 public class User extends Value {
 

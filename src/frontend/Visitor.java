@@ -1,6 +1,6 @@
 package frontend;
 
-import ir.Type;
+import ir.types.Type;
 
 public class Visitor extends SysYBaseVisitor {
 

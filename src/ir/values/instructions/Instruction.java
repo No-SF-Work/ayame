@@ -1,9 +1,8 @@
 package ir.values.instructions;
 
-import ir.Type;
+import ir.types.Type;
 import ir.values.BasicBlock;
 import ir.values.User;
-import ir.values.Value;
 
 public abstract class Instruction extends User {
 

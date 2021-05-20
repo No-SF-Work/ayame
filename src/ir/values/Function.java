@@ -1,8 +1,6 @@
 package ir.values;
 
-import ir.Type;
-import ir.values.Value;
-import jdk.jfr.Unsigned;
+import ir.types.Type;
 
 import java.util.ArrayList;
 
