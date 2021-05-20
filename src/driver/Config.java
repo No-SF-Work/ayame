@@ -7,22 +7,23 @@ import net.sourceforge.argparse4j.inf.Namespace;
  * options' meaning are self-explanatory
  ***/
 public class Config {
-    private static Config config = new Config();
 
-    public static Config getInstance() {
-        return config;
-    }
+  private static Config config = new Config();
 
-    public boolean isDebugMode = false;
-    public boolean isIRMode = false;
-    public boolean isOutPutMode = false;
+  public static Config getInstance() {
+    return config;
+  }
 
-    public void setConfig(Namespace res) {
-        isIRMode = res.get("ir");
-        isDebugMode = res.get("debug");
-        isOutPutMode = res.get("output");
-    }
+  public boolean isDebugMode = false;
+  public boolean isIRMode = false;
+  public boolean isOutPutMode = false;
 
-    private Config() {
-    }
+  public void setConfig(Namespace res) {
+    isIRMode = res.get("ir");
+    isDebugMode = res.get("debug");
+    isOutPutMode = res.get("output");
+  }
+
+  private Config() {
+  }
 }

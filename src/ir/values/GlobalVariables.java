@@ -5,7 +5,7 @@ import ir.values.Value;
 
 public class GlobalVariables extends User {
 
-    public GlobalVariables(Type type) {
-        super(type);
-    }
+  public GlobalVariables(Type type) {
+    super(type);
+  }
 }

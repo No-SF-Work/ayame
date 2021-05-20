@@ -1,41 +1,43 @@
 package ir;
+
 /**
  * 用来记录某个Value的Type，每一个Value都有一个Type
- * */
-public class Type {
-    public boolean isLeft;
-    public String name;
+ */
+public abstract class Type {
 
-    public Type(String name) {//默认是右值
-        this.name = name;
-        this.isLeft = false;
-    }
+  enum TypeID {
+    VoidTyID,
+    LabelTyID,
+    IntegerTyID,
+    FunctionTyID,
+    ArrayTyID,
+    PointerTyID,
+  }
 
-    public Type(String name, boolean type) {
-        this.name = name;
-        this.isLeft = type;
-    }
+  public Type(TypeID tid) {
+    this.tid = tid;
+  }
+
+  public TypeID getTid() {
+    return tid;
+  }
+
+  public boolean isVoidTy() {
+    return getTid() == TypeID.VoidTyID;
+  }
+
+  public boolean isLabelTy() {
+    return getTid() == TypeID.LabelTyID;
+  }
+
+  public boolean isIntegerTy() {
+    return getTid() == TypeID.IntegerTyID;
+  }
+
+  public boolean isFunctionTy() {
+    return getTid() == TypeID.FunctionTyID;
+  }
 
 
-    public class IntType extends Type {
-
-        public IntType(String name) {
-            super(name);
-        }
-
-        public IntType(String name, boolean type) {
-            super(name, type);
-        }
-    }
-
-    public class VoidType extends Type {
-
-        public VoidType(String name) {
-            super(name);
-        }
-
-        public VoidType(String name, boolean type) {
-            super(name, type);
-        }
-    }
+  private TypeID tid;
 }
