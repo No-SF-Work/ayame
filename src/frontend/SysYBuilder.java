@@ -2,8 +2,9 @@ package frontend;
 
 import ir.types.Type;
 
-public class Visitor extends SysYBaseVisitor {
+public class SysYBuilder extends SysYBaseVisitor {
 
+  //因为I32Ty,I1yT,I32PtrTy,VoidTy本身不存储任何信息，所以就只声明一次。
   @Override
   public Type visitProgram(SysYParser.ProgramContext ctx) {
     return visitProgram(ctx);
