@@ -7,7 +7,6 @@ import java.util.ArrayList;
  * <p>
  * 多维数组用Array的嵌套结构表示
  * <p>
- * exp:ArrayType(ArrayType(ArrayType(intType,num_a),num_b),num_c) represents int[c][b][a]
  */
 public class ArrayType extends Type {
 
