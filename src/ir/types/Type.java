@@ -21,11 +21,11 @@ public abstract class Type {
   public static class NoType extends Type {
 
     //todo : should this exist?
-    public NoType getType() {
+    public static NoType getType() {
       return type;
     }
 
-    private NoType type = new NoType();
+    private static NoType type = new NoType();
 
     private NoType() {
     }
@@ -36,11 +36,11 @@ public abstract class Type {
    */
   public static class VoidType extends Type {
 
-    public VoidType getType() {
+    public static VoidType getType() {
       return type;
     }
 
-    private VoidType type = new VoidType();
+    private static VoidType type = new VoidType();
 
     private VoidType() {
     }
@@ -48,11 +48,11 @@ public abstract class Type {
 
   public static class LabelType extends Type {
 
-    public LabelType getType() {
+    public static LabelType getType() {
       return type;
     }
 
-    private LabelType type = new LabelType();
+    private static LabelType type = new LabelType();
 
     //todo
     private LabelType() {

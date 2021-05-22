@@ -27,6 +27,11 @@ public abstract class Value {
     this.type = type;
   }
 
+  public Value(Type type) {
+    this.type = type;
+    //todo this.name = auto generated name;
+  }
+
   public void setName(String name) {
     this.name = name;
   }

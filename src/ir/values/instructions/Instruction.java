@@ -15,7 +15,7 @@ public abstract class Instruction extends User {
   }
   
   BasicBlock parent = null;// 指令所属基本块
-  Instruction prev = null;//前驱指令，记住basicBlock中执行流只有一条
+  Instruction prev = null;//前驱指令
   Instruction next = null;//后继指令
 
   public BasicBlock getParent() {
@@ -41,4 +41,6 @@ public abstract class Instruction extends User {
   public void setNext(Instruction next) {
     this.next = next;
   }
+
+  private int handler;//fixme 生成一个全局唯一的表示符作为从module中的container里存取的依据
 }

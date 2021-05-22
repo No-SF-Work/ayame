@@ -2,13 +2,22 @@ package ir.values;
 
 import ir.types.Type;
 import ir.values.User;
+import java.util.ArrayList;
 
 /**
- * immutable at runtime
+ * 常量
  */
-public class Constant extends User {
+public abstract class Constant extends User {
 
-  public Constant(String name, Type type, int numOP) {
-    super(name, type, numOP);
+  public Constant(Type type) {
+    super("", type, 0);
   }
+
+  public Constant(Type type, int numOP) {
+    super("", type, numOP);
+  }
+
+  private ArrayList<Constant> constants;
+
 }
+
