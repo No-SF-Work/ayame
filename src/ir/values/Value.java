@@ -40,18 +40,22 @@ public abstract class Value {
    * 将所有对 this 的使用换为对v的使用，连带着更新User的Operand
    */
   public void COReplaceAllUseWith(Value v) {
-    User tmp;
+    User usr;
     for (Use use : usesList) {
-      use.getUser().COReplaceOperand(this, v);
+      use.getUser().CoSetOperand(use.getOperandRank(), v);
     }
   }
 
   /**
-   * 删去自身的一条Use，连带着修改User的operands
+   * 删去自身的一条Use，并将User的operand设置为null
    */
-  public void CORemoveUse(User usr) {
-    usesList.removeIf(use -> use.getUser() == (usr));
-    usr.removeOperand(this);
+  public void CORemoveUse(Use use) {
+    use.getUser().CoSetOperand(use.getOperandRank(), null);
+    usesList.remove(use);
+  }
+
+  protected void removeUseByIndexAndUser(User usr, int index) {
+    usesList.removeIf(use -> use.getUser() == usr && use.getOperandRank() == index);
   }
 
   protected void removeUseByUser(User usr) {
@@ -68,7 +72,7 @@ public abstract class Value {
 
   public Type getType() {
     return type;
-  }//所有的Value都指明了一个Type的
+  }//所有的Value都需要指明一个Type
 
   private Value parent;
   private LinkedList<Use> usesList;//记录使用这个Value的所有User
