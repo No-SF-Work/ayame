@@ -20,7 +20,6 @@ public class ArrayType extends Type {
     this.contained = contained;
     this.num_elements = num_elements;
   }
-
   /**
    * 返回一个包含了各个维的长度的list
    */

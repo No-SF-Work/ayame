@@ -1,5 +1,6 @@
 package ir.values;
 
+import ir.MyModule;
 import ir.types.Type;
 import ir.Use;
 
@@ -15,9 +16,12 @@ import java.util.LinkedList;
  * <p>
  * ***Use(以及Use的paramNum) 和 operand应该保持一致***
  * <p>
- * ***以CO开头的修改DU关系的方法是同步更新的*** fixme
+ * ***以CO开头的修改DU关系的方法是同步更新的***
  */
 public abstract class Value {
+
+  //module is approachable for all value
+  public static MyModule module = MyModule.getInstance();
 
   /**
    * 每个Value应该有一个独一无二的name

@@ -22,7 +22,14 @@ public class BasicBlock extends Value {
   }
 
   public void addInstruction(Instruction inst) {
-  this.instructions.addLast(inst);
+    this.instructions.addLast(inst);
+  }
+
+  public void killMe() {
+    for (Instruction instruction : instructions) {
+      instruction.killMe();
+    }
+
   }
 
   public BasicBlock create() {
@@ -37,8 +44,8 @@ public class BasicBlock extends Value {
     this.parent = parent;
   }
 
-  private LinkedList<Instruction> instructions;
-  private Function parent;//它所属的函数
-  private ArrayList<BasicBlock> predecessor;//前驱
-  private ArrayList<BasicBlock> successor;//后继
+  public LinkedList<Instruction> instructions;//按执行顺序
+  protected Function parent;//它所属的函数
+  protected ArrayList<BasicBlock> predecessor;//前驱
+  protected ArrayList<BasicBlock> successor;//后继
 }

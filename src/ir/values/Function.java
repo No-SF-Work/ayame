@@ -16,18 +16,16 @@ public class Function extends User {
 
     private int rank;//排第几,非负
 
-
     public Arg(String name, Type type) {
       super(name, type);
     }
   }
 
-
   public Function(String name, Type type, int numOP) {
     super(name, type, numOP);
   }
 
-  private boolean isBuiltin;//is lib function
-  private ArrayList<BasicBlock> basicBlocks = new ArrayList<>();//由于目标语法没有函数原型, func 不存基本块的话也没什么存在的必要了，所以直接new了
+  private boolean isBuiltin;//lib function
+  private ArrayList<BasicBlock> basicBlocks = new ArrayList<>();
   private ArrayList<Arg> argList;//有序参数列表
 }
