@@ -37,9 +37,10 @@ public abstract class User extends Value {
     this.numOP = 0;
   }
 
-  /**
+  /*
    * 下面是借鉴llvm的几个可能对优化比较方便的方法
    */
+
   /**
    * 添加一个operand
    */
@@ -71,7 +72,7 @@ public abstract class User extends Value {
   public void CORemoveNOperand(int[] a) {
     removeUsesOfOPs();
     this.numOP = 0;
-    boolean in = false;
+    boolean in;
     ArrayList<Value> tmp = this.operands;
     this.operands = new ArrayList<>();
     for (int i = 0; i < tmp.size(); i++) {
@@ -128,7 +129,8 @@ public abstract class User extends Value {
   public void replaceValue(Value lhs, Value rhs) {
 
   }
-  private ArrayList<Value> operands;
-  private int numOP;
+
+  protected ArrayList<Value> operands;
+  protected int numOP;
 }
 //todo

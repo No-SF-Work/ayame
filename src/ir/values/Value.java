@@ -21,18 +21,19 @@ import java.util.LinkedList;
 public abstract class Value {
 
   //module is approachable for all value
+  //module 对所有Value暴露，因为我们只需要考虑单文件编译的情况
   public static MyModule module = MyModule.getInstance();
 
   /**
-   * 每个Value应该有一个独一无二的name
+   * 每个Value应该有一个独一无二的name以及一个type
    */
   public Value(String name, Type type) {
     this.name = name;
     this.type = type;
   }
-
   public Value(Type type) {
     this.type = type;
+    this.name = "";
     //todo this.name = auto generated name;
   }
 
