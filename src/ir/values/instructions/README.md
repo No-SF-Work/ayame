@@ -30,11 +30,11 @@ https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/a-quic
 
 ### terminator insts
 
-| TAG    | llvm ir | usage                                                        | intro                                                        |
-| ------ | ------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| Br     |         | `br i1 <cond>, label <iftrue>, label <iffalse>`       `br label <dest>  ` | cause control flow to transfer to a different basic block **
+| TAG  | llvm ir | usage                                                        | intro                                                        |
+| ---- | ------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Br   | br      | `br i1 <cond>, label <iftrue>, label <iffalse>`       `br label <dest>  ` | cause control flow to transfer to a different basic block **
 in current function** |
-| Return | ret     | `ret <type> <value> `           `ret void  `                 | return control flow(optionally a value)                      |
+| Ret  | ret     | `ret <type> <value> `           `ret void  `                 | return control flow(optionally a value)                      |
 
 ### memoryops 
 

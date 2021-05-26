@@ -17,21 +17,21 @@ public class MyModule {
   }
 
   public void addGlobalVariable(GlobalVariable gl) {
-    _globalVariables.add(gl);
+    __globalVariables.add(gl);
   }
 
   public void addFunction(Function fn) {
-    _functions.add(fn);
+    __functions.add(fn);
   }
 
   public void addInstruction(Instruction inst) {
-    _instructions.put(inst.getHandle(), inst);
+    __instructions.put(inst.getHandle(), inst);
   }
 
-  public ArrayList<GlobalVariable> _globalVariables;
-  public ArrayList<Function> _functions;
-  public HashMap<Integer, Instruction> _instructions;
-  private static MyModule myModule = new MyModule();
+  public ArrayList<GlobalVariable> __globalVariables;
+  public ArrayList<Function> __functions;
+  public HashMap<Integer, Instruction> __instructions;
+  private static final MyModule myModule = new MyModule();
 
   private MyModule() {
   }

@@ -10,26 +10,27 @@ public abstract class BinaryInst extends Instruction {
     super(tag, type, 2);
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
-    module._instructions.put(this.getHandle(), this);
+    module.__instructions.put(this.handle, this);
   }
 
-  public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs, BasicBlock bb
+  public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs, BasicBlock parent
       /**insert at bb end*/) {
     super(tag, type, 2);
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
-    module._instructions.put(this.getHandle(), this);
-    this.setParent(bb);
-    bb.getInstructions().getLast().setNext(this);
-    bb.addInstruction(this);
+    module.__instructions.put(this.handle, this);
+    this.setParent(parent);
+
+
   }
 
   public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs, Instruction inst
-/** insert after inst*/) {
+/** insert before inst*/) {
     super(tag, type, 2);
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
-    module._instructions.put(this.getHandle(), this);
+    module.__instructions.put(this.handle, this);
+    this.insertBefore(inst);
   }
 
   public boolean isAdd() {

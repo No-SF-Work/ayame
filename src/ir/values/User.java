@@ -18,7 +18,7 @@ import java.util.ArrayList;
  * <p>
  * operand 0 是a，operand 1是b，显然将a和b颠倒会出现错误。
  * <p>
- * fixme :把operand的关系理清楚
+ *
  */
 public abstract class User extends Value {
 
@@ -96,7 +96,8 @@ public abstract class User extends Value {
    */
   public void COReplaceOperand(Value lhs, Value rhs) {
 
-    //还没有实际写优化，暂时假定可能有一个lhs被用为复数次operand todo
+    //还没有实际写优化，暂时假定可能有一个lhs被用为复数次operand
+    //update:确实有
     lhs.removeUseByUser(this);
     for (int i = 0; i < operands.size(); i++) {
       if (operands.get(i) == lhs) {
