@@ -27,13 +27,6 @@ public class BasicBlock extends Value {
     this.successor = new ArrayList<>();
   }
 
-  /// remove self and its instructions from the module
-  /*public void killMe() {
-    for (Instruction instruction : instructions.values()) {
-      instruction.killMe();
-    }
-    parent.getBasicBlocks().remove(this);
-  }*/
 
   @Deprecated //所有直接对外暴露的Value都应该通过ValueFactory生成
   public static BasicBlock create(Function func) {
@@ -49,7 +42,18 @@ public class BasicBlock extends Value {
     this.parent = parent;
   }
 
-  //
+  public void setEntry(Instruction entry) {
+    // you should not call this func directly,
+    // this is made for Instruction class
+    // 要是有友元就好了
+    this.entry = entry;
+  }
+
+  //you should not call this func directly
+  public void setLast(Instruction last) {
+    this.last = last;
+  }
+
   public Instruction getLast() {
     return last;
   }
@@ -58,20 +62,8 @@ public class BasicBlock extends Value {
     return entry;
   }
 
-  //在初始化bb以后，这条指令应该总是第一个被调用的
-  public void setEntry(Instruction entry) {
-    this.entry = entry;
-    if (this.last == null) {
-      this.last = entry;
-    }
-  }
 
-  public void setLast(Instruction last) {
-    this.last = last;
-  }
-
-
-  private Instruction entry;
+  private Instruction entry;//链表头
   private Instruction last; //链表尾，在well form的bb里面是terminator
   protected Function parent;//它所属的函数
   protected ArrayList<BasicBlock> predecessor;//前驱

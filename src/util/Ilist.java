@@ -7,13 +7,13 @@ import ir.values.instructions.Instruction;
  */
 public interface Ilist<T> {
 
-  public void insertBefore(T t);
+  void insertBefore(T t);
 
-  public void insertAfter(T t);
+  void insertAfter(T t);
 
-  public void removeSelf();
+  void removeSelf();
 
-  public T getPrev();
+  T getPrev();
 
-  public T getNext();
+  T getNext();
 }

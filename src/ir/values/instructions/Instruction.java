@@ -41,10 +41,11 @@ public abstract class Instruction extends User implements Ilist<Instruction> {
     Phi;
   }
 
-  /**
-   * 在调用这些个指令的时候可能需要处理Use关系
-   */
+
   public void insertBefore(Instruction next) {
+    if (next.getParent().getEntry() == next) {
+      next.getParent().setEntry(this);
+    }
     this.parent = next.parent;
     this.prev = next.prev;
     this.next = next;
@@ -52,13 +53,15 @@ public abstract class Instruction extends User implements Ilist<Instruction> {
   }
 
   public void insertAfter(Instruction prev) {
+    if (next.getParent().getLast() == prev) {
+      next.getParent().setLast(this);
+    }
     this.parent = prev.parent;
     this.prev = prev;
     this.next = prev.next;
     prev.next = this;
   }
 
-  //将自己从所在的bb里和module里除去
   public void removeSelf() {
     if (this == this.parent.getEntry()) {
       this.getParent().setEntry(this.next);
@@ -86,7 +89,9 @@ public abstract class Instruction extends User implements Ilist<Instruction> {
   }
 
   public void insertAtEnd(BasicBlock bb) {
-    assert bb.getLast() != null;//bb 的 last 会在 set entry的时候更新
+    if (bb.getEntry() == null) {
+
+    }
     this.parent = bb;
     bb.getLast().next = this;
     this.prev = bb.getLast();
@@ -98,6 +103,30 @@ public abstract class Instruction extends User implements Ilist<Instruction> {
     this.tag = tag;
     this.handle = HANDLE;
     HANDLE++;
+  }
+
+  public Instruction(TAG_ tag, Type type, int numOP, BasicBlock parent) {/** Insert at bb end*/
+    super("", type, numOP);
+    this.tag = tag;
+    this.handle = HANDLE;
+    HANDLE++;
+    this.insertAtEnd(parent);
+  }
+
+  public Instruction(TAG_ tag, Type type, int numOP, Instruction prev) {/** Insert after Inst*/
+    super("", type, numOP);
+    this.tag = tag;
+    this.handle = HANDLE;
+    HANDLE++;
+    insertAfter(prev);
+  }
+
+  public Instruction(Instruction next, TAG_ tag, Type type, int numOP) {/** Insert before Inst*/
+    super("", type, numOP);
+    this.tag = tag;
+    this.handle = HANDLE;
+    HANDLE++;
+    insertBefore(next);
   }
 
   public boolean isBinary() {

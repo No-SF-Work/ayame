@@ -6,6 +6,7 @@ import ir.values.Value;
 
 public abstract class BinaryInst extends Instruction {
 
+  //不插
   public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs) {
     super(tag, type, 2);
     this.CoSetOperand(0, lhs);
@@ -13,24 +14,28 @@ public abstract class BinaryInst extends Instruction {
     module.__instructions.put(this.handle, this);
   }
 
-  public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs, BasicBlock parent
-      /**insert at bb end*/) {
-    super(tag, type, 2);
+  //插在bb末尾
+  public BinaryInst(TAG_ tag, Type type, BasicBlock parent, Value lhs, Value rhs) {
+    super(tag, type, 2, parent);
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
     module.__instructions.put(this.handle, this);
-    this.setParent(parent);
-
-
   }
 
-  public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs, Instruction inst
-/** insert before inst*/) {
-    super(tag, type, 2);
+  //插在next前面
+  public BinaryInst(Instruction next, TAG_ tag, Type type, Value lhs, Value rhs) {
+    super(next, tag, type, 2);
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
     module.__instructions.put(this.handle, this);
-    this.insertBefore(inst);
+  }
+
+  //插在prev后面
+  public BinaryInst(TAG_ tag, Type type, Instruction prev, Value lhs, Value rhs) {
+    super(tag, type, 2, prev);
+    this.CoSetOperand(0, lhs);
+    this.CoSetOperand(1, rhs);
+    module.__instructions.put(this.handle, this);
   }
 
   public boolean isAdd() {
