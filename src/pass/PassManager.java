@@ -1,21 +1,22 @@
 package pass;
 
 public class PassManager {
-    private static PassManager passManager = new PassManager();
 
-    private PassManager() {
-    }
+  private static PassManager passManager = new PassManager();
 
-    public static PassManager getPassManager() {
-        return passManager;
-    }
+  private PassManager() {
+  }
 
-    //todo
-    public void addpass() {
-    }
+  public static PassManager getPassManager() {
+    return passManager;
+  }
 
-    //todo
-    public void run() {
-    }
+  //todo
+  public void addpass() {
+  }
+
+  //todo
+  public void run() {
+  }
 
 }
