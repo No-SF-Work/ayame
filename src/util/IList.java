@@ -11,9 +11,20 @@ public class IList<T, P> {
   private INode<T, P> entry;
   private INode<T, P> last;
   private P val;
+  private int numNode;
 
   public void setVal(P val) {
     this.val = val;
+  }
+
+  public int getNumNode() {
+    return numNode;
+  }
+
+  public IList(P val) {
+    this.val = val;
+    numNode = 0;
+    entry = last = null;
   }
 
   public P getVal() {
@@ -65,15 +76,14 @@ public class IList<T, P> {
       if (father.getEntry() == null && father.getLast() == null) {
         father.setEntry(this);
         father.setLast(this);
-        return;
       } else {
         insertAfter(father.getLast());
       }
-
     }
 
     //将自己从链表中移除
     public INode<T, P> removeSelf() {
+      this.parent.numNode--;
       if (parent.getEntry() == this) {
         parent.setEntry(this.next);
       }
@@ -98,6 +108,7 @@ public class IList<T, P> {
     //insert my self before next node
     public void insertBefore(INode<T, P> next) {
       this.parent = next.parent;
+      this.parent.numNode++;
       if (next.getParent().getEntry() == next) {
         next.getParent().setEntry(this);
       }
@@ -110,6 +121,7 @@ public class IList<T, P> {
     //insert my self after prev node
     public void insertAfter(INode<T, P> prev) {
       this.parent = prev.parent;
+      this.parent.numNode++;
       if (prev.getParent().getLast() == prev) {
         prev.getParent().setLast(this);
       }

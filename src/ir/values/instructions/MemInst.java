@@ -1,7 +1,13 @@
 package ir.values.instructions;
 
+import ir.types.ArrayType;
+import ir.types.PointerType;
 import ir.types.Type;
+import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
+import ir.values.Value;
+import java.util.ArrayList;
+import java.util.Set;
 
 public abstract class MemInst extends Instruction {
 
@@ -23,24 +29,24 @@ public abstract class MemInst extends Instruction {
 
   public static class AllocaInst extends MemInst {
 
-    //todo
-    public AllocaInst(TAG_ tag, Type type, int numOP, Type allocatedType_) {
-      super(tag, type, numOP);
+    //todo typecheck
+    public AllocaInst(Type allocatedType_) {
+      super(TAG_.Alloca, new PointerType(allocatedType_), 0);
       this.allocatedType_ = allocatedType_;
     }
 
-    public AllocaInst(TAG_ tag, Type type, int numOP, BasicBlock parent, Type allocatedType_) {
-      super(tag, type, numOP, parent);
+    public AllocaInst(BasicBlock parent, Type allocatedType_) {
+      super(TAG_.Alloca, new PointerType(allocatedType_), 0, parent);
       this.allocatedType_ = allocatedType_;
     }
 
-    public AllocaInst(TAG_ tag, Type type, int numOP, Instruction prev, Type allocatedType_) {
-      super(tag, type, numOP, prev);
+    public AllocaInst(Instruction prev, Type allocatedType_) {
+      super(TAG_.Alloca, new PointerType(allocatedType_), 0, prev);
       this.allocatedType_ = allocatedType_;
     }
 
-    public AllocaInst(Instruction next, TAG_ tag, Type type, int numOP, Type allocatedType_) {
-      super(next, tag, type, numOP);
+    public AllocaInst(Type allocatedType_, Instruction next) {
+      super(next, TAG_.Alloca, new PointerType(allocatedType_), 0);
       this.allocatedType_ = allocatedType_;
     }
 
@@ -62,67 +68,117 @@ public abstract class MemInst extends Instruction {
 
   public static class LoadInst extends MemInst {
 
-    //todo
-    public LoadInst(TAG_ tag, Type type, int numOP) {
-      super(tag, type, numOP);
+    //todo typecheck
+    public LoadInst(Type type, Value v/**指针*/) {
+      super(TAG_.Load, type, 1);
+      CoSetOperand(0, v);
     }
 
-    public LoadInst(TAG_ tag, Type type, int numOP, BasicBlock parent) {
-      super(tag, type, numOP, parent);
+    public LoadInst(Type type, Value v, BasicBlock parent) {
+      super(TAG_.Load, type, 1, parent);
+      CoSetOperand(0, v);
     }
 
-    public LoadInst(TAG_ tag, Type type, int numOP, Instruction prev) {
-      super(tag, type, numOP, prev);
+    public LoadInst(Type type, Value v, Instruction prev) {
+      super(TAG_.Load, type, 1, prev);
+      CoSetOperand(0, v);
     }
 
-    public LoadInst(Instruction next, TAG_ tag, Type type, int numOP) {
-      super(next, tag, type, numOP);
+    public LoadInst(Instruction next, Value v, Type type) {
+      super(next, TAG_.Load, type, 1);
+      CoSetOperand(0, v);
     }
   }
 
   public static class StoreInst extends MemInst {
 
-    //todo
-    public StoreInst(TAG_ tag, Type type, int numOP) {
-      super(tag, type, numOP);
+    //todo typecheck
+    public StoreInst(Value val, Value pointer) {
+      super(TAG_.Store, VoidType.getType(), 2);
+      CoSetOperand(0, val);
+      CoSetOperand(1, pointer);
     }
 
-    public StoreInst(TAG_ tag, Type type, int numOP, BasicBlock parent) {
-      super(tag, type, numOP, parent);
+    public StoreInst(Value val, Value pointer, BasicBlock parent) {
+      super(TAG_.Store, VoidType.getType(), 2, parent);
+      CoSetOperand(0, val);
+      CoSetOperand(1, pointer);
     }
 
-    public StoreInst(TAG_ tag, Type type, int numOP, Instruction prev) {
-      super(tag, type, numOP, prev);
+    public StoreInst(Value val, Value pointer, Instruction prev) {
+      super(TAG_.Store, VoidType.getType(), 2, prev);
+      CoSetOperand(0, val);
+      CoSetOperand(1, pointer);
     }
 
-    public StoreInst(Instruction next, TAG_ tag, Type type, int numOP) {
-      super(next, tag, type, numOP);
+    public StoreInst(Instruction next, Value val, Value pointer) {
+      super(next, TAG_.Store, VoidType.getType(), 2);
+      CoSetOperand(0, val);
+      CoSetOperand(1, pointer);
     }
   }
 
-  public static class GEP extends MemInst {
+  public static class GEPInst extends MemInst {
 
     //todo
-    public GEP(TAG_ tag, Type type, int numOP) {
-      super(tag, type, numOP);
+
+    /**
+     * 拿到这个pointer指向的数组/值的指针
+     * <p>
+     * 实际上就是i32,可以考虑在这里加typeCheck
+     */
+    private static Type getElementType(Value ptr, ArrayList<Value> indices) {
+      assert ptr.getType().isPointerTy();
+      Type type = ((PointerType) ptr.getType()).getContained();
+      if (type.isIntegerTy()) {
+        return type;
+      }
+      if (type.isArrayTy()) {
+        for (int i = 0; i < indices.size(); i++) {
+          type = ((ArrayType) type).getELeType();
+          assert (i < indices.size() - 1) || !type.isArrayTy();
+        }
+        return type;//which should always be i32 in SysY
+      } else {
+        //todo typecheck
+        return null;
+      }
     }
 
-    public GEP(TAG_ tag, Type type, int numOP, BasicBlock parent) {
-      super(tag, type, numOP, parent);
+    public GEPInst(Value pointer, ArrayList<Value> indices) {
+      super(TAG_.GEP, new PointerType(getElementType(pointer, indices)), indices.size() + 1);
+      CoSetOperand(0, pointer);
+      for (int i = 0; i < indices.size(); i++) {
+        CoSetOperand(i + 1, indices.get(i));
+      }
+      elementType_ = getElementType(pointer, indices);
     }
 
-    public GEP(TAG_ tag, Type type, int numOP, Instruction prev) {
-      super(tag, type, numOP, prev);
+    public GEPInst(Value pointer, ArrayList<Value> indices, BasicBlock parent) {
+      super(TAG_.GEP, new PointerType(getElementType(pointer, indices)), indices.size() + 1,
+          parent);
+      CoSetOperand(0, pointer);
+      for (int i = 0; i < indices.size(); i++) {
+        CoSetOperand(i + 1, indices.get(i));
+      }
+      elementType_ = getElementType(pointer, indices);
     }
 
-    public GEP(Instruction next, TAG_ tag, Type type, int numOP) {
-      super(next, tag, type, numOP);
+    public GEPInst(Instruction prev, Value pointer, ArrayList<Value> indices) {
+      super(TAG_.GEP, new PointerType(getElementType(pointer, indices)), indices.size() + 1, prev);
+      CoSetOperand(0, pointer);
+      for (int i = 0; i < indices.size(); i++) {
+        CoSetOperand(i + 1, indices.get(i));
+      }
+      elementType_ = getElementType(pointer, indices);
     }
+
+    private Type elementType_;
   }
 
   public static class Phi extends MemInst {
 
-    //todo
+    //todo 还不知道咋实现
     public Phi(TAG_ tag, Type type, int numOP) {
       super(tag, type, numOP);
     }

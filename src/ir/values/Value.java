@@ -84,6 +84,14 @@ public abstract class Value {
     return type;
   }//所有的Value都需要指明一个Type
 
+  public boolean isFunction() {
+    return this instanceof Function;
+  }
+
+  public boolean isBasicBlock() {
+    return this instanceof BasicBlock;
+  }
+
   private Value parent;
   private LinkedList<Use> usesList;//记录使用这个Value的所有User
   private String name;

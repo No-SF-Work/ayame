@@ -35,7 +35,7 @@ https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io/en/latest/a-quic
 | Br   | br      | `br i1 <cond>, label <iftrue>, label <iffalse>`       `br label <dest>  ` | cause control flow to transfer to a different basic block **
 in current function** |
 | Ret  | ret     | `ret <type> <value> `           `ret void  `                 | return control flow(optionally a value)                      |
-
+| Call   | call          | `<result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret attrs] [addrspace(<num>)]            <ty>|<fnty> <fnptrval>(<function args>) [fn attrs] [ operand bundles ]` |    
 ### memoryops 
 
 | TAG    | llvm ir       | usage                                                        | intro                                                       |
@@ -43,8 +43,7 @@ in current function** |
 | Alloca | alloca        | `  <result> = alloca [inalloca] <type> [, <ty> <NumElements>] [, align <alignment>] [, addrspace(<num>)] ; yields type addrspace(num)*:result` | allocate  memory in current stack frame                     |
 | Load   | load          | `<result> = load [volatile] <ty>, <ty>* <pointer>[, align <alignment>][, !nontemporal !][, !invariant.load !<empty_node>][, !invariant.group !][, !nonnull !<empty_node>][, !dereferenceable !][, !dereferenceable_or_null !<deref_bytes_node>][, !align !][, !noundef !<empty_node>]` | read memory                                                 |
 | Store  | store         | `store [volatile] <ty> <value>, <ty>* <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.group !<empty_node>] ; yields void` | write memory                                                |
-| GEP    | getelementptr | `<result> = getelementptr <ty>, * {, [inrange] <ty> <idx>}*`                                                                                                 `<result> = getelementptr inbounds <ty>, <ty>* <ptrval>{, [inrange] <ty> <idx>}*`                                                                                 `<result> = getelementptr <ty>, <ptr vector> <ptrval>, [inrange] <vector index type> <idx>` | this inst only calculate  memory,do not read or load memory |
-| Call   | call          | `<result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret attrs] [addrspace(<num>)]            <ty>|<fnty> <fnptrval>(<function args>) [fn attrs] [ operand bundles ]` |                                                             |
+| GEP    | getelementptr | `<result> = getelementptr <ty>, * {, [inrange] <ty> <idx>}*`                                                                                                 `<result> = getelementptr inbounds <ty>, <ty>* <ptrval>{, [inrange] <ty> <idx>}*`                                                                                 `<result> = getelementptr <ty>, <ptr vector> <ptrval>, [inrange] <vector index type> <idx>` | this inst only calculate  memory,do not read or load memory | |
 | Phi    | phi           | `<result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...` |                                                             |
 
 

@@ -31,14 +31,14 @@ public abstract class Instruction extends User {
     Or,
     //terminator
     Br,
+    Call,
     Ret,
     //mem op
     Alloca,
     Load,
     Store,
     GEP,
-    Call,
-    Phi;
+    Phi
   }
 
   public Instruction(TAG_ tag, Type type, int numOP) {

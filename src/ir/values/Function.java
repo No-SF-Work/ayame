@@ -1,5 +1,6 @@
 package ir.values;
 
+import ir.types.FunctionType;
 import ir.types.Type;
 
 import java.util.ArrayList;
@@ -8,7 +9,7 @@ import util.IList;
 /**
  * Function类,代表一个函数，拥有一串基本块，一串参数，一个SymbolTable //
  */
-public class Function {
+public class Function extends Value {
 
   //参数声明，不含值
   public class Arg extends Value {
@@ -22,7 +23,14 @@ public class Function {
     }
   }
 
-  public Function() {
+  public Function(String name, Type type) {
+    super(name, type);
+    assert type instanceof FunctionType;
+    list_ = new IList<>(this);
+  }
+
+  public int getNumArgs() {
+    return argList_.size();
   }
 
   private boolean isBuiltin_ = false;//lib function

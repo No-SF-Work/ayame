@@ -23,7 +23,7 @@ public class BasicBlock extends Value {
     //所以这里直接new了2个container
     this.predecessor_ = new ArrayList<>();
     this.successor_ = new ArrayList<>();
-    list_ = new IList<>();
+    list_ = new IList<>(this);
     list_.setVal(this);
   }
 
