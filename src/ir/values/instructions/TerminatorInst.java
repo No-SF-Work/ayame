@@ -4,7 +4,6 @@ import ir.types.Type;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Value;
-import util.Ilist;
 
 public abstract class TerminatorInst extends Instruction {
 
@@ -28,7 +27,6 @@ public abstract class TerminatorInst extends Instruction {
           0, cond);
       this.CoSetOperand(1, trueBlock);
       this.CoSetOperand(2, falseBlock);
-      this.isTerminator = true;
     }
 
     /**
@@ -40,7 +38,6 @@ public abstract class TerminatorInst extends Instruction {
           0, cond);
       this.CoSetOperand(1, trueBlock);
       this.CoSetOperand(2, falseBlock);
-      this.isTerminator = true;
     }
 
     /**
