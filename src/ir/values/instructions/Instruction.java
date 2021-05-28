@@ -60,7 +60,7 @@ public abstract class Instruction extends User {
     this.node.insertAtEnd(parent.getList());
   }
 
-  public Instruction(TAG_ tag, Type type, int numOP, Instruction prev) {/** Insert after Inst*/
+  public Instruction(TAG_ tag, Type type, int numOP, Instruction prev) {/** Insert self after Inst*/
     super("", type, numOP);
     this.node = new INode<>(this);
     this.tag = tag;
@@ -70,14 +70,15 @@ public abstract class Instruction extends User {
     this.node.insertAfter(prev.node);
   }
 
-  public Instruction(Instruction next, TAG_ tag, Type type, int numOP) {/** Insert before Inst*/
+  public Instruction(Instruction next, TAG_ tag, Type type,
+      int numOP) {/** Insert self before Inst*/
     super("", type, numOP);
     this.node = new INode<>(this);
     this.tag = tag;
     this.handle = HANDLE;
     module.__instructions.put(this.handle, this);
     HANDLE++;
-    next.node.insertBefore(this.node);
+    this.node.insertBefore(next.node);
   }
 
   public boolean isBinary() {

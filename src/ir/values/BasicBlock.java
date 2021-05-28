@@ -24,9 +24,30 @@ public class BasicBlock extends Value {
     this.predecessor_ = new ArrayList<>();
     this.successor_ = new ArrayList<>();
     list_ = new IList<>(this);
-    list_.setVal(this);
+    node_ = new INode<>(this);
   }
 
+  //插入到parent的末尾
+  public BasicBlock(String name, Type type, Function parent) {
+    super(name, type);
+    this.predecessor_ = new ArrayList<>();
+    this.successor_ = new ArrayList<>();
+    list_ = new IList<>(this);
+    node_ = new INode<>(this);
+    this.node_.insertAtEnd(parent.getList_());
+  }
+
+  public Function getParent() {
+    return parent;
+  }
+
+  public ArrayList<BasicBlock> getPredecessor_() {
+    return predecessor_;
+  }
+
+  public ArrayList<BasicBlock> getSuccessor_() {
+    return successor_;
+  }
 
   public IList<Instruction, BasicBlock> getList() {
     return list_;

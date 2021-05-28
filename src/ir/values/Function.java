@@ -1,10 +1,12 @@
 package ir.values;
 
+import ir.MyModule;
 import ir.types.FunctionType;
 import ir.types.Type;
 
 import java.util.ArrayList;
 import util.IList;
+import util.IList.INode;
 
 /**
  * Function类,代表一个函数，拥有一串基本块，一串参数，一个SymbolTable //
@@ -25,15 +27,27 @@ public class Function extends Value {
 
   public Function(String name, Type type) {
     super(name, type);
-    assert type instanceof FunctionType;
     list_ = new IList<>(this);
+    node = new INode<>(this);
+  }
+
+  public Function(String name, Type type, MyModule module) {
+    super(name, type);
+    list_ = new IList<>(this);
+    node = new INode<>(this);
+    this.node.insertAtEnd(module.__functions);
   }
 
   public int getNumArgs() {
     return argList_.size();
   }
 
+  public IList<BasicBlock, Function> getList_() {
+    return list_;
+  }
+
   private boolean isBuiltin_ = false;//lib function
   private IList<BasicBlock, Function> list_;
+  private INode<Function, MyModule> node;
   private ArrayList<Arg> argList_;//有序参数列表
 }

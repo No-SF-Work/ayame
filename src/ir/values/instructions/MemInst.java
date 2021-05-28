@@ -123,7 +123,7 @@ public abstract class MemInst extends Instruction {
     //todo
 
     /**
-     * 拿到这个pointer指向的数组/值的指针
+     * 拿到这个pointer指向的数组/值的指针的type
      * <p>
      * 实际上就是i32,可以考虑在这里加typeCheck
      */
@@ -166,6 +166,16 @@ public abstract class MemInst extends Instruction {
 
     public GEPInst(Instruction prev, Value pointer, ArrayList<Value> indices) {
       super(TAG_.GEP, new PointerType(getElementType(pointer, indices)), indices.size() + 1, prev);
+      CoSetOperand(0, pointer);
+      for (int i = 0; i < indices.size(); i++) {
+        CoSetOperand(i + 1, indices.get(i));
+      }
+      elementType_ = getElementType(pointer, indices);
+    }
+
+
+    public GEPInst(Value pointer, ArrayList<Value> indices, Instruction next) {
+      super(next, TAG_.GEP, new PointerType(getElementType(pointer, indices)), indices.size() + 1);
       CoSetOperand(0, pointer);
       for (int i = 0; i < indices.size(); i++) {
         CoSetOperand(i + 1, indices.get(i));

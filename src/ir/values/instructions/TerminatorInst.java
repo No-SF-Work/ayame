@@ -77,7 +77,7 @@ public abstract class TerminatorInst extends Instruction {
     /**
      * ret void 插在bb末尾
      */
-    public RetInst(TAG_ tag, Type type, int numOP, BasicBlock parent) {
+    public RetInst(BasicBlock parent) {
       super(TAG_.Ret, VoidType.getType(), 0, parent);
     }
 

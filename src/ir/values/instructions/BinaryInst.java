@@ -4,7 +4,7 @@ import ir.types.Type;
 import ir.values.BasicBlock;
 import ir.values.Value;
 
-public abstract class BinaryInst extends Instruction {
+public class BinaryInst extends Instruction {
 
   //不插
   public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs) {
@@ -15,7 +15,7 @@ public abstract class BinaryInst extends Instruction {
   }
 
   //插在bb末尾
-  public BinaryInst(TAG_ tag, Type type, BasicBlock parent, Value lhs, Value rhs) {
+  public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs, BasicBlock parent) {
     super(tag, type, 2, parent);
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
@@ -31,7 +31,7 @@ public abstract class BinaryInst extends Instruction {
   }
 
   //插在prev后面
-  public BinaryInst(TAG_ tag, Type type, Instruction prev, Value lhs, Value rhs) {
+  public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs, Instruction prev) {
     super(tag, type, 2, prev);
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
