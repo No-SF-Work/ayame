@@ -189,7 +189,7 @@ public class ValueBuilderFactory {
   }
 
   /**
-   * @param ptr:     你想要操作的pointer,举个例子，在你想要取出数组a[2][3]中的某个值的时候，你传进来的这个就是 a 的指针
+   * @param ptr:     你想要对其操作的pointer,举个例子，在你想要取出数组a[2][3]中的某个值的时候，你传进来的这个就是 a 的指针
    * @param indices: 具体求的位置，因为在SysY中没有结构体什么的复杂结构，所以可以认为这就是数组的每个维度的值 比如 a[2][3] ，这里传进来的就是["i"]["j"]
    */
   public GEPInst getGEP(Value ptr, ArrayList<Value> indices) {

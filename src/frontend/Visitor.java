@@ -1,237 +1,238 @@
 package frontend;
 
-import ir.types.Type;
 
-public class Visitor extends SysYBaseVisitor {
+import frontend.SysYParser.*;
 
-  //因为I32Ty,I1yT,I32PtrTy,VoidTy本身不存储任何信息，所以就只声明一次。
+public class Visitor extends SysYBaseVisitor<Void> {
+
   @Override
-  public Type visitProgram(SysYParser.ProgramContext ctx) {
-    return visitProgram(ctx);
+  public Void visitProgram(ProgramContext ctx) {
+    return null;
   }
 
   @Override
-  public Type visitCompUnit(SysYParser.CompUnitContext ctx) {
-    return visitCompUnit(ctx);
+  public Void visitCompUnit(CompUnitContext ctx) {
+    return null;
   }
 
   @Override
-  public Type visitDecl(SysYParser.DeclContext ctx) {
-    return visitDecl(ctx);
+  public Void visitDecl(DeclContext ctx) {
+    return super.visitDecl(ctx);
   }
 
   @Override
-  public Type visitConstDecl(SysYParser.ConstDeclContext ctx) {
-    return visitConstDecl(ctx);
+  public Void visitConstDecl(ConstDeclContext ctx) {
+    return super.visitConstDecl(ctx);
   }
 
   @Override
-  public Type visitBType(SysYParser.BTypeContext ctx) {
-    return visitBType(ctx);
+  public Void visitBType(BTypeContext ctx) {
+    return super.visitBType(ctx);
   }
 
   @Override
-  public Type visitConstDef(SysYParser.ConstDefContext ctx) {
-    return visitConstDef(ctx);
+  public Void visitConstDef(ConstDefContext ctx) {
+    return super.visitConstDef(ctx);
   }
 
   @Override
-  public Type visitConstInitVal(SysYParser.ConstInitValContext ctx) {
-    return visitConstInitVal(ctx);
+  public Void visitConstInitVal(ConstInitValContext ctx) {
+    return super.visitConstInitVal(ctx);
   }
 
   @Override
-  public Type visitVarDecl(SysYParser.VarDeclContext ctx) {
-    return visitVarDecl(ctx);
+  public Void visitVarDecl(VarDeclContext ctx) {
+    return super.visitVarDecl(ctx);
   }
 
   @Override
-  public Type visitVarDef(SysYParser.VarDefContext ctx) {
-    return visitVarDef(ctx);
+  public Void visitVarDef(VarDefContext ctx) {
+    return super.visitVarDef(ctx);
   }
 
   @Override
-  public Type visitInitVal(SysYParser.InitValContext ctx) {
-    return visitInitVal(ctx);
+  public Void visitInitVal(InitValContext ctx) {
+    return super.visitInitVal(ctx);
   }
 
   @Override
-  public Type visitFuncDef(SysYParser.FuncDefContext ctx) {
-    return visitFuncDef(ctx);
+  public Void visitFuncDef(FuncDefContext ctx) {
+    return super.visitFuncDef(ctx);
   }
 
   @Override
-  public Type visitFuncType(SysYParser.FuncTypeContext ctx) {
-    return visitFuncType(ctx);
+  public Void visitFuncType(FuncTypeContext ctx) {
+    return super.visitFuncType(ctx);
   }
 
   @Override
-  public Type visitFuncFParams(SysYParser.FuncFParamsContext ctx) {
-    return visitFuncFParams(ctx);
+  public Void visitFuncFParams(FuncFParamsContext ctx) {
+    return super.visitFuncFParams(ctx);
   }
 
   @Override
-  public Type visitFuncFParam(SysYParser.FuncFParamContext ctx) {
-    return visitFuncFParam(ctx);
+  public Void visitFuncFParam(FuncFParamContext ctx) {
+    return super.visitFuncFParam(ctx);
   }
 
   @Override
-  public Type visitBlock(SysYParser.BlockContext ctx) {
-    return visitBlock(ctx);
+  public Void visitBlock(BlockContext ctx) {
+    return super.visitBlock(ctx);
   }
 
   @Override
-  public Type visitBlockItem(SysYParser.BlockItemContext ctx) {
-    return visitBlockItem(ctx);
+  public Void visitBlockItem(BlockItemContext ctx) {
+    return super.visitBlockItem(ctx);
   }
 
   @Override
-  public Type visitStmt(SysYParser.StmtContext ctx) {
-    return visitStmt(ctx);
+  public Void visitStmt(StmtContext ctx) {
+    return super.visitStmt(ctx);
   }
 
   @Override
-  public Type visitAssignStmt(SysYParser.AssignStmtContext ctx) {
-    return visitAssignStmt(ctx);
+  public Void visitAssignStmt(AssignStmtContext ctx) {
+    return super.visitAssignStmt(ctx);
   }
 
   @Override
-  public Type visitExpStmt(SysYParser.ExpStmtContext ctx) {
-    return visitExpStmt(ctx);
+  public Void visitExpStmt(ExpStmtContext ctx) {
+    return super.visitExpStmt(ctx);
   }
 
   @Override
-  public Type visitConditionStmt(SysYParser.ConditionStmtContext ctx) {
-    return visitConditionStmt(ctx);
+  public Void visitConditionStmt(ConditionStmtContext ctx) {
+    return super.visitConditionStmt(ctx);
   }
 
   @Override
-  public Type visitWhileStmt(SysYParser.WhileStmtContext ctx) {
-    return visitWhileStmt(ctx);
+  public Void visitWhileStmt(WhileStmtContext ctx) {
+    return super.visitWhileStmt(ctx);
   }
 
   @Override
-  public Type visitBreakStmt(SysYParser.BreakStmtContext ctx) {
-    return visitBreakStmt(ctx);
+  public Void visitBreakStmt(BreakStmtContext ctx) {
+    return super.visitBreakStmt(ctx);
   }
 
   @Override
-  public Type visitContinueStmt(SysYParser.ContinueStmtContext ctx) {
-    return visitContinueStmt(ctx);
+  public Void visitContinueStmt(ContinueStmtContext ctx) {
+    return super.visitContinueStmt(ctx);
   }
 
   @Override
-  public Type visitReturnStmt(SysYParser.ReturnStmtContext ctx) {
-    return visitReturnStmt(ctx);
+  public Void visitReturnStmt(ReturnStmtContext ctx) {
+    return super.visitReturnStmt(ctx);
   }
 
   @Override
-  public Type visitExp(SysYParser.ExpContext ctx) {
-    return visitExp(ctx);
+  public Void visitExp(ExpContext ctx) {
+    return super.visitExp(ctx);
   }
 
   @Override
-  public Type visitCond(SysYParser.CondContext ctx) {
-    return visitCond(ctx);
+  public Void visitCond(CondContext ctx) {
+    return super.visitCond(ctx);
   }
 
   @Override
-  public Type visitLVal(SysYParser.LValContext ctx) {
-    return visitLVal(ctx);
+  public Void visitLVal(LValContext ctx) {
+    return super.visitLVal(ctx);
   }
 
   @Override
-  public Type visitPrimaryExp(SysYParser.PrimaryExpContext ctx) {
-    return visitPrimaryExp(ctx);
+  public Void visitPrimaryExp(PrimaryExpContext ctx) {
+    return super.visitPrimaryExp(ctx);
   }
 
   @Override
-  public Type visitNumber(SysYParser.NumberContext ctx) {
-    return visitNumber(ctx);
+  public Void visitNumber(NumberContext ctx) {
+    return super.visitNumber(ctx);
   }
 
   @Override
-  public Type visitIntConst(SysYParser.IntConstContext ctx) {
-    return visitIntConst(ctx);
+  public Void visitIntConst(IntConstContext ctx) {
+    return super.visitIntConst(ctx);
   }
 
   @Override
-  public Type visitUnaryExp(SysYParser.UnaryExpContext ctx) {
-    return visitUnaryExp(ctx);
+  public Void visitUnaryExp(UnaryExpContext ctx) {
+    return super.visitUnaryExp(ctx);
   }
 
   @Override
-  public Type visitCallee(SysYParser.CalleeContext ctx) {
-    return visitCallee(ctx);
+  public Void visitCallee(CalleeContext ctx) {
+    return super.visitCallee(ctx);
   }
 
   @Override
-  public Type visitUnaryOp(SysYParser.UnaryOpContext ctx) {
-    return visitUnaryOp(ctx);
+  public Void visitUnaryOp(UnaryOpContext ctx) {
+    return super.visitUnaryOp(ctx);
   }
 
   @Override
-  public Type visitFuncRParams(SysYParser.FuncRParamsContext ctx) {
-    return visitFuncRParams(ctx);
+  public Void visitFuncRParams(FuncRParamsContext ctx) {
+    return super.visitFuncRParams(ctx);
   }
 
   @Override
-  public Type visitParam(SysYParser.ParamContext ctx) {
-    return visitParam(ctx);
+  public Void visitParam(ParamContext ctx) {
+    return super.visitParam(ctx);
   }
 
   @Override
-  public Type visitMulExp(SysYParser.MulExpContext ctx) {
-    return visitMulExp(ctx);
+  public Void visitMulExp(MulExpContext ctx) {
+    return super.visitMulExp(ctx);
   }
 
   @Override
-  public Type visitMulOp(SysYParser.MulOpContext ctx) {
-    return visitMulOp(ctx);
+  public Void visitMulOp(MulOpContext ctx) {
+    return super.visitMulOp(ctx);
   }
 
   @Override
-  public Type visitAddExp(SysYParser.AddExpContext ctx) {
-    return visitAddExp(ctx);
+  public Void visitAddExp(AddExpContext ctx) {
+    return super.visitAddExp(ctx);
   }
 
   @Override
-  public Type visitAddOp(SysYParser.AddOpContext ctx) {
-    return visitAddOp(ctx);
+  public Void visitAddOp(AddOpContext ctx) {
+    return super.visitAddOp(ctx);
   }
 
   @Override
-  public Type visitRelExp(SysYParser.RelExpContext ctx) {
-    return visitRelExp(ctx);
+  public Void visitRelExp(RelExpContext ctx) {
+    return super.visitRelExp(ctx);
   }
 
   @Override
-  public Type visitRelOp(SysYParser.RelOpContext ctx) {
-    return visitRelOp(ctx);
+  public Void visitRelOp(RelOpContext ctx) {
+    return super.visitRelOp(ctx);
   }
 
   @Override
-  public Type visitEqExp(SysYParser.EqExpContext ctx) {
-    return visitEqExp(ctx);
+  public Void visitEqExp(EqExpContext ctx) {
+
+    return super.visitEqExp(ctx);
   }
 
   @Override
-  public Type visitEqOp(SysYParser.EqOpContext ctx) {
-    return visitEqOp(ctx);
+  public Void visitEqOp(EqOpContext ctx) {
+    return super.visitEqOp(ctx);
   }
 
   @Override
-  public Type visitLAndExp(SysYParser.LAndExpContext ctx) {
-    return visitLAndExp(ctx);
+  public Void visitLAndExp(LAndExpContext ctx) {
+    return super.visitLAndExp(ctx);
   }
 
   @Override
-  public Type visitLOrExp(SysYParser.LOrExpContext ctx) {
-    return visitLOrExp(ctx);
+  public Void visitLOrExp(LOrExpContext ctx) {
+    return super.visitLOrExp(ctx);
   }
 
   @Override
-  public Type visitConstExp(SysYParser.ConstExpContext ctx) {
-    return visitConstExp(ctx);
+  public Void visitConstExp(ConstExpContext ctx) {
+    return super.visitConstExp(ctx);
   }
 }
