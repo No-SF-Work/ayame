@@ -17,6 +17,7 @@ public class Config {
   private static Config config = new Config();
 
   public static Config getInstance() {
+
     return config;
   }
 

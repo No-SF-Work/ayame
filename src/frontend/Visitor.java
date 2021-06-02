@@ -1,6 +1,7 @@
 package frontend;
 
 
+import driver.Config;
 import frontend.SysYParser.*;
 import ir.MyModule;
 import ir.values.BasicBlock;
@@ -17,13 +18,8 @@ import java.util.logging.Logger;
 
 public class Visitor extends SysYBaseVisitor<Void> {
 
-  Logger log = Logger.getLogger("Syntax Logger");
+  Logger log = Config.getLogger();
 
-  public Visitor() {
-    super();
-    this.scope_ = new Scope();
-
-  }
 
   private class Scope {
 
@@ -44,13 +40,21 @@ public class Visitor extends SysYBaseVisitor<Void> {
       params.pop();
     }
 
+    public void addParams() {
+      //todo 咱先把没数组的部分弄完
+    }
+
+    public void popParams() {
+      //todo
+    }
+
     public boolean isGlobal() {
       return this.symbols_.size() == 1;
     }
 
   }
 
-  private Scope scope_;//symbol table
+  private Scope scope_ = new Scope();//symbol table
   private BasicBlock curBB_;//current basicBlock
   private Function curFunc_;//current function
   private final MyModule m = MyModule.getInstance();
