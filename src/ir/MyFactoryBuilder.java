@@ -4,6 +4,7 @@ import driver.Config;
 import ir.types.ArrayType;
 import ir.types.FunctionType;
 import ir.types.IntegerType;
+import ir.types.PointerType;
 import ir.types.Type;
 import ir.types.Type.LabelType;
 import ir.types.Type.VoidType;
@@ -69,6 +70,17 @@ public class MyFactoryBuilder {
     return IntegerType.getI1();
   }
 
+  /**
+   * @param contained:指向元素的类型
+   */
+  public PointerType getPointTy(Type contained) {
+    return new PointerType(contained);
+  }
+
+  /**
+   * @param retTy:返回值类型
+   * @param params:参数类型的列表
+   */
   public FunctionType getFuncTy(Type retTy, ArrayList<Type> params) {
     return new FunctionType(retTy, params);
   }
@@ -109,6 +121,7 @@ public class MyFactoryBuilder {
 
   /**
    * 在inst后面造一个binary
+   * @param tag:手动标记的binary运算的类型
    */
   public void buildBinaryAfter(TAG_ tag, Value lhs, Value rhs, Instruction inst) {
     assert lhs.getType() == rhs.getType();
