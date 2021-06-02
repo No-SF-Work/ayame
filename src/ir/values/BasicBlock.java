@@ -1,6 +1,7 @@
 package ir.values;
 
 import ir.types.Type;
+import ir.types.Type.LabelType;
 import ir.values.instructions.Instruction;
 
 import java.util.ArrayList;
@@ -17,8 +18,8 @@ import util.IList.INode;
 public class BasicBlock extends Value {
 
 
-  public BasicBlock(String name, Type type) {
-    super(name, type);
+  public BasicBlock(String name) {
+    super(name, LabelType.getType());
     //当我们新建一个BasicBlock对象的时候实际上很快就要对其进行操作了，
     //所以这里直接new了2个container
     this.predecessor_ = new ArrayList<>();
@@ -28,8 +29,8 @@ public class BasicBlock extends Value {
   }
 
   //插入到parent的末尾
-  public BasicBlock(String name, Type type, Function parent) {
-    super(name, type);
+  public BasicBlock(String name, Function parent) {
+    super(name, LabelType.getType());
     this.predecessor_ = new ArrayList<>();
     this.successor_ = new ArrayList<>();
     list_ = new IList<>(this);
