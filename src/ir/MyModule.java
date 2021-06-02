@@ -22,6 +22,9 @@ public class MyModule {
   public HashMap<Integer, Instruction> __instructions;
   private static final MyModule myModule = new MyModule();
   private MyModule() {
+    __functions = new IList<>(this);
+    __instructions = new HashMap<>();
+    __globalVariables = new ArrayList<>();
   }
 
 }

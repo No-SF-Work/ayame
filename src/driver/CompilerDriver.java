@@ -3,6 +3,7 @@ package driver;
 import frontend.SysYLexer;
 import frontend.SysYParser;
 import frontend.Visitor;
+import java.util.logging.Logger;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.annotation.Arg;
 import net.sourceforge.argparse4j.helper.HelpScreenException;
@@ -25,8 +26,8 @@ public class CompilerDriver {
   /**
    * @param args:从命令行未处理直接传过来的参数
    */
+  private static Logger logger = Config.getLogger();
   public static void run(String[] args) {
-    Debugger dbg = Debugger.getInstance();
     Config config = Config.getInstance();
     PassManager pm = PassManager.getPassManager();
     ArgumentParser argParser =
@@ -45,14 +46,14 @@ public class CompilerDriver {
     try {
       Namespace res = argParser.parseArgs(args);
       config.setConfig(res);
-      dbg.loadConfig(config);
-      dbg.dbg("Params are : " + res);
+      logger.info("Config : " + res);
       String source = res.get("source");
       String target = res.get("target");
 
       CharStream input = CharStreams.fromFileName(source);
       /*词法
        * */
+
       SysYLexer lexer = new SysYLexer(input);
       lexer.addErrorListener(new BaseErrorListener() {
         @Override
