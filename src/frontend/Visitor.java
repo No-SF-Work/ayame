@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Stack;
 import java.util.logging.Logger;
+import util.Mylogger;
 
 /**
  * 我们并不需要用返回值传递信息，所以将类型标注为Void
@@ -18,7 +19,7 @@ import java.util.logging.Logger;
 
 public class Visitor extends SysYBaseVisitor<Void> {
 
-  Logger log = Config.getLogger();
+  Logger log = Mylogger.getLogger(Visitor.class);
 
 
   private class Scope {

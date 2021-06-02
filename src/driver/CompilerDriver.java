@@ -3,6 +3,7 @@ package driver;
 import frontend.SysYLexer;
 import frontend.SysYParser;
 import frontend.Visitor;
+import ir.MyModule;
 import java.util.logging.Logger;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.annotation.Arg;
@@ -16,6 +17,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import pass.PassManager;
 
 import java.io.IOException;
+import util.Mylogger;
 
 
 /**
@@ -26,7 +28,7 @@ public class CompilerDriver {
   /**
    * @param args:从命令行未处理直接传过来的参数
    */
-  private static Logger logger = Config.getLogger();
+  private static Logger logger;
   public static void run(String[] args) {
     Config config = Config.getInstance();
     PassManager pm = PassManager.getPassManager();
@@ -45,13 +47,15 @@ public class CompilerDriver {
     argParser.addArgument("target");
     try {
       Namespace res = argParser.parseArgs(args);
+      Mylogger.init();
       config.setConfig(res);
+      logger = Mylogger.getLogger(CompilerDriver.class);
       logger.info("Config -> " + res);
       String source = res.get("source");
       String target = res.get("target");
       CharStream input = CharStreams.fromFileName(source);
 
-      logger.warning("Lex begin\n");
+      logger.warning("Lex begin");
       SysYLexer lexer = new SysYLexer(input);
       lexer.addErrorListener(new BaseErrorListener() {
         @Override
@@ -61,17 +65,18 @@ public class CompilerDriver {
         }
       });
       CommonTokenStream tokens = new CommonTokenStream(lexer);
-      logger.warning("Lex finished\n");
+      logger.warning("Lex finished");
 
-      logger.warning("parse begin\n");
+      logger.warning("parse begin");
       SysYParser parser = new SysYParser(tokens);
       parser.setErrorHandler(new BailErrorStrategy());
       ParseTree tree = parser.program();
-      logger.warning("parse finished\n");
-      logger.warning("IR program generating\n");
+      logger.warning("parse finished");
+      logger.warning("IR program generating");
+      MyModule.getInstance().init();
       Visitor visitor = new Visitor(/* OptionsTable table */);
       visitor.visit(tree);
-      logger.warning("IR program generated\n");
+      logger.warning("IR program generated");
 
       /*
        * pass

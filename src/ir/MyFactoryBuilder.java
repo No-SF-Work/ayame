@@ -22,6 +22,7 @@ import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
 import java.util.logging.Logger;
+import util.Mylogger;
 
 /**
  * get开头的方法是工厂方法，返回的是没有被持有的
@@ -43,7 +44,7 @@ import java.util.logging.Logger;
 
 public class MyFactoryBuilder {
 
-  Logger log = Config.getLogger();
+  Logger log = Mylogger.getLogger(MyFactoryBuilder.class);
 
   private MyFactoryBuilder() {
   }
@@ -82,6 +83,7 @@ public class MyFactoryBuilder {
    * @param params:参数类型的列表
    */
   public FunctionType getFuncTy(Type retTy, ArrayList<Type> params) {
+
     return new FunctionType(retTy, params);
   }
 
@@ -98,6 +100,7 @@ public class MyFactoryBuilder {
 
   //只有一个module，在module末尾插入function
   public void buildFunction(String name, Type functype) {
+    log.info("new Function : " + name + " return type :" + functype);
     new Function(name, functype, MyModule.getInstance());
   }
 
