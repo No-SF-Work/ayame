@@ -37,6 +37,14 @@ public class Function extends Value {
     node = new INode<>(this);
     this.node.insertAtEnd(module.__functions);
   }
+  
+  public Function(String name, Type type, MyModule module, boolean isBuiltin) {
+    super(name, type);
+    list_ = new IList<>(this);
+    node = new INode<>(this);
+    this.node.insertAtEnd(module.__functions);
+    this.isBuiltin_ = isBuiltin;
+  }
 
   public int getNumArgs() {
     return argList_.size();
