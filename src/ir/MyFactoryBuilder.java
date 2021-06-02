@@ -1,6 +1,12 @@
 package ir;
 
+import driver.Config;
+import ir.types.ArrayType;
+import ir.types.FunctionType;
+import ir.types.IntegerType;
 import ir.types.Type;
+import ir.types.Type.LabelType;
+import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Function;
 import ir.values.Value;
@@ -14,9 +20,10 @@ import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 
 /**
- * get开头的方法是工厂方法，返回的所有指令都是没有被持有的
+ * get开头的方法是工厂方法，返回的是没有被持有的
  * <p>
  * build开头的方法是build方法，一般就三种
  * <p>
@@ -32,35 +39,64 @@ import java.util.ArrayList;
  * <p>
  * 在你需要放置这个Value的时候，你需要自己把这个Value插入到适当的容器里面的适当的位置***
  **/
-public class ValueBuilderFactory {
 
-  private ValueBuilderFactory() {
+public class MyFactoryBuilder {
+
+  Logger log = Config.getLogger();
+
+  private MyFactoryBuilder() {
   }
 
-  private static ValueBuilderFactory ibf = new ValueBuilderFactory();
+  private static MyFactoryBuilder mf = new MyFactoryBuilder();
 
-  public static ValueBuilderFactory getInstance() {
-    return ibf;
+  public static MyFactoryBuilder getInstance() {
+    return mf;
   }
+
+  public VoidType getVoidTy() {
+    return VoidType.getType();
+  }
+
+  public LabelType getLabelTy() {
+    return LabelType.getType();
+  }
+
+  public IntegerType getI32Ty() {
+    return IntegerType.getI32();
+  }
+
+  public IntegerType getI1Ty() {
+    return IntegerType.getI1();
+  }
+
+  public FunctionType getFuncTy(Type retTy, ArrayList<Type> params) {
+    return new FunctionType(retTy, params);
+  }
+
+  public ArrayType getArrayTy(Type containedTy, int numElem) {
+    return new ArrayType(containedTy, numElem);
+  }
+
 
   //获得一个function
-  public Function getFunction(String name, Type type) {
-    return new Function(name, type);
+  public Function getFunction(String name, Type functype) {
+    log.info("new Function : " + name + " return type :" + functype);
+    return new Function(name, functype);
   }
 
   //只有一个module，在module末尾插入function
-  public void buildFunction(String name, Type type) {
-    new Function(name, type, MyModule.getInstance());
+  public void buildFunction(String name, Type functype) {
+    new Function(name, functype, MyModule.getInstance());
   }
 
   //获得一个BasicBlock
-  public BasicBlock getBasicBlock(String name, Type type) {
-    return new BasicBlock(name, type);
+  public BasicBlock getBasicBlock(String name) {
+    return new BasicBlock(name);
   }
 
   //在func末尾插入bb
-  public void buildBasicBloock(String name, Type type, Function func) {
-    new BasicBlock(name, type, func);
+  public void buildBasicBloock(String name, Function func) {
+    new BasicBlock(name, func);
   }
 
   /**

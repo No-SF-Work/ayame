@@ -1,5 +1,6 @@
 package ir;
 
+import ir.types.IntegerType;
 import ir.values.Function;
 import ir.values.GlobalVariable;
 import ir.values.instructions.Instruction;
@@ -25,6 +26,8 @@ public class MyModule {
     __functions = new IList<>(this);
     __instructions = new HashMap<>();
     __globalVariables = new ArrayList<>();
+    MyFactoryBuilder vbf = MyFactoryBuilder.getInstance();
+    vbf.buildFunction("getint", IntegerType.getI32());
   }
 
 }

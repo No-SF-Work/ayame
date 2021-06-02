@@ -46,14 +46,12 @@ public class CompilerDriver {
     try {
       Namespace res = argParser.parseArgs(args);
       config.setConfig(res);
-      logger.info("Config : " + res);
+      logger.info("Config -> " + res);
       String source = res.get("source");
       String target = res.get("target");
-
       CharStream input = CharStreams.fromFileName(source);
-      /*词法
-       * */
 
+      logger.warning("Lex begin\n");
       SysYLexer lexer = new SysYLexer(input);
       lexer.addErrorListener(new BaseErrorListener() {
         @Override
@@ -63,16 +61,18 @@ public class CompilerDriver {
         }
       });
       CommonTokenStream tokens = new CommonTokenStream(lexer);
-      /*语法
-       * */
+      logger.warning("Lex finished\n");
+
+      logger.warning("parse begin\n");
       SysYParser parser = new SysYParser(tokens);
       parser.setErrorHandler(new BailErrorStrategy());
       ParseTree tree = parser.program();
-      /*语义
-       * todo:遍历生成线性IR
-       * */
+      logger.warning("parse finished\n");
+      logger.warning("IR program generating\n");
       Visitor visitor = new Visitor(/* OptionsTable table */);
       visitor.visit(tree);
+      logger.warning("IR program generated\n");
+
       /*
        * pass
        * todo:在这里完成线性IR转换cfg，cfg层面的优化，cfg转ssa，ssa层面的优化，ssa转asm，asm层面的优化

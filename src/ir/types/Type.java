@@ -20,7 +20,6 @@ public abstract class Type {
    */
   public static class NoType extends Type {
 
-    //todo : should this exist?
     public static NoType getType() {
       return type;
     }
