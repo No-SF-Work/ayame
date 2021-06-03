@@ -97,6 +97,10 @@ public class MyFactoryBuilder {
     return new Function(name, functype);
   }
 
+  public Function getBuiltInFunc(String name, Type funcTy) {
+    return new Function(name, funcTy, MyModule.getInstance(), true);
+  }
+
   //只有一个module，在module末尾插入function
   public void buildFunction(String name, Type functype) {
     log.info("new Function : " + name + " return type :" + functype);
