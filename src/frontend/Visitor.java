@@ -5,20 +5,16 @@ import frontend.SysYParser.*;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.types.FunctionType;
-import ir.types.IntegerType;
-import ir.types.PointerType;
 import ir.types.Type;
-import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Function;
-import ir.values.GlobalVariable;
 import ir.values.Value;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Stack;
 import java.util.logging.Logger;
+import org.antlr.v4.runtime.tree.ParseTree;
 import util.Mylogger;
 
 /**
@@ -71,6 +67,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private Function curFunc_; // current function
 
   // pass values between `visit` functions
+  private Type tmpType_;
   private Value tmp_;
   private int tmpInt_;
 
@@ -179,21 +176,38 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitFuncDef(FuncDefContext ctx) {
+    // get function name
+    String functionName = ctx.IDENT().getText();
+    log.info("funcDef begin @" + functionName);
+
+    // get function return type
     Type retType = voidType;
     String typeStr = ctx.getChild(0).getText();
     if (typeStr.equals("int")) {
       retType = i32Type;
     }
 
-    FunctionType functionType = f.getFuncTy(retType, new ArrayList<>());
-    f.buildFunction(ctx.IDENT().getText(), functionType);
-    curFunc_ = m.__functions.getLast().getVal();
-    // 用全局的 curFunc_ 传递当前函数的引用，在 visitFuncFParams 时修改 FunctionType 中 param 的 type
+    // get function params information
+    ArrayList<Type> paramTypeList = new ArrayList<>();
     if (ctx.funcFParams() != null) {
-      visit(ctx.funcFParams());
+      FuncFParamsContext paramsContext = ctx.funcFParams();
+      int paramNum = (ctx.funcFParams().getChildCount() + 1) / 2;
+      for (int i = 0; i < paramNum; i++) {
+        FuncFParamContext paramContext = paramsContext.funcFParam(i);
+        // get each parameter information
+      }
     }
 
-    // TODO
+    // build function object
+    FunctionType functionType = f.getFuncTy(retType, paramTypeList);
+    f.buildFunction(functionName, functionType);
+    curFunc_ = m.__functions.getLast().getVal();
+
+    // add to symbol table
+
+    // visit block and create basic blocks
+
+    log.info("funcDef end@" + functionName);
 
     return null;
 //    return super.visitFuncDef(ctx);
@@ -204,7 +218,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitFuncType(FuncTypeContext ctx) {
-    //todo
     return super.visitFuncType(ctx);
   }
 
@@ -213,7 +226,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitFuncFParams(FuncFParamsContext ctx) {
-    //todo
     return super.visitFuncFParams(ctx);
   }
 

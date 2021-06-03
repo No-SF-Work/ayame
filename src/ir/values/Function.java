@@ -54,6 +54,11 @@ public class Function extends Value {
     return list_;
   }
 
+  @Override
+  public FunctionType getType() {
+    return (FunctionType) super.getType();
+  }
+
   private boolean isBuiltin_ = false;//lib function
   private IList<BasicBlock, Function> list_;
   private INode<Function, MyModule> node;
