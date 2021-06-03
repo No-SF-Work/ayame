@@ -7,6 +7,8 @@ import ir.MyModule;
 import ir.types.FunctionType;
 import ir.types.Type;
 import ir.values.BasicBlock;
+import ir.values.Constant;
+import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
 import java.lang.reflect.Array;
@@ -76,7 +78,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
     public boolean isGlobal() {
       return this.symbols_.size() == 1;
     }
-
   }
 
   // 不用捕获，程序出错语义肯定出问题了
@@ -395,22 +396,36 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
   /**
-   * number : intConst ;
+   * @author : ai
+   * @value : tmp_ -> 解析出的ConstantInt
    */
   @Override
   public Void visitNumber(NumberContext ctx) {
     //todo
-
+    visit(ctx);
+    tmp_ = f.getConstantInt(tmpInt_);
     return null;
   }
 
   /**
-   * intConst : DECIMAL_CONST | OCTAL_CONST | HEXADECIMAL_CONST ;
+   * @author : ai
+   * @value: tmpInt_ -> child解析出的int intConst : DECIMAL_CONST | OCTAL_CONST | HEXADECIMAL_CONST ;
    */
+
   @Override
   public Void visitIntConst(IntConstContext ctx) {
     //todo
-    return super.visitIntConst(ctx);
+    if (ctx.DECIMAL_CONST() != null) {
+      tmpInt_ = Integer.parseInt(ctx.DECIMAL_CONST().getText(), 10);
+      return null;
+    } else if (ctx.HEXADECIMAL_CONST() != null) {
+      tmpInt_ = Integer.parseInt(ctx.HEXADECIMAL_CONST().getText().substring(2), 16);
+      return null;
+    } else if (ctx.OCTAL_CONST() != null) {
+      tmpInt_ = Integer.parseInt(ctx.OCTAL_CONST().getText(), 8);
+      return null;
+    }
+    throw new SyntaxException("Unexpected approach in parsingInt");
   }
 
   /**

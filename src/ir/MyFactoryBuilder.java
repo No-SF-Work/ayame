@@ -9,6 +9,7 @@ import ir.types.Type;
 import ir.types.Type.LabelType;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
+import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
@@ -49,10 +50,15 @@ public class MyFactoryBuilder {
   private MyFactoryBuilder() {
   }
 
+
   private static MyFactoryBuilder mf = new MyFactoryBuilder();
 
   public static MyFactoryBuilder getInstance() {
     return mf;
+  }
+
+  public ConstantInt getConstantInt(int val) {
+    return ConstantInt.newOne(IntegerType.getI32(), val);
   }
 
   public VoidType getVoidTy() {
