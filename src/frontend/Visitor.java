@@ -245,9 +245,17 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   /**
    * funcType : VOID_KW | INT_KW ;
+   *
+   * @author : ai
+   * @value : tmpType-> stored type
    */
   @Override
   public Void visitFuncType(FuncTypeContext ctx) {
+    if (ctx.INT_KW() != null) {
+      tmpType_ = voidType;
+    } else if (ctx.VOID_KW() != null) {
+      tmpType_ = i32Type;
+    }
     return super.visitFuncType(ctx);
   }
 
@@ -383,11 +391,21 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitLVal(LValContext ctx) {
     //todo
-    return super.visitLVal(ctx);
+    String name = ctx.IDENT().getText();
+    tmp_ = scope_.find(name);
+    if (tmp_ == null) {
+      throw new SyntaxException("undefined value name" + name);
+    }
+    if (tmp_.getType().isIntegerTy()) { //todo
+      log.info("Lval inttype :" + name);
+      return null;
+    }
+    return null;
   }
 
   /**
-   * primaryExp : (L_PAREN exp R_PAREN) | lVal | number ;
+   * @author : ai
+   * @value : primaryExp : (L_PAREN exp R_PAREN) | lVal | number ;
    */
   @Override
   public Void visitPrimaryExp(PrimaryExpContext ctx) {
@@ -404,6 +422,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     //todo
     visit(ctx);
     tmp_ = f.getConstantInt(tmpInt_);
+    log.info("syntax constant num: " + tmpInt_);
     return null;
   }
 
@@ -425,7 +444,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       tmpInt_ = Integer.parseInt(ctx.OCTAL_CONST().getText(), 8);
       return null;
     }
-    throw new SyntaxException("Unexpected approach in parsingInt");
+    throw new SyntaxException("Unreachable");
   }
 
   /**
@@ -567,6 +586,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitConstExp(ConstExpContext ctx) {//todo
+    visit(ctx.addExp());
     return super.visitConstExp(ctx);
   }
 }
