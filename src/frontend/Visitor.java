@@ -1,12 +1,16 @@
 package frontend;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import ir.MyModule;
+import ir.types.FunctionType;
 import ir.types.IntegerType;
+import ir.types.PointerType;
 import ir.types.Type;
 import ir.types.Type.VoidType;
+import ir.values.Constant;
 import ir.values.Function;
 import ir.values.GlobalVariable;
 import ir.values.Value;
@@ -15,6 +19,8 @@ import ir.values.Value;
 public class Visitor extends SysYBaseVisitor<Value> {
   private MyModule module;
   private List<Value> globList = new ArrayList<Value>();
+  private Type integerType = IntegerType.getI32();
+  private Type voidType = VoidType.getType();
 
   // 因为I32Ty,I1yT,I32PtrTy,VoidTy本身不存储任何信息，所以就只声明一次。
 
@@ -25,16 +31,22 @@ public class Visitor extends SysYBaseVisitor<Value> {
   public Value visitProgram(SysYParser.ProgramContext ctx) {
     module = MyModule.getInstance();
 
-    // TODO handle argument
-    Function func_getint = new Function("getint", IntegerType.getI32(), module, true);
-    Function func_getch = new Function("getch", IntegerType.getI32(), module, true);
-    Function func_getarray = new Function("getarray", IntegerType.getI32(), module, true);
-    Function func_putint = new Function("putint", VoidType.getType(), module, true);
-    Function func_putch = new Function("putch", VoidType.getType(), module, true);
-    Function func_putarray = new Function("putarray", VoidType.getType(), module, true);
-    Function func_putf = new Function("putf", VoidType.getType(), module, true);
-    Function func_starttime = new Function("_sysy_starttime", VoidType.getType(), module, true);
-    Function func_stoptime = new Function("_sysy_stoptime", VoidType.getType(), module, true);
+    ArrayList<Type> params_empty = new ArrayList<Type>(Arrays.asList());
+    ArrayList<Type> params_int = new ArrayList<Type>(Arrays.asList(integerType));
+    ArrayList<Type> params_array = new ArrayList<Type>(Arrays.asList(new PointerType(integerType)));
+    ArrayList<Type> params_int_and_array = new ArrayList<Type>(
+        Arrays.asList(integerType, new PointerType(integerType)));
+    // TODO what about putf(string, int, ...) ?
+
+    Function func_getint = new Function("getint", new FunctionType(integerType, params_empty), module, true);
+    Function func_getch = new Function("getch", new FunctionType(integerType, params_empty), module, true);
+    Function func_getarray = new Function("getarray", new FunctionType(integerType, params_array), module, true);
+    Function func_putint = new Function("putint", new FunctionType(voidType, params_int), module, true);
+    Function func_putch = new Function("putch", new FunctionType(voidType, params_int), module, true);
+    Function func_putarray = new Function("putarray", new FunctionType(voidType, params_int_and_array), module, true);
+    Function func_putf = new Function("putf", voidType, module, true);
+    Function func_starttime = new Function("_sysy_starttime", new FunctionType(voidType, params_empty), module, true);
+    Function func_stoptime = new Function("_sysy_stoptime", new FunctionType(voidType, params_empty), module, true);
 
     return super.visitProgram(ctx);
   }
@@ -58,8 +70,14 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * decl : constDecl | varDecl ;
    */
   @Override
-  public GlobalVariable visitDecl(SysYParser.DeclContext ctx) {
-    return null;
+  public Value visitDecl(SysYParser.DeclContext ctx) {
+    Value decl;
+    if (ctx.constDecl() != null) {
+      decl = visit(ctx.constDecl());
+    } else {
+      decl = visit(ctx.varDecl());
+    }
+    return decl;
     // return super.visitDecl(ctx);
   }
 
@@ -67,8 +85,9 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * constDecl : CONST_KW bType constDef (COMMA constDef)* SEMICOLON ;
    */
   @Override
-  public Value visitConstDecl(SysYParser.ConstDeclContext ctx) {
-    return super.visitConstDecl(ctx);
+  public Constant visitConstDecl(SysYParser.ConstDeclContext ctx) {
+    return null;
+    // return super.visitConstDecl(ctx);
   }
 
   /**
@@ -100,8 +119,9 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * varDecl : bType varDef (COMMA varDef)* SEMICOLON ;
    */
   @Override
-  public Value visitVarDecl(SysYParser.VarDeclContext ctx) {
-    return super.visitVarDecl(ctx);
+  public GlobalVariable visitVarDecl(SysYParser.VarDeclContext ctx) {
+    return null;
+    // return super.visitVarDecl(ctx);
   }
 
   /**
@@ -125,7 +145,20 @@ public class Visitor extends SysYBaseVisitor<Value> {
    */
   @Override
   public Function visitFuncDef(SysYParser.FuncDefContext ctx) {
-    return super.visitFuncDef(ctx);
+    String typeStr = ctx.getChild(0).getText();
+    Type retType;
+    switch (typeStr) {
+      case "void":
+        retType = voidType;
+        break;
+      case "int":
+        retType = integerType;
+        break;
+      default:
+        // throw new Exception();
+    }
+    return null;
+    // return super.visitFuncDef(ctx);
   }
 
   /**
