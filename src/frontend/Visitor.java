@@ -1,77 +1,103 @@
 package frontend;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
+import frontend.SysYParser.*;
+import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.types.FunctionType;
 import ir.types.IntegerType;
 import ir.types.PointerType;
 import ir.types.Type;
 import ir.types.Type.VoidType;
-import ir.values.Constant;
+import ir.values.BasicBlock;
 import ir.values.Function;
 import ir.values.GlobalVariable;
 import ir.values.Value;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Stack;
+import java.util.logging.Logger;
+import util.Mylogger;
 
-// visit 的传参使用全局变量，返回尽量使用 Value
-public class Visitor extends SysYBaseVisitor<Value> {
+/**
+ * 我们并不需要用返回值传递信息，所以将类型标注为Void
+ */
 
-  private MyModule module;
-  private List<Value> globList = new ArrayList<Value>();
-  private Type integerType = IntegerType.getI32();
-  private Type voidType = VoidType.getType();
+public class Visitor extends SysYBaseVisitor<Void> {
 
-  // 因为I32Ty,I1yT,I32PtrTy,VoidTy本身不存储任何信息，所以就只声明一次。
+  Logger log = Mylogger.getLogger(Visitor.class);
+
+
+  private class Scope {
+
+    private Stack<HashMap<String, Value>> symbols_;
+    private Stack<HashMap<String, Value>> params;
+
+    public void find(String name) {
+
+    }
+
+    public void addLayer() {
+      symbols_.add(new HashMap<>());
+      params.add(new HashMap<>());
+    }
+
+    public void pop() {
+      symbols_.pop();
+      params.pop();
+    }
+
+    public void addParams() {
+      //todo 咱先把没数组的部分弄完
+    }
+
+    public void popParams() {
+      //todo
+    }
+
+    public boolean isGlobal() {
+      return this.symbols_.size() == 1;
+    }
+
+  }
+
+  // translation context
+  private final MyModule m = MyModule.getInstance();
+  private final MyFactoryBuilder f = MyFactoryBuilder.getInstance();
+  private Scope scope_ = new Scope(); // symbol table
+  private BasicBlock curBB_; // current basicBlock
+  private Function curFunc_; // current function
+
+  // pass values between `visit` functions
+  private Value tmp_;
+  private int tmpInt_;
+
+  // singleton variables
+  private final Type i32Type = f.getI32Ty();
+  private final Type voidType = f.getVoidTy();
+  private final Type ptri32Type = f.getPointTy(i32Type);
 
   /**
-   * program : compUnit ; 初始化 module，定义内置函数
+   * program : compUnit ;
+   * <p>
+   * 初始化 module，定义内置函数
    */
   @Override
-  public Value visitProgram(SysYParser.ProgramContext ctx) {
-    module = MyModule.getInstance();
-
-    ArrayList<Type> params_empty = new ArrayList<Type>(Arrays.asList());
-    ArrayList<Type> params_int = new ArrayList<Type>(Arrays.asList(integerType));
-    ArrayList<Type> params_array = new ArrayList<Type>(Arrays.asList(new PointerType(integerType)));
-    ArrayList<Type> params_int_and_array = new ArrayList<Type>(
-        Arrays.asList(integerType, new PointerType(integerType)));
-    // TODO what about putf(string, int, ...) ?
-
-    Function func_getint = new Function("getint", new FunctionType(integerType, params_empty),
-        module, true);
-    Function func_getch = new Function("getch", new FunctionType(integerType, params_empty), module,
-        true);
-    Function func_getarray = new Function("getarray", new FunctionType(integerType, params_array),
-        module, true);
-    Function func_putint = new Function("putint", new FunctionType(voidType, params_int), module,
-        true);
-    Function func_putch = new Function("putch", new FunctionType(voidType, params_int), module,
-        true);
-    Function func_putarray = new Function("putarray",
-        new FunctionType(voidType, params_int_and_array), module, true);
-    Function func_putf = new Function("putf", voidType, module, true);
-    Function func_starttime = new Function("_sysy_starttime",
-        new FunctionType(voidType, params_empty), module, true);
-    Function func_stoptime = new Function("_sysy_stoptime",
-        new FunctionType(voidType, params_empty), module, true);
+  public Void visitProgram(ProgramContext ctx) {
+    log.info("Syntax begin");
 
     return super.visitProgram(ctx);
   }
 
   /**
-   * compUnit : (funcDef | decl)+ ; 访问每个全局变量或函数，维护当前已经定义的全局变量或函数列表
+   * compUnit : (funcDef | decl)+ ;
+   * <p>
+   * 在 visit funcDef/constDecl/varDecl 时再进行翻译
    */
   @Override
-  public Value visitCompUnit(SysYParser.CompUnitContext ctx) {
-    int globNum = ctx.getChildCount();
-
-    for (int i = 0; i < globNum; i++) {
-      Value globItem = visit(ctx.getChild(i));
-      globList.add(globItem);
-    }
-
+  public Void visitCompUnit(CompUnitContext ctx) {
     return super.visitCompUnit(ctx);
   }
 
@@ -79,31 +105,25 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * decl : constDecl | varDecl ;
    */
   @Override
-  public Value visitDecl(SysYParser.DeclContext ctx) {
-    Value decl;
-    if (ctx.constDecl() != null) {
-      decl = visit(ctx.constDecl());
-    } else {
-      decl = visit(ctx.varDecl());
-    }
-    return decl;
-    // return super.visitDecl(ctx);
+  public Void visitDecl(DeclContext ctx) {
+    return super.visitDecl(ctx);
   }
 
   /**
    * constDecl : CONST_KW bType constDef (COMMA constDef)* SEMICOLON ;
    */
   @Override
-  public Constant visitConstDecl(SysYParser.ConstDeclContext ctx) {
-    return null;
-    // return super.visitConstDecl(ctx);
+  public Void visitConstDecl(ConstDeclContext ctx) {
+//todo
+    return super.visitConstDecl(ctx);
   }
 
   /**
    * bType : INT_KW ;
    */
   @Override
-  public Value visitBType(SysYParser.BTypeContext ctx) {
+  public Void visitBType(BTypeContext ctx) {
+    //todo
     return super.visitBType(ctx);
   }
 
@@ -111,7 +131,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * constDef : IDENT (L_BRACKT constExp R_BRACKT)* ASSIGN constInitVal ;
    */
   @Override
-  public Value visitConstDef(SysYParser.ConstDefContext ctx) {
+  public Void visitConstDef(ConstDefContext ctx) {
+    //todo
     return super.visitConstDef(ctx);
   }
 
@@ -119,7 +140,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * constInitVal : constExp | (L_BRACE (constInitVal (COMMA constInitVal)*)? R_BRACE) ;
    */
   @Override
-  public Value visitConstInitVal(SysYParser.ConstInitValContext ctx) {
+  public Void visitConstInitVal(ConstInitValContext ctx) {
+    //todo
     return super.visitConstInitVal(ctx);
   }
 
@@ -127,16 +149,17 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * varDecl : bType varDef (COMMA varDef)* SEMICOLON ;
    */
   @Override
-  public GlobalVariable visitVarDecl(SysYParser.VarDeclContext ctx) {
-    return null;
-    // return super.visitVarDecl(ctx);
+  public Void visitVarDecl(VarDeclContext ctx) {
+    //todo
+    return super.visitVarDecl(ctx);
   }
 
   /**
    * varDef : IDENT (L_BRACKT constExp R_BRACKT)* (ASSIGN initVal)? ;
    */
   @Override
-  public Value visitVarDef(SysYParser.VarDefContext ctx) {
+  public Void visitVarDef(VarDefContext ctx) {
+    //todo
     return super.visitVarDef(ctx);
   }
 
@@ -144,36 +167,44 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * initVal : exp | (L_BRACE (initVal (COMMA initVal)*)? R_BRACE) ;
    */
   @Override
-  public Value visitInitVal(SysYParser.InitValContext ctx) {
+  public Void visitInitVal(InitValContext ctx) {
+    //todo
     return super.visitInitVal(ctx);
   }
 
   /**
    * funcDef : funcType IDENT L_PAREN funcFParams? R_PAREN block ;
+   * <p>
+   * 初始化函数类型；初始化函数参数，并对参数插入 alloca 和 store；初始化基本块
    */
   @Override
-  public Function visitFuncDef(SysYParser.FuncDefContext ctx) {
+  public Void visitFuncDef(FuncDefContext ctx) {
+    Type retType = voidType;
     String typeStr = ctx.getChild(0).getText();
-    Type retType;
-    switch (typeStr) {
-      case "void":
-        retType = voidType;
-        break;
-      case "int":
-        retType = integerType;
-        break;
-      default:
-        // throw new Exception();
+    if (typeStr.equals("int")) {
+      retType = i32Type;
     }
+
+    FunctionType functionType = f.getFuncTy(retType, new ArrayList<>());
+    f.buildFunction(ctx.IDENT().getText(), functionType);
+    curFunc_ = m.__functions.getLast().getVal();
+    // 用全局的 curFunc_ 传递当前函数的引用，在 visitFuncFParams 时修改 FunctionType 中 param 的 type
+    if (ctx.funcFParams() != null) {
+      visit(ctx.funcFParams());
+    }
+
+    // TODO
+
     return null;
-    // return super.visitFuncDef(ctx);
+//    return super.visitFuncDef(ctx);
   }
 
   /**
    * funcType : VOID_KW | INT_KW ;
    */
   @Override
-  public Value visitFuncType(SysYParser.FuncTypeContext ctx) {
+  public Void visitFuncType(FuncTypeContext ctx) {
+    //todo
     return super.visitFuncType(ctx);
   }
 
@@ -181,7 +212,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * funcFParams : funcFParam (COMMA funcFParam)* ;
    */
   @Override
-  public Value visitFuncFParams(SysYParser.FuncFParamsContext ctx) {
+  public Void visitFuncFParams(FuncFParamsContext ctx) {
+    //todo
     return super.visitFuncFParams(ctx);
   }
 
@@ -189,7 +221,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * funcFParam : bType IDENT (L_BRACKT R_BRACKT (L_BRACKT exp R_BRACKT)*)? ;
    */
   @Override
-  public Value visitFuncFParam(SysYParser.FuncFParamContext ctx) {
+  public Void visitFuncFParam(FuncFParamContext ctx) {
+    //todo
     return super.visitFuncFParam(ctx);
   }
 
@@ -197,7 +230,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * block : L_BRACE blockItem* R_BRACE ;
    */
   @Override
-  public Value visitBlock(SysYParser.BlockContext ctx) {
+  public Void visitBlock(BlockContext ctx) {
+    //todo
     return super.visitBlock(ctx);
   }
 
@@ -205,7 +239,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * blockItem : constDecl | varDecl | stmt ;
    */
   @Override
-  public Value visitBlockItem(SysYParser.BlockItemContext ctx) {
+  public Void visitBlockItem(BlockItemContext ctx) {
+    //todo
     return super.visitBlockItem(ctx);
   }
 
@@ -214,7 +249,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * returnStmt ;
    */
   @Override
-  public Value visitStmt(SysYParser.StmtContext ctx) {
+  public Void visitStmt(StmtContext ctx) {
+    //todo
     return super.visitStmt(ctx);
   }
 
@@ -222,7 +258,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * assignStmt : lVal ASSIGN exp SEMICOLON ;
    */
   @Override
-  public Value visitAssignStmt(SysYParser.AssignStmtContext ctx) {
+  public Void visitAssignStmt(AssignStmtContext ctx) {
+    //todo
     return super.visitAssignStmt(ctx);
   }
 
@@ -230,7 +267,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * expStmt : exp? SEMICOLON ;
    */
   @Override
-  public Value visitExpStmt(SysYParser.ExpStmtContext ctx) {
+  public Void visitExpStmt(ExpStmtContext ctx) {
+    //todo
     return super.visitExpStmt(ctx);
   }
 
@@ -238,7 +276,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * conditionStmt : IF_KW L_PAREN cond R_PAREN stmt (ELSE_KW stmt)? ;
    */
   @Override
-  public Value visitConditionStmt(SysYParser.ConditionStmtContext ctx) {
+  public Void visitConditionStmt(ConditionStmtContext ctx) {
+    //todo
     return super.visitConditionStmt(ctx);
   }
 
@@ -246,7 +285,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * whileStmt : WHILE_KW L_PAREN cond R_PAREN stmt ;
    */
   @Override
-  public Value visitWhileStmt(SysYParser.WhileStmtContext ctx) {
+  public Void visitWhileStmt(WhileStmtContext ctx) {
+    //todo
     return super.visitWhileStmt(ctx);
   }
 
@@ -254,7 +294,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * breakStmt : BREAK_KW SEMICOLON ;
    */
   @Override
-  public Value visitBreakStmt(SysYParser.BreakStmtContext ctx) {
+  public Void visitBreakStmt(BreakStmtContext ctx) {
+    //todo
     return super.visitBreakStmt(ctx);
   }
 
@@ -262,7 +303,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * continueStmt : CONTINUE_KW SEMICOLON ;
    */
   @Override
-  public Value visitContinueStmt(SysYParser.ContinueStmtContext ctx) {
+  public Void visitContinueStmt(ContinueStmtContext ctx) {
+    //todo
     return super.visitContinueStmt(ctx);
   }
 
@@ -270,7 +312,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * returnStmt : RETURN_KW (exp)? SEMICOLON ;
    */
   @Override
-  public Value visitReturnStmt(SysYParser.ReturnStmtContext ctx) {
+  public Void visitReturnStmt(ReturnStmtContext ctx) {
+    //todo
     return super.visitReturnStmt(ctx);
   }
 
@@ -278,7 +321,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * exp : addExp ;
    */
   @Override
-  public Value visitExp(SysYParser.ExpContext ctx) {
+  public Void visitExp(ExpContext ctx) {
+    //todo
     return super.visitExp(ctx);
   }
 
@@ -286,7 +330,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * cond : lOrExp ;
    */
   @Override
-  public Value visitCond(SysYParser.CondContext ctx) {
+  public Void visitCond(CondContext ctx) {
+    //todo
     return super.visitCond(ctx);
   }
 
@@ -294,7 +339,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * lVal : IDENT (L_BRACKT exp R_BRACKT)* ;
    */
   @Override
-  public Value visitLVal(SysYParser.LValContext ctx) {
+  public Void visitLVal(LValContext ctx) {
+    //todo
     return super.visitLVal(ctx);
   }
 
@@ -302,7 +348,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * primaryExp : (L_PAREN exp R_PAREN) | lVal | number ;
    */
   @Override
-  public Value visitPrimaryExp(SysYParser.PrimaryExpContext ctx) {
+  public Void visitPrimaryExp(PrimaryExpContext ctx) {
+    //todo
     return super.visitPrimaryExp(ctx);
   }
 
@@ -310,15 +357,18 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * number : intConst ;
    */
   @Override
-  public Value visitNumber(SysYParser.NumberContext ctx) {
-    return super.visitNumber(ctx);
+  public Void visitNumber(NumberContext ctx) {
+    //todo
+
+    return null;
   }
 
   /**
    * intConst : DECIMAL_CONST | OCTAL_CONST | HEXADECIMAL_CONST ;
    */
   @Override
-  public Value visitIntConst(SysYParser.IntConstContext ctx) {
+  public Void visitIntConst(IntConstContext ctx) {
+    //todo
     return super.visitIntConst(ctx);
   }
 
@@ -326,7 +376,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * unaryExp : primaryExp | callee | (unaryOp unaryExp) ;
    */
   @Override
-  public Value visitUnaryExp(SysYParser.UnaryExpContext ctx) {
+  public Void visitUnaryExp(UnaryExpContext ctx) {
+    //todo
     return super.visitUnaryExp(ctx);
   }
 
@@ -334,7 +385,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * callee : IDENT L_PAREN funcRParams? R_PAREN ;
    */
   @Override
-  public Value visitCallee(SysYParser.CalleeContext ctx) {
+  public Void visitCallee(CalleeContext ctx) {
+    //todo
     return super.visitCallee(ctx);
   }
 
@@ -342,7 +394,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * unaryOp : PLUS | MINUS | NOT ;
    */
   @Override
-  public Value visitUnaryOp(SysYParser.UnaryOpContext ctx) {
+  public Void visitUnaryOp(UnaryOpContext ctx) {
+    //todo
     return super.visitUnaryOp(ctx);
   }
 
@@ -350,7 +403,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * funcRParams : param (COMMA param)* ;
    */
   @Override
-  public Value visitFuncRParams(SysYParser.FuncRParamsContext ctx) {
+  public Void visitFuncRParams(FuncRParamsContext ctx) {
+    //todo
     return super.visitFuncRParams(ctx);
   }
 
@@ -358,7 +412,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * param : exp | STRING ; STRING 是 void putf() 函数的需要
    */
   @Override
-  public Value visitParam(SysYParser.ParamContext ctx) {
+  public Void visitParam(ParamContext ctx) {
+    //todo
     return super.visitParam(ctx);
   }
 
@@ -366,7 +421,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * mulExp : unaryExp (mulOp unaryExp)* ;
    */
   @Override
-  public Value visitMulExp(SysYParser.MulExpContext ctx) {
+  public Void visitMulExp(MulExpContext ctx) {
+    //todo
     return super.visitMulExp(ctx);
   }
 
@@ -374,7 +430,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * mulOp : MUL | DIV | MOD ;
    */
   @Override
-  public Value visitMulOp(SysYParser.MulOpContext ctx) {
+  public Void visitMulOp(MulOpContext ctx) {
+    //todo
     return super.visitMulOp(ctx);
   }
 
@@ -382,7 +439,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * addExp : mulExp (addOp mulExp)* ;
    */
   @Override
-  public Value visitAddExp(SysYParser.AddExpContext ctx) {
+  public Void visitAddExp(AddExpContext ctx) {
+    //todo
     return super.visitAddExp(ctx);
   }
 
@@ -390,7 +448,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * addOp : PLUS | MINUS ;
    */
   @Override
-  public Value visitAddOp(SysYParser.AddOpContext ctx) {
+  public Void visitAddOp(AddOpContext ctx) {
+    //todo
     return super.visitAddOp(ctx);
   }
 
@@ -398,7 +457,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * relExp : addExp (relOp addExp)* ;
    */
   @Override
-  public Value visitRelExp(SysYParser.RelExpContext ctx) {
+  public Void visitRelExp(RelExpContext ctx) {
+    //todo
     return super.visitRelExp(ctx);
   }
 
@@ -406,7 +466,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * relOp : LT | GT | LE | GE ;
    */
   @Override
-  public Value visitRelOp(SysYParser.RelOpContext ctx) {
+  public Void visitRelOp(RelOpContext ctx) {
+    //todo
     return super.visitRelOp(ctx);
   }
 
@@ -414,7 +475,9 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * eqExp : relExp (eqOp relExp)* ;
    */
   @Override
-  public Value visitEqExp(SysYParser.EqExpContext ctx) {
+  public Void visitEqExp(EqExpContext ctx) {
+    //todo
+
     return super.visitEqExp(ctx);
   }
 
@@ -422,7 +485,8 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * eqOp : EQ | NEQ ;
    */
   @Override
-  public Value visitEqOp(SysYParser.EqOpContext ctx) {
+  public Void visitEqOp(EqOpContext ctx) {//todo
+
     return super.visitEqOp(ctx);
   }
 
@@ -430,7 +494,7 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * lAndExp : eqExp (AND eqExp)* ;
    */
   @Override
-  public Value visitLAndExp(SysYParser.LAndExpContext ctx) {
+  public Void visitLAndExp(LAndExpContext ctx) {//todo
     return super.visitLAndExp(ctx);
   }
 
@@ -438,7 +502,7 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * lOrExp : lAndExp (OR lAndExp)* ;
    */
   @Override
-  public Value visitLOrExp(SysYParser.LOrExpContext ctx) {
+  public Void visitLOrExp(LOrExpContext ctx) {//todo
     return super.visitLOrExp(ctx);
   }
 
@@ -446,7 +510,7 @@ public class Visitor extends SysYBaseVisitor<Value> {
    * constExp : addExp ;
    */
   @Override
-  public Value visitConstExp(SysYParser.ConstExpContext ctx) {
+  public Void visitConstExp(ConstExpContext ctx) {//todo
     return super.visitConstExp(ctx);
   }
 }
