@@ -32,12 +32,32 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   private class Scope {
 
-    private Stack<HashMap<String, Value>> symbols_;
+    //因为涉及了往上层查找参数，所以这里不用stack用arraylist
+    private ArrayList<HashMap<String, Value>> symbols_;
     private Stack<HashMap<String, Value>> params;
 
-    public void find(String name) {
-
+    private HashMap<String, Value> top() {
+      return symbols_.get(symbols_.size() - 1);
     }
+
+    public Value find(String name) {
+      for (int i = symbols_.size() - 1; i >= 0; i--) {
+        Value t = symbols_.get(i).get(name);
+        if (t != null) {
+          return t;
+        }
+      }
+      return null;
+    }
+
+    public void put(String name, Value v) {
+      if (top().get(name) != null) {
+        throw new SyntaxException("name already exists");
+      } else {
+        top().put(name, v);
+      }
+    }
+
 
     public void addLayer() {
       symbols_.add(new HashMap<>());
@@ -45,7 +65,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
 
     public void pop() {
-      symbols_.pop();
+      symbols_.remove(symbols_.size() - 1);
       params.pop();
     }
 
@@ -63,6 +83,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   }
 
+  // 不用捕获，程序出错语义肯定出问题了
+  private class SyntaxException extends RuntimeException {
+
+    SyntaxException(String msg) {
+      log.severe(msg);
+    }
+  }
+
   // translation context
   private final MyModule m = MyModule.getInstance();
   private final MyFactoryBuilder f = MyFactoryBuilder.getInstance();
@@ -77,6 +105,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   // singleton variables
   private final Type i32Type = f.getI32Ty();
   private final Type voidType = f.getVoidTy();
+  private final Type labelType = f.getLabelTy();
   private final Type ptri32Type = f.getPointTy(i32Type);
 
   /**

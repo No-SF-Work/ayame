@@ -55,7 +55,7 @@ public class CompilerDriver {
       String target = res.get("target");
       CharStream input = CharStreams.fromFileName(source);
 
-      logger.warning("Lex begin");
+      logger.info("Lex begin");
       SysYLexer lexer = new SysYLexer(input);
       lexer.addErrorListener(new BaseErrorListener() {
         @Override
@@ -65,18 +65,18 @@ public class CompilerDriver {
         }
       });
       CommonTokenStream tokens = new CommonTokenStream(lexer);
-      logger.warning("Lex finished");
+      logger.info("Lex finished");
 
-      logger.warning("parse begin");
+      logger.info("parse begin");
       SysYParser parser = new SysYParser(tokens);
       parser.setErrorHandler(new BailErrorStrategy());
       ParseTree tree = parser.program();
-      logger.warning("parse finished");
-      logger.warning("IR program generating");
+      logger.info("parse finished");
+      logger.info("IR program generating");
       MyModule.getInstance().init();
       Visitor visitor = new Visitor(/* OptionsTable table */);
       visitor.visit(tree);
-      logger.warning("IR program generated");
+      logger.info("IR program generated");
 
       /*
        * pass
@@ -96,7 +96,7 @@ public class CompilerDriver {
     } catch (ArgumentParserException e) {
       System.err.println("ArgParsing error,use \"-h\" for more information ");
       e.printStackTrace();
-    } catch (Exception e) {
+    } catch (IOException e) {
       e.printStackTrace();
     }
   }
