@@ -405,12 +405,24 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   /**
    * @author : ai
-   * @value : primaryExp : (L_PAREN exp R_PAREN) | lVal | number ;
+   * @value : null primaryExp : (L_PAREN exp R_PAREN) | lVal | number ;
    */
   @Override
   public Void visitPrimaryExp(PrimaryExpContext ctx) {
     //todo
-    return super.visitPrimaryExp(ctx);
+    if (ctx.exp() != null) {
+      visit(ctx.exp());
+      return null;
+    }
+    if (ctx.lVal() != null) {
+      visit(ctx.lVal());
+      return null;
+    }
+    if (ctx.number() != null) {
+      visit(ctx.number());
+      return null;
+    }
+    throw new SyntaxException("unreachable");
   }
 
   /**
