@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Stack;
 import java.util.logging.Logger;
+import javax.xml.namespace.QName;
 import org.antlr.v4.runtime.tree.ParseTree;
 import util.Mylogger;
 
@@ -105,6 +106,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private final Type voidType = f.getVoidTy();
   private final Type labelType = f.getLabelTy();
   private final Type ptri32Type = f.getPointTy(i32Type);
+  //status word
+  private boolean isInitializingConst = false;//常量初始化要对表达式求值，并且用的Ident也要是常量
 
   /**
    * program : compUnit ;
@@ -114,7 +117,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitProgram(ProgramContext ctx) {
     log.info("Syntax begin");
-
     return super.visitProgram(ctx);
   }
 
@@ -138,11 +140,17 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   /**
    * constDecl : CONST_KW bType constDef (COMMA constDef)* SEMICOLON ;
+   *
+   * @author : ai
+   * @value : null
    */
+
   @Override
   public Void visitConstDecl(ConstDeclContext ctx) {
-//todo
-    return super.visitConstDecl(ctx);
+    for (ConstDefContext constDefContext : ctx.constDef()) {
+      visit(constDefContext);
+    }
+    return null;
   }
 
   /**
@@ -150,7 +158,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitBType(BTypeContext ctx) {
-    //todo
+    //useless
     return super.visitBType(ctx);
   }
 
@@ -159,8 +167,23 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitConstDef(ConstDefContext ctx) {
-    //todo
-    return super.visitConstDef(ctx);
+    log.info("visit ConstDef ");
+    String name = ctx.IDENT().getText();
+    if (scope_.top().get(name) != null) {
+      throw new SyntaxException("name already exists");
+    }
+    if (ctx.constExp().isEmpty()) { //not array
+      if (ctx.constInitVal() != null) {
+        visit(ctx.constInitVal());
+
+      } else {
+        throw new SyntaxException("Defining const without initVal");
+      }
+
+    } else {// array
+
+    }
+    return null;
   }
 
   /**
@@ -169,6 +192,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitConstInitVal(ConstInitValContext ctx) {
     //todo
+
     return super.visitConstInitVal(ctx);
   }
 
@@ -256,7 +280,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     } else if (ctx.VOID_KW() != null) {
       tmpType_ = i32Type;
     }
-    return super.visitFuncType(ctx);
+    return null;
   }
 
   /**
@@ -409,7 +433,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitPrimaryExp(PrimaryExpContext ctx) {
-    //todo
     if (ctx.exp() != null) {
       visit(ctx.exp());
       return null;
@@ -422,6 +445,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       visit(ctx.number());
       return null;
     }
+    //todo 处理函数调用
     throw new SyntaxException("unreachable");
   }
 
@@ -465,6 +489,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitUnaryExp(UnaryExpContext ctx) {
     //todo
+
     return super.visitUnaryExp(ctx);
   }
 
@@ -473,6 +498,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitCallee(CalleeContext ctx) {
+
     //todo
     return super.visitCallee(ctx);
   }
@@ -510,6 +536,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitMulExp(MulExpContext ctx) {
     //todo
+
     return super.visitMulExp(ctx);
   }
 
@@ -518,17 +545,38 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitMulOp(MulOpContext ctx) {
-    //todo
-    return super.visitMulOp(ctx);
+    //useless
+    return null;
   }
 
   /**
+   * @author : ai
+   * @value :
+   * <p>
    * addExp : mulExp (addOp mulExp)* ;
    */
   @Override
   public Void visitAddExp(AddExpContext ctx) {
     //todo
-    return super.visitAddExp(ctx);
+    if (isInitializingConst) {//所有值包括ident都必须是常量
+      visit(ctx.mulExp(0));
+      int s = tmpInt_;
+      for (int i = 1; i < ctx.mulExp().size(); i++) {
+        visit(ctx.mulExp(i));
+        if (ctx.addOp(i - 1).PLUS() != null) {
+          s += tmpInt_;
+        } else if (ctx.addOp(i - 1).MINUS() != null) {
+          s -= tmpInt_;
+        } else {
+          throw new SyntaxException("unexpected");
+        }
+      }
+      tmpInt_ = s;
+      return null;
+    } else {
+      //todo
+    }
+    return null;
   }
 
   /**
@@ -536,8 +584,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitAddOp(AddOpContext ctx) {
-    //todo
-    return super.visitAddOp(ctx);
+    //useless
+    return null;
   }
 
   /**
@@ -546,7 +594,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitRelExp(RelExpContext ctx) {
     //todo
-    return super.visitRelExp(ctx);
+
+    return null;
   }
 
   /**
@@ -595,10 +644,17 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   /**
    * constExp : addExp ;
+   *
+   * @author : ai
+   * @value : tmpint_ -> res of exp
+   * <p>
+   * 表达式求和
    */
   @Override
   public Void visitConstExp(ConstExpContext ctx) {//todo
+    isInitializingConst = true;
     visit(ctx.addExp());
-    return super.visitConstExp(ctx);
+    isInitializingConst = false;
+    return null;
   }
 }
