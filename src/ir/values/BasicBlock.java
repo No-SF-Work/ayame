@@ -1,6 +1,5 @@
 package ir.values;
 
-import ir.types.Type;
 import ir.types.Type.LabelType;
 import ir.values.instructions.Instruction;
 
@@ -54,9 +53,38 @@ public class BasicBlock extends Value {
     return list_;
   }
 
+  public BasicBlock getIdomer() {
+    return idomer;
+  }
+
+  public ArrayList<BasicBlock> getIdoms() {
+    return idoms;
+  }
+
+  public ArrayList<BasicBlock> getDomers() {
+    return domers;
+  }
+
+  public void setIdomer(BasicBlock idomer) {
+    this.idomer = idomer;
+  }
+
+  public void setIdoms(ArrayList<BasicBlock> idoms) {
+    this.idoms = idoms;
+  }
+
+  public void setDomers(ArrayList<BasicBlock> domers) {
+    this.domers = domers;
+  }
+
   private INode<BasicBlock, Function> node_;
   private IList<Instruction, BasicBlock> list_; //在well form的bb里面,最后一个listNode是terminator
   protected Function parent;//它所属的函数
   protected ArrayList<BasicBlock> predecessor_;//前驱
   protected ArrayList<BasicBlock> successor_;//后继
+
+  // domination info
+  protected BasicBlock idomer;  // 直接支配节点
+  protected ArrayList<BasicBlock> idoms; // 直接支配的节点集
+  protected ArrayList<BasicBlock> domers; // 支配者节点集
 }
