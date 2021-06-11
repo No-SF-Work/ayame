@@ -9,6 +9,12 @@ import java.util.BitSet;
 
 public class CFGInfo {
 
+  /**
+   * Compute domers, idomer and idoms for all the basic blocks of a function.
+   *
+   * @param function
+   * @author Codevka
+   */
   void computeDominanceInfo(Function function) {
     // assume that `entry` is the entry basic block as well as the head of linked list
     IList.INode<BasicBlock, Function> head = function.getList_().getEntry();
@@ -38,7 +44,7 @@ public class CFGInfo {
     }
 
     // calculate domer
-    // Engineering A Compiler P.479
+    // Algorithm: Engineering A Compiler P479.
     boolean changed = true;
     while (changed) {
       changed = false;
@@ -72,7 +78,8 @@ public class CFGInfo {
     for (int i = 0; i < numNode; i++) {
       BasicBlock bb = bbList.get(i);
       BitSet domerInfo = domers.get(i);
-      for (int domerIndex = domerInfo.nextSetBit(0); domerIndex >= 0; domerIndex = domerInfo.nextSetBit(domerIndex + 1)) {
+      for (int domerIndex = domerInfo.nextSetBit(0); domerIndex >= 0;
+          domerIndex = domerInfo.nextSetBit(domerIndex + 1)) {
         BasicBlock domerbb = bbList.get(domerIndex);
         bb.getDomers().add(domerbb);
       }
@@ -103,8 +110,31 @@ public class CFGInfo {
     }
   }
 
-  void computeDominatorFrontier(Function function) {
+  /**
+   * Compute the dominance frontier of all the basic blocks of a function.
+   *
+   * @param function
+   * @author : Codevka
+   * <p>
+   * Algorithm: The SSA Book P32. for (a, b) \in CFG edges do x <- a while x does not strictly
+   * dominate b do DF(x) <- DF(x) + b x <- idom(x)
+   */
+  void computeDominanceFrontier(Function function) {
+    IList.INode<BasicBlock, Function> head = function.getList_().getEntry();
+    IList.INode<BasicBlock, Function> iterator;
 
+    for (iterator = head; iterator.getNext() != null; iterator = iterator.getNext()) {
+      BasicBlock a = iterator.getVal();
+      for (BasicBlock b : a.getSuccessor_()) {
+        BasicBlock x = a;
+        while (x == b || b.getDomers().indexOf(x) == -1) {
+          if (x.getDominanceFrontier().indexOf(b) == -1) {
+            x.getDominanceFrontier().add(b);
+          }
+          x = x.getIdomer();
+        }
+      }
+    }
   }
 
   void computeLoopInfo(Function function) {

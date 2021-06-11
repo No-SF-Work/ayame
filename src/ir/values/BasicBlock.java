@@ -77,6 +77,10 @@ public class BasicBlock extends Value {
     this.domers = domers;
   }
 
+  public ArrayList<BasicBlock> getDominanceFrontier() {
+    return dominanceFrontier;
+  }
+
   private INode<BasicBlock, Function> node_;
   private IList<Instruction, BasicBlock> list_; //在well form的bb里面,最后一个listNode是terminator
   protected Function parent;//它所属的函数
@@ -84,7 +88,9 @@ public class BasicBlock extends Value {
   protected ArrayList<BasicBlock> successor_;//后继
 
   // domination info
+  // FIXME maybe change `ArrayList` to `HashSet` is better.
   protected BasicBlock idomer;  // 直接支配节点
   protected ArrayList<BasicBlock> idoms; // 直接支配的节点集
   protected ArrayList<BasicBlock> domers; // 支配者节点集
+  protected ArrayList<BasicBlock> dominanceFrontier;
 }
