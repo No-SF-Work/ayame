@@ -15,7 +15,7 @@ public class CFGInfo {
    * @param function
    * @author Codevka
    */
-  void computeDominanceInfo(Function function) {
+  public static void computeDominanceInfo(Function function) {
     // assume that `entry` is the entry basic block as well as the head of linked list
     IList.INode<BasicBlock, Function> head = function.getList_().getEntry();
     BasicBlock entry = head.getVal();
@@ -119,7 +119,7 @@ public class CFGInfo {
    * Algorithm: The SSA Book P32. for (a, b) \in CFG edges do x <- a while x does not strictly
    * dominate b do DF(x) <- DF(x) + b x <- idom(x)
    */
-  void computeDominanceFrontier(Function function) {
+  public static void computeDominanceFrontier(Function function) {
     IList.INode<BasicBlock, Function> head = function.getList_().getEntry();
     IList.INode<BasicBlock, Function> iterator;
 
@@ -129,6 +129,7 @@ public class CFGInfo {
         BasicBlock x = a;
         while (x == b || b.getDomers().indexOf(x) == -1) {
           if (x.getDominanceFrontier().indexOf(b) == -1) {
+            // maybe better to design the data structure of dominance frontier as a set
             x.getDominanceFrontier().add(b);
           }
           x = x.getIdomer();
@@ -137,7 +138,7 @@ public class CFGInfo {
     }
   }
 
-  void computeLoopInfo(Function function) {
+  public static void computeLoopInfo(Function function) {
 
   }
 }
