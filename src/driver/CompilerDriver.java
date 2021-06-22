@@ -3,6 +3,8 @@ package driver;
 import frontend.SysYLexer;
 import frontend.SysYParser;
 import frontend.Visitor;
+import ir.MyModule;
+import java.util.logging.Logger;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.annotation.Arg;
 import net.sourceforge.argparse4j.helper.HelpScreenException;
@@ -15,6 +17,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import pass.PassManager;
 
 import java.io.IOException;
+import util.Mylogger;
 
 
 /**
@@ -25,8 +28,8 @@ public class CompilerDriver {
   /**
    * @param args:从命令行未处理直接传过来的参数
    */
+  private static Logger logger;
   public static void run(String[] args) {
-    Debugger dbg = Debugger.getInstance();
     Config config = Config.getInstance();
     PassManager pm = PassManager.getPassManager();
     ArgumentParser argParser =
@@ -44,15 +47,15 @@ public class CompilerDriver {
     argParser.addArgument("target");
     try {
       Namespace res = argParser.parseArgs(args);
+      Mylogger.init();
       config.setConfig(res);
-      dbg.loadConfig(config);
-      dbg.dbg("Params are : " + res);
+      logger = Mylogger.getLogger(CompilerDriver.class);
+      logger.info("Config -> " + res);
       String source = res.get("source");
       String target = res.get("target");
-
       CharStream input = CharStreams.fromFileName(source);
-      /*词法
-       * */
+
+      logger.warning("Lex begin");
       SysYLexer lexer = new SysYLexer(input);
       lexer.addErrorListener(new BaseErrorListener() {
         @Override
@@ -62,16 +65,19 @@ public class CompilerDriver {
         }
       });
       CommonTokenStream tokens = new CommonTokenStream(lexer);
-      /*语法
-       * */
+      logger.warning("Lex finished");
+
+      logger.warning("parse begin");
       SysYParser parser = new SysYParser(tokens);
       parser.setErrorHandler(new BailErrorStrategy());
       ParseTree tree = parser.program();
-      /*语义
-       * todo:遍历生成线性IR
-       * */
+      logger.warning("parse finished");
+      logger.warning("IR program generating");
+      MyModule.getInstance().init();
       Visitor visitor = new Visitor(/* OptionsTable table */);
       visitor.visit(tree);
+      logger.warning("IR program generated");
+
       /*
        * pass
        * todo:在这里完成线性IR转换cfg，cfg层面的优化，cfg转ssa，ssa层面的优化，ssa转asm，asm层面的优化

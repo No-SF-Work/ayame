@@ -1,6 +1,13 @@
 package ir;
 
+import driver.Config;
+import ir.types.ArrayType;
+import ir.types.FunctionType;
+import ir.types.IntegerType;
+import ir.types.PointerType;
 import ir.types.Type;
+import ir.types.Type.LabelType;
+import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Function;
 import ir.values.Value;
@@ -14,9 +21,11 @@ import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
+import java.util.logging.Logger;
+import util.Mylogger;
 
 /**
- * get开头的方法是工厂方法，返回的所有指令都是没有被持有的
+ * get开头的方法是工厂方法，返回的是没有被持有的
  * <p>
  * build开头的方法是build方法，一般就三种
  * <p>
@@ -32,35 +41,77 @@ import java.util.ArrayList;
  * <p>
  * 在你需要放置这个Value的时候，你需要自己把这个Value插入到适当的容器里面的适当的位置***
  **/
-public class ValueBuilderFactory {
 
-  private ValueBuilderFactory() {
+public class MyFactoryBuilder {
+
+  Logger log = Mylogger.getLogger(MyFactoryBuilder.class);
+
+  private MyFactoryBuilder() {
   }
 
-  private static ValueBuilderFactory ibf = new ValueBuilderFactory();
+  private static MyFactoryBuilder mf = new MyFactoryBuilder();
 
-  public static ValueBuilderFactory getInstance() {
-    return ibf;
+  public static MyFactoryBuilder getInstance() {
+    return mf;
   }
+
+  public VoidType getVoidTy() {
+    return VoidType.getType();
+  }
+
+  public LabelType getLabelTy() {
+    return LabelType.getType();
+  }
+
+  public IntegerType getI32Ty() {
+    return IntegerType.getI32();
+  }
+
+  public IntegerType getI1Ty() {
+    return IntegerType.getI1();
+  }
+
+  /**
+   * @param contained:指向元素的类型
+   */
+  public PointerType getPointTy(Type contained) {
+    return new PointerType(contained);
+  }
+
+  /**
+   * @param retTy:返回值类型
+   * @param params:参数类型的列表
+   */
+  public FunctionType getFuncTy(Type retTy, ArrayList<Type> params) {
+
+    return new FunctionType(retTy, params);
+  }
+
+  public ArrayType getArrayTy(Type containedTy, int numElem) {
+    return new ArrayType(containedTy, numElem);
+  }
+
 
   //获得一个function
-  public Function getFunction(String name, Type type) {
-    return new Function(name, type);
+  public Function getFunction(String name, Type functype) {
+    log.info("new Function : " + name + " return type :" + functype);
+    return new Function(name, functype);
   }
 
   //只有一个module，在module末尾插入function
-  public void buildFunction(String name, Type type) {
-    new Function(name, type, MyModule.getInstance());
+  public void buildFunction(String name, Type functype) {
+    log.info("new Function : " + name + " return type :" + functype);
+    new Function(name, functype, MyModule.getInstance());
   }
 
   //获得一个BasicBlock
-  public BasicBlock getBasicBlock(String name, Type type) {
-    return new BasicBlock(name, type);
+  public BasicBlock getBasicBlock(String name) {
+    return new BasicBlock(name);
   }
 
   //在func末尾插入bb
-  public void buildBasicBloock(String name, Type type, Function func) {
-    new BasicBlock(name, type, func);
+  public void buildBasicBloock(String name, Function func) {
+    new BasicBlock(name, func);
   }
 
   /**
@@ -73,6 +124,7 @@ public class ValueBuilderFactory {
 
   /**
    * 在inst后面造一个binary
+   * @param tag:手动标记的binary运算的类型
    */
   public void buildBinaryAfter(TAG_ tag, Value lhs, Value rhs, Instruction inst) {
     assert lhs.getType() == rhs.getType();
@@ -189,7 +241,7 @@ public class ValueBuilderFactory {
   }
 
   /**
-   * @param ptr:     你想要操作的pointer,举个例子，在你想要取出数组a[2][3]中的某个值的时候，你传进来的这个就是 a 的指针
+   * @param ptr:     你想要对其操作的pointer,举个例子，在你想要取出数组a[2][3]中的某个值的时候，你传进来的这个就是 a 的指针
    * @param indices: 具体求的位置，因为在SysY中没有结构体什么的复杂结构，所以可以认为这就是数组的每个维度的值 比如 a[2][3] ，这里传进来的就是["i"]["j"]
    */
   public GEPInst getGEP(Value ptr, ArrayList<Value> indices) {
