@@ -29,6 +29,7 @@ public class CompilerDriver {
    * @param args:从命令行未处理直接传过来的参数
    */
   private static Logger logger;
+
   public static void run(String[] args) {
     Config config = Config.getInstance();
     PassManager pm = PassManager.getPassManager();
@@ -78,19 +79,15 @@ public class CompilerDriver {
       visitor.visit(tree);
       logger.warning("IR program generated");
 
-      /*
-       * pass
-       * todo:在这里完成线性IR转换cfg，cfg层面的优化，cfg转ssa，ssa层面的优化，ssa转asm，asm层面的优化
-       */
-      pm.addpass();
-      pm.run();
+      //todo convert to ssa
+      pm.runIRPasses(MyModule.getInstance());
+      //todo convert to LIR
       if (config.isIRMode) {//做到可以同时使用 -o -f 指令，-o的文件进行底层的优化，-f的文件只进行中高层的优化
-        pm.addpass(/* llvm ir generate */);
+        //   pm.addpass(/* llvm ir generate */);
       }
-      /*
-       * Writer
-       * todo:完成输出目标文件
-       */
+      pm.runMAPasses(/*MAModule mm*/);
+      //todo output
+
     } catch (HelpScreenException e) {
       //当使用 -h指令时抛出该异常，catch后直接退出。
     } catch (ArgumentParserException e) {
