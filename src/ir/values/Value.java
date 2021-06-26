@@ -84,6 +84,8 @@ public abstract class Value {
     return type;
   }//所有的Value都需要指明一个Type
 
+  public void setType(Type type_) { this.type = type_;}
+
   public boolean isFunction() {
     return this instanceof Function;
   }
@@ -95,5 +97,5 @@ public abstract class Value {
   private Value parent;
   private LinkedList<Use> usesList;//记录使用这个Value的所有User
   private String name;
-  private final Type type;
+  private Type type;
 }

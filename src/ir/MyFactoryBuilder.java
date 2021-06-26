@@ -9,6 +9,7 @@ import ir.types.Type;
 import ir.types.Type.LabelType;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
+import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
@@ -49,10 +50,15 @@ public class MyFactoryBuilder {
   private MyFactoryBuilder() {
   }
 
+
   private static MyFactoryBuilder mf = new MyFactoryBuilder();
 
   public static MyFactoryBuilder getInstance() {
     return mf;
+  }
+
+  public ConstantInt getConstantInt(int val) {
+    return ConstantInt.newOne(IntegerType.getI32(), val);
   }
 
   public VoidType getVoidTy() {
@@ -91,17 +97,26 @@ public class MyFactoryBuilder {
     return new ArrayType(containedTy, numElem);
   }
 
-
   //获得一个function
   public Function getFunction(String name, Type functype) {
     log.info("new Function : " + name + " return type :" + functype);
     return new Function(name, functype);
   }
 
+  public Function getBuiltInFunc(String name, Type funcTy) {
+    return new Function(name, funcTy, MyModule.getInstance(), true);
+  }
+
   //只有一个module，在module末尾插入function
   public void buildFunction(String name, Type functype) {
     log.info("new Function : " + name + " return type :" + functype);
     new Function(name, functype, MyModule.getInstance());
+  }
+
+  // 内置函数，isBuiltin 为 true，其他函数用上面的方法 build
+  public void buildFunction(String name, Type functype, boolean isBuiltin) {
+    log.info("new Function : " + name + " return type :" + functype + " isBuiltin");
+    new Function(name, functype, MyModule.getInstance(), true);
   }
 
   //获得一个BasicBlock
@@ -124,6 +139,7 @@ public class MyFactoryBuilder {
 
   /**
    * 在inst后面造一个binary
+   *
    * @param tag:手动标记的binary运算的类型
    */
   public void buildBinaryAfter(TAG_ tag, Value lhs, Value rhs, Instruction inst) {

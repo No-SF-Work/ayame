@@ -1,5 +1,6 @@
 package driver;
 
+import java.io.IOException;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
@@ -26,7 +27,7 @@ public class Config {
   public boolean isIRMode = false;
   public boolean isOutPutMode = false;
 
-  public void setConfig(Namespace res) throws Exception {
+  public void setConfig(Namespace res) throws IOException {
     isIRMode = res.get("ir");
     isDebugMode = res.get("debug");
     isOutPutMode = res.get("output");

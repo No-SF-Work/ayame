@@ -1,12 +1,12 @@
 package util;
 
-import ir.values.BasicBlock;
-import ir.values.instructions.Instruction;
+import java.util.Iterator;
+import util.IList.INode;
 
 /**
  * LinkedList,猫猫都不用
  */
-public class IList<T, P> {
+public class IList<T, P> implements Iterable<INode<T, P>> {
 
   private INode<T, P> entry;
   private INode<T, P> last;
@@ -45,6 +45,31 @@ public class IList<T, P> {
 
   protected void setLast(INode<T, P> last) {
     this.last = last;
+  }
+
+  @Override
+  public Iterator<INode<T, P>> iterator() {
+    return new IIterator(entry);
+  }
+
+  class IIterator implements Iterator<INode<T, P>> {
+
+    INode<T, P> tmp = new INode<>(null);
+
+    IIterator(INode<T, P> head) {
+      tmp.next = head;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return tmp.next != null;
+    }
+
+    @Override
+    public INode<T, P> next() {
+      tmp = tmp.next;
+      return tmp;
+    }
   }
 
   public static class INode<T, P> {
@@ -137,6 +162,7 @@ public class IList<T, P> {
     public INode<T, P> getNext() {
       return next;
     }
+
   }
 
 }
