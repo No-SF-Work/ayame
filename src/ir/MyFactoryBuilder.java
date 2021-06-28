@@ -61,6 +61,10 @@ public class MyFactoryBuilder {
     return ConstantInt.newOne(IntegerType.getI32(), val);
   }
 
+  public ConstantInt CONST0() {
+    return ConstantInt.CONST0();//type is i32
+  }
+
   public VoidType getVoidTy() {
     return VoidType.getType();
   }

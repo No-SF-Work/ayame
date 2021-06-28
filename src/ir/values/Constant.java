@@ -17,7 +17,5 @@ public abstract class Constant extends User {
     super("", type, numOP);
   }
 
-  private ArrayList<Constant> constants;
-
 }
 

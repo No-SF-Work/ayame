@@ -4,9 +4,11 @@ package frontend;
 import frontend.SysYParser.*;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
+import ir.types.ArrayType;
 import ir.types.FunctionType;
 import ir.types.Type;
 import ir.values.BasicBlock;
+import ir.values.Constant;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
@@ -97,7 +99,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private Type tmpType_;
   private Value tmp_;
   private int tmpInt_;
-
   // singleton variables
   private final Type i32Type_ = f.getI32Ty();
   private final Type voidType_ = f.getVoidTy();
@@ -160,6 +161,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
     return super.visitBType(ctx);
   }
 
+
+  public ArrayList<Constant> genConstArr(ArrayList<Integer> dims, ArrayList<Value> inits) {
+    //todo
+
+    return null;
+  }
+
   /**
    * constDef : IDENT (L_BRACKT constExp R_BRACKT)* ASSIGN constInitVal ;
    */
@@ -186,12 +194,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
         dims.add(((ConstantInt) tmp_).getVal());
       }
       for (var i = dims.size() - 1; i > 0; i--) {
-        arrty = f.getArrayTy(arrty, dims.get(i));
+        arrty = f.getArrayTy(arrty, dims.get(i));// arr(arr(arr(i32,dim1),dim2),dim3)
       }
       if (scope_.isGlobal()) {
         if (!ctx.constInitVal().isEmpty()) {
-
+          ctx.constInitVal().dimInfo_ = new ArrayList<>(dims);
+          visit(ctx.constInitVal());//dim.size()=n
+          //todo initval
         } else {
+          //var
           //todo zeroinitializer
         }
       }
@@ -205,15 +216,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitConstInitVal(ConstInitValContext ctx) {
-    if (ctx.constExp().isEmpty()) {
+    //ConstInitVal 和 数组结构一样，是嵌套的
+    if ((!ctx.constExp().isEmpty()) && ctx.dimInfo_.isEmpty()) {
+      visit(ctx.constExp());//非数组形式变量的初始化，根据代码逻辑，我们不支持 int
+    } else {
       for (ConstInitValContext constInitValContext : ctx.constInitVal()) {
         //todo 数组处理
         visit(constInitValContext);
 
       }
-    } else {
-      //单个值
-      visit(ctx.constExp());
     }
     return null;
   }
