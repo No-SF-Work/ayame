@@ -4,7 +4,6 @@ package frontend;
 import frontend.SysYParser.*;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
-import ir.types.ArrayType;
 import ir.types.FunctionType;
 import ir.types.Type;
 import ir.values.BasicBlock;
@@ -67,7 +66,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
 
     public void addParams() {
-      //todo 咱先把没数组的部分弄完
+      //todo for functionDef
     }
 
     public void popParams() {
@@ -95,11 +94,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private Function curFunc_; // current function
 
   // pass values between `visit` functions
-
+  private ArrayList<Value> tmpArr;//只能赋值以及被赋值，不能直接在上面add
   private Type tmpType_;
   private Value tmp_;
   private int tmpInt_;
   // singleton variables
+  private final ConstantInt CONST0 = ConstantInt.CONST0();
   private final Type i32Type_ = f.getI32Ty();
   private final Type voidType_ = f.getVoidTy();
   private final Type labelType_ = f.getLabelTy();
@@ -162,7 +162,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
 
-  public ArrayList<Constant> genConstArr(ArrayList<Integer> dims, ArrayList<Value> inits) {
+  public Constant genConstArr(ArrayList<Integer> dims, ArrayList<Value> inits) {
     //todo
 
     return null;
@@ -198,13 +198,19 @@ public class Visitor extends SysYBaseVisitor<Void> {
       }
       if (scope_.isGlobal()) {
         if (!ctx.constInitVal().isEmpty()) {
-          ctx.constInitVal().dimInfo_ = new ArrayList<>(dims);
+          ctx.constInitVal().dimInfo_ = dims;//todo check
           visit(ctx.constInitVal());//dim.size()=n
-          //todo initval
+          var initializer = genConstArr(dims, tmpArr);
+          var variable = f.getGlobalvariable(ctx.IDENT().getText(), arrty, initializer);
+          variable.setConst();
+          scope_.put(ctx.IDENT().getText(), variable);
         } else {
-          //var
-          //todo zeroinitializer
+          var variable = f.getGlobalvariable(ctx.IDENT().getText(), arrty, CONST0);
+          scope_.put(ctx.IDENT().getText(), variable);
         }
+      } else {
+        //todo local const var def
+
       }
 
     }
@@ -212,19 +218,42 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
   /**
-   * constInitVal : constExp | (L_BRACE (constInitVal (COMMA constInitVal)*)? R_BRACE) ;
+   * @author :ai constInitVal : constExp | (L_BRACE (constInitVal (COMMA constInitVal)*)? R_BRACE)
+   * ;
    */
   @Override
   public Void visitConstInitVal(ConstInitValContext ctx) {
-    //ConstInitVal 和 数组结构一样，是嵌套的
+    //ConstInitVal 和 数组结构一样，是嵌套的，逻辑是把每一层的初始值放进去，然后不足的补0
     if ((!ctx.constExp().isEmpty()) && ctx.dimInfo_.isEmpty()) {
-      visit(ctx.constExp());//非数组形式变量的初始化，根据代码逻辑，我们不支持 int
+      visit(ctx.constExp());//非数组形式变量的初始化
     } else {
-      for (ConstInitValContext constInitValContext : ctx.constInitVal()) {
-        //todo 数组处理
-        visit(constInitValContext);
-
+      var curDimLength = ctx.dimInfo_.get(0);
+      var sizeOfEachEle = 1;//每个元素（i32或者是数组）的长度
+      var arrOfCurDim = new ArrayList<Value>();//
+      //calculate Size of Ele in cur dim
+      for (int i = 1; i < ctx.dimInfo_.size(); i++) {
+        sizeOfEachEle *= ctx.dimInfo_.get(i);
       }
+      //recursively init each dim
+      for (ConstInitValContext constInitValContext : ctx.constInitVal()) {
+        if (constInitValContext.constExp() == null) {
+          var pos = arrOfCurDim.size();
+          for (int i = 0; i < sizeOfEachEle - (pos % sizeOfEachEle) % sizeOfEachEle; i++) {
+            arrOfCurDim.add(CONST0);//长度不足一个ele的补0为一个ele长
+          }
+          constInitValContext.dimInfo_ = new ArrayList<>(
+              ctx.dimInfo_.subList(1, ctx.dimInfo_.size()));
+          visit(constInitValContext);
+          arrOfCurDim.addAll(tmpArr);
+        } else {
+          visit(constInitValContext);
+          arrOfCurDim.add(tmp_);
+        }
+      }
+      for (int i = arrOfCurDim.size(); i < curDimLength * sizeOfEachEle; i++) {
+        arrOfCurDim.add(CONST0);
+      }//长度不足一个ele*dimsize 的补0
+      tmpArr = arrOfCurDim;
     }
     return null;
   }
