@@ -7,8 +7,9 @@ import ir.types.Type;
  */
 public class GlobalVariable extends User {
 
-  public GlobalVariable(String name, final Type type, int numOP) {
+  public GlobalVariable(String name, final Type type, int numOP, Constant init) {
     super(name, type, numOP);
+    this.init = init;
   }
 
   public void setConstant() {
@@ -16,6 +17,6 @@ public class GlobalVariable extends User {
   }
 
   public boolean isConstant = false;
-  private Constant initVal;
+  public Constant init;
 
 }
