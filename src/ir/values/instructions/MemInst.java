@@ -193,8 +193,10 @@ public abstract class MemInst extends Instruction {
       super(tag, type, numOP);
     }
 
+    // Phi 指令需要放在基本块最前面
     public Phi(TAG_ tag, Type type, int numOP, BasicBlock parent) {
-      super(tag, type, numOP, parent);
+      super(tag, type, numOP);
+      this.node.insertAtEntry(parent.getList());
     }
 
     public Phi(TAG_ tag, Type type, int numOP, Instruction prev) {

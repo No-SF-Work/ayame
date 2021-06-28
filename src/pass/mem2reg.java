@@ -7,7 +7,10 @@ import ir.types.IntegerType;
 import ir.values.BasicBlock;
 import ir.values.Function;
 import ir.values.instructions.Instruction;
+import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
+import ir.values.instructions.MemInst.Phi;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -61,23 +64,32 @@ public class mem2reg implements IRPass {
       }
     }
 
+    // Algorithm: Static Single Assignment Book P31
     // insert phi-instructions
     log.info("mem2reg: inserting phi-instructions");
     Queue<BasicBlock> W = new LinkedList<>();
+    HashMap<Phi, AllocaInst> phiValue = new HashMap<>();
     for (AllocaInst allocaInst : defs.keySet()) {
-      for (BasicBlock bb: defs.get(allocaInst)) {
-        W.add(bb);
+      for (INode<BasicBlock, Function> bbNode : func.getList_()) {
+        bbNode.getVal().setDirty(false);
       }
+
+      W.addAll(defs.get(allocaInst));
 
       while (!W.isEmpty()) {
         BasicBlock bb = W.remove();
-        for (BasicBlock y: bb.getDominanceFrontier()) {
-          // TODO: if y not visited, insert phi
-          W.add(y);
+        for (BasicBlock y : bb.getDominanceFrontier()) {
+          if (!y.isDirty()) {
+            y.setDirty(true);
+            Phi phiInst = new Phi(TAG_.Phi, factory.getI32Ty(), 0, y);
+            phiValue.put(phiInst, allocaInst);
+            if (!defs.get(allocaInst).contains(y)) {
+              W.add(y);
+            }
+          }
         }
       }
     }
-
 
     // variable renaming
     log.info("mem2reg: variable renaming");
