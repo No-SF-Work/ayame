@@ -10,9 +10,13 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.MemInst.AllocaInst;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.IList;
+import util.IList.INode;
 import util.Mylogger;
 
 public class mem2reg implements IRPass {
@@ -28,10 +32,8 @@ public class mem2reg implements IRPass {
   public void run(MyModule m) {
     log.info("Running pass : mem2reg");
 
-    IList.INode<Function, MyModule> iterator;
-    IList.INode<Function, MyModule> head = m.__functions.getEntry();
-    for (iterator = head; iterator.getNext() != null; iterator = iterator.getNext()) {
-      runMem2reg(iterator.getVal());
+    for (INode<Function, MyModule> funcNode : m.__functions) {
+      runMem2reg(funcNode.getVal());
     }
   }
 
@@ -45,27 +47,36 @@ public class mem2reg implements IRPass {
     HashMap<AllocaInst, ArrayList<BasicBlock>> defs = new HashMap<AllocaInst, ArrayList<BasicBlock>>();
 
     // initialize `defs`
-    IList.INode<BasicBlock, Function> bbIterator;
-    IList.INode<BasicBlock, Function> bbHead = func.getList_().getEntry();
-    for (bbIterator = bbHead; bbIterator.getNext() != null; bbIterator = bbIterator.getNext()) {
-      BasicBlock bb = bbIterator.getVal();
-      IList.INode<Instruction, BasicBlock> instIterator;
-      IList.INode<Instruction, BasicBlock> instHead = bb.getList().getEntry();
-      for (instIterator = instHead; instIterator.getNext() != null; instIterator = instIterator.getNext()) {
-        Instruction inst = instIterator.getVal();
+    for (INode<BasicBlock, Function> bbNode : func.getList_()) {
+      BasicBlock bb = bbNode.getVal();
+      for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
+        Instruction inst = instNode.getVal();
         if (inst instanceof AllocaInst) {
           AllocaInst allocaInst = (AllocaInst) inst;
-          if (allocaInst.getAllocatedType().equals(factory.getI32Ty()))
+          if (allocaInst.getAllocatedType().equals(factory.getI32Ty())) {
             defs.put(allocaInst, new ArrayList<>());
+            // TODO: only int
+          }
         }
       }
     }
 
-
-
-
     // insert phi-instructions
     log.info("mem2reg: inserting phi-instructions");
+    Queue<BasicBlock> W = new LinkedList<>();
+    for (AllocaInst allocaInst : defs.keySet()) {
+      for (BasicBlock bb: defs.get(allocaInst)) {
+        W.add(bb);
+      }
+
+      while (!W.isEmpty()) {
+        BasicBlock bb = W.remove();
+        for (BasicBlock y: bb.getDominanceFrontier()) {
+          // TODO: if y not visited, insert phi
+          W.add(y);
+        }
+      }
+    }
 
 
     // variable renaming

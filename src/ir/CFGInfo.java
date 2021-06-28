@@ -23,10 +23,9 @@ public class CFGInfo {
     ArrayList<BitSet> domers = new ArrayList<>(numNode);
     ArrayList<BasicBlock> bbList = new ArrayList<>();
 
-    IList.INode<BasicBlock, Function> iterator;
     int index = 0;
     // clear existing dominance information and initialize
-    for (iterator = head; iterator.getNext() != null; iterator = iterator.getNext()) {
+    for (IList.INode<BasicBlock, Function> iterator : function.getList_()) {
       BasicBlock bb = iterator.getVal();
       bb.getDomers().clear();
       bb.getIdoms().clear();
@@ -50,7 +49,8 @@ public class CFGInfo {
       changed = false;
 
       index = 0;
-      for (iterator = head; iterator.getNext() != null; iterator = iterator.getNext()) {
+
+      for (IList.INode<BasicBlock, Function> iterator : function.getList_()) {
         BasicBlock bb = iterator.getVal();
         // no need to consider entry node
         if (bb != entry) {
@@ -120,10 +120,7 @@ public class CFGInfo {
    * dominate b do DF(x) <- DF(x) + b x <- idom(x)
    */
   public static void computeDominanceFrontier(Function function) {
-    IList.INode<BasicBlock, Function> head = function.getList_().getEntry();
-    IList.INode<BasicBlock, Function> iterator;
-
-    for (iterator = head; iterator.getNext() != null; iterator = iterator.getNext()) {
+    for (IList.INode<BasicBlock, Function> iterator : function.getList_()) {
       BasicBlock a = iterator.getVal();
       for (BasicBlock b : a.getSuccessor_()) {
         BasicBlock x = a;
