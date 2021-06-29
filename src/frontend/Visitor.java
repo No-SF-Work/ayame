@@ -161,11 +161,33 @@ public class Visitor extends SysYBaseVisitor<Void> {
     return super.visitBType(ctx);
   }
 
-
+  //把一堆Constant封装为一个按照dims排列的ConstArr
   public Constant genConstArr(ArrayList<Integer> dims, ArrayList<Value> inits) {
     //todo
+    var curDimLength = dims.get(0);
+    var curDimArr = new ArrayList<Constant>();
+    var length = inits.size() / curDimLength;
+    var arrTy = i32Type_;
+    if (length == 1) {
+      for (int i = 0; i < curDimLength; i++) {
+        curDimArr.add((Constant) inits.get(i));
+      }
+    } else {
+      for (int i = 0; i < curDimLength; i++) {
+        //fix subDims and add to curDimArr
+        curDimArr.add(
+            genConstArr(
+                new ArrayList<>(dims.subList(1, dims.size())),
+                new ArrayList<>(inits.subList(length * i, length * (i + 1)))));
 
-    return null;
+      }
+    }
+
+    for (int i = dims.size() - 1; i > 0; i--) {
+      arrTy = f.getArrayTy(arrTy, dims.get(i));
+    }
+    //todo
+    return f.getConstantArray(arrTy, curDimArr);
   }
 
   /**
@@ -212,7 +234,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
         //todo local const var def
 
       }
-
     }
     return null;
   }
