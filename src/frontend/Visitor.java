@@ -140,8 +140,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   /**
    * constDecl : CONST_KW bType constDef (COMMA constDef)* SEMICOLON ;
    *
-   * @author : ai
-   * @value : null
    */
 
   @Override
@@ -186,7 +184,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
     for (int i = dims.size() - 1; i > 0; i--) {
       arrTy = f.getArrayTy(arrTy, dims.get(i));
     }
-    //todo
     return f.getConstantArray(arrTy, curDimArr);
   }
 
@@ -239,7 +236,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
   /**
-   * @author :ai constInitVal : constExp | (L_BRACE (constInitVal (COMMA constInitVal)*)? R_BRACE)
+   constInitVal : constExp | (L_BRACE (constInitVal (COMMA constInitVal)*)? R_BRACE)
    * ;
    */
   @Override
@@ -352,10 +349,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
   /**
-   * funcType : VOID_KW | INT_KW ;
-   *
-   * @author : ai
-   * @value : tmpType-> stored type
+   * funcType : VOID_KW | INT_KW ; * @value : tmpType-> stored type
    */
   @Override
   public Void visitFuncType(FuncTypeContext ctx) {
@@ -513,7 +507,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
   /**
-   * @author : ai
    * @value : null primaryExp : (L_PAREN exp R_PAREN) | lVal | number ;
    */
   @Override
@@ -541,7 +534,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
   /**
-   * @author : ai
    * @value : tmp_ -> 解析出的ConstantInt
    */
   @Override
@@ -678,7 +670,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
   /**
-   * @author : ai
    * @value :
    * <p>
    * addExp : mulExp (addOp mulExp)* ;
@@ -771,7 +762,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   /**
    * constExp : addExp ;
    *
-   * @author : ai
    * @value : tmpint_ -> res of exp
    * <p>
    * 表达式求和
