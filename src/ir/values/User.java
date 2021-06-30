@@ -131,6 +131,10 @@ public abstract class User extends Value {
 
   }
 
+  public ArrayList<Value> getOperands() {
+    return operands;
+  }
+
   protected ArrayList<Value> operands;
   protected int numOP;
 }
