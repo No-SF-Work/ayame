@@ -139,7 +139,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   /**
    * constDecl : CONST_KW bType constDef (COMMA constDef)* SEMICOLON ;
-   *
    */
 
   @Override
@@ -197,7 +196,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     if (scope_.top().get(name) != null) {
       throw new SyntaxException("name already exists");
     }
-    if (ctx.constExp().isEmpty()) { //not array
+    if (ctx.constExp() == null) { //not array
       if (ctx.constInitVal() != null) {
         visit(ctx.constInitVal());
       } else {
@@ -216,7 +215,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         arrty = f.getArrayTy(arrty, dims.get(i));// arr(arr(arr(i32,dim1),dim2),dim3)
       }
       if (scope_.isGlobal()) {
-        if (!ctx.constInitVal().isEmpty()) {
+        if (ctx.constInitVal() != null) {
           ctx.constInitVal().dimInfo_ = dims;//todo check
           visit(ctx.constInitVal());//dim.size()=n
           var initializer = genConstArr(dims, tmpArr);
@@ -229,20 +228,23 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }
       } else {
         //todo local const var def
+        var allocaInst = f.buildAlloca(curBB_, arrty);
+        scope_.put(ctx.IDENT().getText(), allocaInst);
+        if (ctx.constInitVal() != null) {
 
+        }
       }
     }
     return null;
   }
 
   /**
-   constInitVal : constExp | (L_BRACE (constInitVal (COMMA constInitVal)*)? R_BRACE)
-   * ;
+   * constInitVal : constExp | (L_BRACE (constInitVal (COMMA constInitVal)*)? R_BRACE) ;
    */
   @Override
   public Void visitConstInitVal(ConstInitValContext ctx) {
     //ConstInitVal 和 数组结构一样，是嵌套的，逻辑是把每一层的初始值放进去，然后不足的补0
-    if ((!ctx.constExp().isEmpty()) && ctx.dimInfo_.isEmpty()) {
+    if ((ctx.constExp() != null) && ctx.dimInfo_ != null) {
       visit(ctx.constExp());//非数组形式变量的初始化
     } else {
       var curDimLength = ctx.dimInfo_.get(0);
@@ -335,8 +337,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     // build function object
     FunctionType functionType = f.getFuncTy(retType, paramTypeList);
-    f.buildFunction(functionName, functionType);
-    curFunc_ = m.__functions.getLast().getVal();
+    curFunc_ = f.buildFunction(functionName, functionType);
 
     // add to symbol table
 
