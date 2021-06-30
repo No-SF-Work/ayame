@@ -10,6 +10,7 @@ import ir.types.Type.LabelType;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Constant;
+import ir.values.Constants.ConstantArray;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.GlobalVariable;
@@ -61,6 +62,10 @@ public class MyFactoryBuilder {
 
   public ConstantInt getConstantInt(int val) {
     return ConstantInt.newOne(IntegerType.getI32(), val);
+  }
+
+  public ConstantArray getConstantArray(Type type, ArrayList<Constant> arr) {
+    return new ConstantArray(type, arr);
   }
 
   public GlobalVariable getGlobalvariable(String name, Type type, Constant init) {
