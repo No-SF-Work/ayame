@@ -130,7 +130,7 @@ public class mem2reg implements IRPass {
     // variable renaming
     // Algorithm: https://llvm-clang-study-notes.readthedocs.io/en/latest/ssa/Mem2Reg.html#id1
     log.info("mem2reg: variable renaming");
-    ArrayList<Value> values = new ArrayList<Value>();
+    ArrayList<Value> values = new ArrayList<>();
     for (int i = 0; i < allocas.size(); i++) {
       values.set(i, null);
     }
@@ -142,24 +142,60 @@ public class mem2reg implements IRPass {
     renameDataStack.push(new RenameData(func.getList_().getEntry().getVal(), null, values));
     while (!renameDataStack.isEmpty()) {
       RenameData data = renameDataStack.pop();
+
+      ArrayList<Value> currValues = new ArrayList<>(data.values);
+
+      for (INode<Instruction, BasicBlock> instNode : data.bb.getList()) {
+        Instruction inst = instNode.getVal();
+        if (inst.tag != TAG_.Phi) {
+          break;
+        }
+
+        Phi phiInst = (Phi) inst;
+        if (!phiToAllocaMap.containsKey(phiInst)) {
+          continue;
+        }
+        int predIndex = data.bb.getPredecessor_().indexOf(data.pred);
+        phiInst.getIncomingVals().set(predIndex, data.values.get(phiToAllocaMap.get(phiInst)));
+      }
+
       if (data.bb.isDirty()) {
         continue;
       }
+      data.bb.setDirty(true);
+
 //      renamePass(data.bb, data.pred, data.values);
       for (INode<Instruction, BasicBlock> instNode : data.bb.getList()) {
         Instruction inst = instNode.getVal();
         // AllocaInst
-        if (inst.tag == TAG_.Load) {
+        if (inst.tag == TAG_.Alloca) {
+          AllocaInst allocaInst = (AllocaInst) inst;
+          instNode.removeSelf();
+        }
+        // LoadInst
+        else if (inst.tag == TAG_.Load) {
           LoadInst loadInst = (LoadInst) inst;
+          int allocaIndex = allocaLookup.get((AllocaInst) loadInst.getOperands().get(0));
+          loadInst.COReplaceAllUseWith(currValues.get(allocaIndex));
+          instNode.removeSelf();
         }
         // StoreInst
         else if (inst.tag == TAG_.Store) {
           StoreInst storeInst = (StoreInst) inst;
+          int allocaIndex = allocaLookup.get((AllocaInst) storeInst.getOperands().get(1));
+          currValues.set(allocaIndex, storeInst.getOperands().get(0));
+          instNode.removeSelf();
         }
         // Phi
         else if (inst.tag == TAG_.Phi) {
           Phi phiInst = (Phi) inst;
+          int allocaIndex = phiToAllocaMap.get(phiInst);
+          currValues.set(allocaIndex, phiInst);
         }
+      }
+
+      for (BasicBlock bb : data.bb.getSuccessor_()) {
+        renameDataStack.push(new RenameData(bb, data.bb, currValues));
       }
     }
   }

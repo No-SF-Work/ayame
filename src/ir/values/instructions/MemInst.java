@@ -206,6 +206,12 @@ public abstract class MemInst extends Instruction {
     public Phi(Instruction next, TAG_ tag, Type type, int numOP) {
       super(next, tag, type, numOP);
     }
+
+    private ArrayList<Value> incomingVals = new ArrayList<>();
+
+    public ArrayList<Value> getIncomingVals() {
+      return incomingVals;
+    }
   }
 
   public boolean isGEP() {
