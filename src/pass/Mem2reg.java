@@ -22,7 +22,7 @@ import pass.Pass.IRPass;
 import util.IList.INode;
 import util.Mylogger;
 
-public class mem2reg implements IRPass {
+public class Mem2reg implements IRPass {
 
   Logger log = Mylogger.getLogger(IRPass.class);
   MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
@@ -42,7 +42,7 @@ public class mem2reg implements IRPass {
 
   @Override
   public String getName() {
-    return "mem2reg";
+    return "Mem2reg";
   }
 
   public void run(MyModule m) {
@@ -145,6 +145,7 @@ public class mem2reg implements IRPass {
 
       ArrayList<Value> currValues = new ArrayList<>(data.values);
 
+      // 对于插入的 phi 指令，更新 incomingVals 为 values 中的对应值
       for (INode<Instruction, BasicBlock> instNode : data.bb.getList()) {
         Instruction inst = instNode.getVal();
         if (inst.tag != TAG_.Phi) {
@@ -159,12 +160,11 @@ public class mem2reg implements IRPass {
         phiInst.getIncomingVals().set(predIndex, data.values.get(phiToAllocaMap.get(phiInst)));
       }
 
+      // 已经删除过 alloca/load/store，但是可能有来自其他前驱基本块的 incomingVals，所以在这里才 `continue;`
       if (data.bb.isDirty()) {
         continue;
       }
       data.bb.setDirty(true);
-
-//      renamePass(data.bb, data.pred, data.values);
       for (INode<Instruction, BasicBlock> instNode : data.bb.getList()) {
         Instruction inst = instNode.getVal();
         // AllocaInst
