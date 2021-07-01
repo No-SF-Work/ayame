@@ -464,7 +464,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    * whileStmt : WHILE_KW L_PAREN cond R_PAREN stmt ;
    */
   private static final String BreakInstructionMark = "_BREAK";
-  private static final String ConditionInstructionMark = "_BREAK";
+  private static final String ContinueInstructionMark = "_CONTINUE";
   @Override
   public Void visitWhileStmt(WhileStmtContext ctx) {
     var parentBB = curBB_;
@@ -486,7 +486,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     // [Backpatch] for break & continue
     backpatch(BreakInstructionMark, trueBlock, nxtBlock, nxtBlock);
-    backpatch(ConditionInstructionMark, trueBlock, nxtBlock, whileCondBlock);
+    backpatch(ContinueInstructionMark, trueBlock, nxtBlock, whileCondBlock);
 
     curBB_ = nxtBlock;
     return super.visitWhileStmt(ctx);
@@ -566,7 +566,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitContinueStmt(ContinueStmtContext ctx) {
-    f.buildBr(f.getBasicBlock(ConditionInstructionMark), curBB_);
+    f.buildBr(f.getBasicBlock(ContinueInstructionMark), curBB_);
     //todo
     return super.visitContinueStmt(ctx);
   }
