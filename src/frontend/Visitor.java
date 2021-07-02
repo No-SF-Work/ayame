@@ -13,8 +13,11 @@ import ir.values.Function;
 import ir.values.Value;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Stack;
 import java.util.logging.Logger;
+
+import ir.values.instructions.Instruction;
 import util.Mylogger;
 
 /**
@@ -430,17 +433,122 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitConditionStmt(ConditionStmtContext ctx) {
-    //todo
+    var parentBB = curBB_;
+    var name = "";
+    var trueBlock = f.buildBasicBlock(name + "_then", curFunc_);
+    var nxtBlock = f.buildBasicBlock(name + "_nxtBlock", curFunc_);
+    var falseBlock = ctx.ELSE_KW() == null ? nxtBlock :
+            f.buildBasicBlock(parentBB.getName() + "_else", curFunc_);
+
+    // Parse [cond]
+    visitCond(ctx.cond());
+    f.buildBr(tmp_, trueBlock, falseBlock, parentBB);
+
+    // Parse [then] branch
+    curBB_ = trueBlock;
+    visitStmt(ctx.stmt(0));
+    f.buildBr(nxtBlock, trueBlock);
+
+    // Parse [else] branch
+    if (ctx.ELSE_KW() != null) {
+      curBB_ = falseBlock;
+      visitStmt(ctx.stmt(1));
+      f.buildBr(nxtBlock, falseBlock);
+    }
+
+    curBB_ = nxtBlock;
     return super.visitConditionStmt(ctx);
   }
 
   /**
    * whileStmt : WHILE_KW L_PAREN cond R_PAREN stmt ;
    */
+  private static final String BreakInstructionMark = "_BREAK";
+  private static final String ContinueInstructionMark = "_CONTINUE";
   @Override
   public Void visitWhileStmt(WhileStmtContext ctx) {
-    //todo
+    var parentBB = curBB_;
+    var name = "";
+    var whileCondBlock = f.buildBasicBlock(name + "_whileCondition", curFunc_);
+    var trueBlock = f.buildBasicBlock(name + "_body", curFunc_);
+    var nxtBlock = f.buildBasicBlock(name + "_nxtBlock", curFunc_);
+
+    f.buildBr(whileCondBlock, parentBB);
+
+    // Parse [whileCond]
+    visitCond(ctx.cond());
+    f.buildBr(tmp_, trueBlock, nxtBlock, whileCondBlock);
+
+    // Parse [loop]
+    curBB_ = trueBlock;
+    visitStmt(ctx.stmt());
+    f.buildBr(whileCondBlock, trueBlock);
+
+    // [Backpatch] for break & continue
+    backpatch(BreakInstructionMark, trueBlock, nxtBlock, nxtBlock);
+    backpatch(ContinueInstructionMark, trueBlock, nxtBlock, whileCondBlock);
+
+    curBB_ = nxtBlock;
     return super.visitWhileStmt(ctx);
+  }
+
+  private void backpatch(String key, BasicBlock startBlock, BasicBlock endBlock, BasicBlock targetBlock) {
+    var blockList = new LinkedList<BasicBlock>();
+    blockList.add(startBlock);
+
+    // BFS through [BBs]
+    while (!blockList.isEmpty()) {
+      var curBlock = blockList.poll();
+      var firstEntry = curBlock.getList().getEntry();
+      var lastEntry = curBlock.getList().getLast();
+
+      // Iterate through [Instructions] in [BB]
+      // 如果某个块的名字是 KEY，则识别成功，替换成 targetBlock
+      // 否则加入待替换的列表
+      for (var curEntry = firstEntry; curEntry != lastEntry; curEntry = curEntry.getNext()) {
+        var curInstr = curEntry.getVal();
+
+        if (curInstr.tag.equals(Instruction.TAG_.Br)) { // Instruction found, then [backpatch]
+          var operandCount = curInstr.getOperands().size();
+
+          // 有两种情况：
+          // - [operandCount == 1] 无条件跳转，则第 1 个参数为目标块
+          // - [operandCount == 3] 条件跳转，则第 2, 3 个参数为目标块
+          if (operandCount == 1) {
+            // 无条件跳转，则第 1 个参数为目标块
+            assert curInstr.getOperands().get(0) instanceof BasicBlock;
+            var trueBlock = (BasicBlock) curInstr.getOperands().get(0);
+
+            if (trueBlock.getName().equals(key)) {
+              curInstr.getOperands().set(0, targetBlock);
+            } else if (trueBlock != endBlock) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
+              blockList.add(trueBlock);
+            }
+          } else {
+            // 条件跳转，则第 2, 3 个参数为目标块
+            // Check TrueBlock
+            assert curInstr.getOperands().get(1) instanceof BasicBlock;
+            var trueBlock = (BasicBlock) curInstr.getOperands().get(1);
+
+            if (trueBlock.getName().equals(key)) {
+              curInstr.getOperands().set(1, targetBlock);
+            } else if (trueBlock != endBlock) {
+              blockList.add(trueBlock);
+            }
+
+            // Check FalseBlock
+            assert curInstr.getOperands().get(2) instanceof BasicBlock;
+            var falseBlock = (BasicBlock) curInstr.getOperands().get(2);
+
+            if (falseBlock.getName().equals(key)) {
+              curInstr.getOperands().set(2, targetBlock);
+            } else if (falseBlock != endBlock) {
+              blockList.add(falseBlock);
+            }
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -448,6 +556,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitBreakStmt(BreakStmtContext ctx) {
+    f.buildBr(f.getBasicBlock(BreakInstructionMark), curBB_);
     //todo
     return super.visitBreakStmt(ctx);
   }
@@ -457,6 +566,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitContinueStmt(ContinueStmtContext ctx) {
+    f.buildBr(f.getBasicBlock(ContinueInstructionMark), curBB_);
     //todo
     return super.visitContinueStmt(ctx);
   }

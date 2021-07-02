@@ -140,7 +140,7 @@ public class MyFactoryBuilder {
   }
 
   //在func末尾插入bb
-  public BasicBlock buildBasicBloock(String name, Function func) {
+  public BasicBlock buildBasicBlock(String name, Function func) {
     return new BasicBlock(name, func);
   }
 
