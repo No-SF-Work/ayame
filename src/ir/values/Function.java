@@ -1,5 +1,6 @@
 package ir.values;
 
+import ir.LoopInfo;
 import ir.MyModule;
 import ir.types.FunctionType;
 import ir.types.Type;
@@ -50,6 +51,10 @@ public class Function extends Value {
     return argList_.size();
   }
 
+  public LoopInfo getLoopInfo() {
+    return loopInfo;
+  }
+
   public IList<BasicBlock, Function> getList_() {
     return list_;
   }
@@ -63,4 +68,5 @@ public class Function extends Value {
   private IList<BasicBlock, Function> list_;
   private INode<Function, MyModule> node;
   private ArrayList<Arg> argList_;//有序参数列表
+  private LoopInfo loopInfo; // 函数内的循环信息
 }
