@@ -42,6 +42,8 @@ public class LoopInfo {
   // https://blog.csdn.net/yeshahayes/article/details/97233940
   // LLVM: LoopInfoImpl.h
   public void computeLoopInfo(Function function) {
+    DomInfo.computeDominanceInfo(function);
+
     BasicBlock entry = function.getList_().getEntry().getVal();
     Stack<BasicBlock> postOrderStack = new Stack<>();
     Stack<BasicBlock> backEdgeTo = new Stack<>();
