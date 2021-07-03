@@ -21,6 +21,10 @@ public class LoopInfo {
     this.topLevelLoops = new ArrayList<>();
   }
 
+  public ArrayList<Loop> getTopLevelLoops() {
+    return topLevelLoops;
+  }
+
   public Loop getLoopForBB(BasicBlock bb) {
     return bbLoopMap.get(bb);
   }
