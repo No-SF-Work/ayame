@@ -1,6 +1,6 @@
 package pass;
 
-import ir.DomInfo;
+import ir.Analysis.DomInfo;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.values.BasicBlock;

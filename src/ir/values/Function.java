@@ -1,6 +1,6 @@
 package ir.values;
 
-import ir.LoopInfo;
+import ir.Analysis.LoopInfo;
 import ir.MyModule;
 import ir.types.FunctionType;
 import ir.types.Type;

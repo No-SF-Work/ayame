@@ -1,4 +1,4 @@
-package ir;
+package ir.Analysis;
 
 import ir.values.BasicBlock;
 import ir.values.Function;
