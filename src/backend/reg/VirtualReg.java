@@ -4,13 +4,12 @@ import backend.LiveInterval;
 
 public class VirtualReg extends Reg {
 
-    private LiveInterval liveInterval =new LiveInterval();
+    //是否是由SSA指令定义的
+    private boolean isSSA=false;
 
-    public LiveInterval getLiveInterval(){
-        return liveInterval;
+    boolean isSSA(){
+        return isSSA;
     }
 
-    public void setLiveInterval(LiveInterval liveInterval){
-        this.liveInterval=liveInterval;
-    }
+
 }

@@ -13,7 +13,7 @@ public class MachineCode {
     
     int id;
 
-    public enum TAG_ {
+    public enum TAG {
         Add,
         Sub,
         Rsb,
@@ -50,9 +50,7 @@ public class MachineCode {
     //allocated phyreg
     private PhyReg phyReg = null;
 
-    private TAG_ tag;
-
-    private int numOps;
+    private TAG tag;
 
     private MachineBlock mb;
 
@@ -61,32 +59,30 @@ public class MachineCode {
     //例如add v a, b 那距离本指令最近的a和b的def就是本指令的dominator
     private ArrayList<MachineCode> dominators = new ArrayList<>();
 
-    //返回
+    //返回本MC定义的virtualreg
     public ArrayList<VirtualReg> getDef(){
         ArrayList<VirtualReg> def=new ArrayList<>();
         def.add(virtualReg);
         return def;
     }
 
+    //返回本MC使用的virtualreg
     public ArrayList<VirtualReg> getUse(){
         return new ArrayList<>();
     }
 
 
-    public MachineCode(TAG_ tag, int numOps) {
+    public MachineCode(TAG tag) {
         this.tag = tag;
-        this.numOps = numOps;
     }
 
-    public MachineCode(TAG_ tag, int numOps, MachineBlock mb) {
+    public MachineCode(TAG tag, MachineBlock mb) {
         this.tag = tag;
-        this.numOps = numOps;
         this.mb = mb;
     }
 
-    public MachineCode(TAG_ tag, int numOps, MachineFunction mf) {
+    public MachineCode(TAG tag, MachineFunction mf) {
         this.tag = tag;
-        this.numOps = numOps;
         this.mf = mf;
     }
 
