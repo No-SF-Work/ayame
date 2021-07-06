@@ -1,6 +1,6 @@
 package pass;
 
-import ir.CFGInfo;
+import ir.Analysis.DomInfo;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.values.BasicBlock;
@@ -56,9 +56,9 @@ public class Mem2reg implements IRPass {
   public void runMem2reg(Function func) {
     // prepare
     log.info("Running compute dominance info");
-    CFGInfo.computeDominanceInfo(func);
+    DomInfo.computeDominanceInfo(func);
     log.info("Running compute dominance frontier");
-    CFGInfo.computeDominanceFrontier(func);
+    DomInfo.computeDominanceFrontier(func);
 
     ArrayList<ArrayList<BasicBlock>> defBlocks = new ArrayList<>();
     ArrayList<AllocaInst> allocas = new ArrayList<>();
