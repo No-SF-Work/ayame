@@ -21,7 +21,7 @@ import java.util.Iterator;
 public class CodeGenManager {
 
     // all functions
-    private ArrayList<MachineFunction> machineFunctionsfs;
+    private ArrayList<MachineFunction> machineFunctions;
 
     //global virtualregs
     private ArrayList<VirtualReg> globalVirtualRegs;
@@ -36,6 +36,8 @@ public class CodeGenManager {
         return codeGenManager;
     }
 
+    public ArrayList<MachineFunction> getMachineFunctions(){return machineFunctions;}
+
     private void MachineCodeGeneration(MyModule myModule){
         ArrayList<GlobalVariable> gVs= myModule.__globalVariables;
         Iterator<GlobalVariable> itgVs=gVs.iterator();
@@ -48,7 +50,7 @@ public class CodeGenManager {
         while (fIt.hasNext()){
             INode<Function, MyModule> fNode=fIt.next();
             MachineFunction mf=new MachineFunction(this);
-            machineFunctionsfs.add(mf);
+            machineFunctions.add(mf);
             HashMap<BasicBlock, MachineBlock> bMap=new HashMap<>();
             IList<BasicBlock,Function> bList=fNode.getVal().getList_();
             Iterator<INode<BasicBlock,Function>> bIt=bList.iterator();
@@ -56,6 +58,20 @@ public class CodeGenManager {
                 INode<BasicBlock,Function> bNode= bIt.next();
                 bMap.put(bNode.getVal(),new MachineBlock(mf));
             }
+            bIt=bList.iterator();
+            while(bIt.hasNext()){
+                BasicBlock b=bIt.next().getVal();
+                MachineBlock mb=bMap.get(b);
+                Iterator<BasicBlock> bbIt=b.getPredecessor_().iterator();
+                while(bbIt.hasNext()){
+                    mb.addPred(bMap.get(bbIt.next()));
+                }
+                bbIt=b.getSuccessor_().iterator();
+                while(bbIt.hasNext()){
+                    mb.addSucc(bMap.get(bbIt.next()));
+                }
+            }
+
 
         }
     }
