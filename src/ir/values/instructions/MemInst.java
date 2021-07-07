@@ -214,6 +214,31 @@ public abstract class MemInst extends Instruction {
     }
   }
 
+  public static class MemPhi extends MemInst {
+
+    public MemPhi(TAG_ tag, Type type, int numOP) {
+      super(tag, type, numOP);
+    }
+
+    // MemPhi 指令需要放在基本块最前面
+    public MemPhi(TAG_ tag, Type type, int numOP, Value array, BasicBlock parent) {
+      super(tag, type, numOP);
+      this.array = array;
+      this.node.insertAtEntry(parent.getList());
+    }
+
+    private Value array;
+    private ArrayList<Value> incomingVals = new ArrayList<>();
+
+    public Value getArray() {
+      return array;
+    }
+
+    public ArrayList<Value> getIncomingVals() {
+      return incomingVals;
+    }
+  }
+
   public boolean isGEP() {
     return this.tag == TAG_.GEP;
   }

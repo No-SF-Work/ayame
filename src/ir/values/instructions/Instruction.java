@@ -38,7 +38,8 @@ public abstract class Instruction extends User {
     Load,
     Store,
     GEP,
-    Phi
+    Phi,
+    MemPhi
   }
 
   public Instruction(TAG_ tag, Type type, int numOP) {
