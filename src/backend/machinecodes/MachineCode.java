@@ -20,8 +20,6 @@ public class MachineCode {
         Rsb,
         Mul,
         Div,
-        Mod,
-        Ne,
         And,
         Or,
         //binary

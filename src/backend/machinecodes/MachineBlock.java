@@ -28,5 +28,9 @@ public class MachineBlock {
 
     MachineCode entry;// MC list entry
 
+    public MachineBlock(MachineFunction mf){
+        mf.insertBlock(this);
+    }
+
 
 }

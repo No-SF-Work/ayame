@@ -33,4 +33,6 @@ public class MachineFunction {
     //size of stack allocated for virtual register
     private int stackSize;
 
+    public
+
 }
