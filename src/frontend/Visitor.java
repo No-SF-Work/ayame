@@ -36,7 +36,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     //因为涉及了往上层查找参数，所以这里不用stack用arraylist
     private ArrayList<HashMap<String, Value>> tables_;
-    private Stack<HashMap<String, Value>> params;
 
     private HashMap<String, Value> top() {
       return tables_.get(tables_.size() - 1);
@@ -60,23 +59,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
       }
     }
 
-
     public void addLayer() {
       tables_.add(new HashMap<>());
-      params.add(new HashMap<>());
     }
 
-    public void pop() {
+    public void popLayer() {
       tables_.remove(tables_.size() - 1);
-      params.pop();
-    }
-
-    public void addParams() {
-      //todo for functionDef
-    }
-
-    public void popParams() {
-      //todo
     }
 
     public boolean isGlobal() {
@@ -100,7 +88,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private Function curFunc_; // current function
 
   // pass values between `visit` functions
-  private ArrayList<Value> tmpArr_;//只能赋值以及被赋值，不能直接在上面add
+  private ArrayList<Value> tmpArr_;//只允许赋值以及被赋值，不能直接操作
   private Type tmpType_;
   private Value tmp_;
   private Value tmpPtr_;
@@ -155,14 +143,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
       visit(constDefContext);
     }
     return null;
-  }
-
-  /**
-   * bType : INT_KW ;
-   */
-  @Override
-  public Void visitBType(BTypeContext ctx) {
-    return super.visitBType(ctx);
   }
 
   //把一堆Constant封装为一个按照dims排列的ConstArr
@@ -427,8 +407,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitBlockItem(BlockItemContext ctx) {
-    //todo
-    return super.visitBlockItem(ctx);
+    scope_.addLayer();
+
+    return null;
   }
 
   /**
@@ -629,7 +610,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitCond(CondContext ctx) {
-    //todo
     return super.visitCond(ctx);
   }
 
