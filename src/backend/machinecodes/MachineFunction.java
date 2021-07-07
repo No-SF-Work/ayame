@@ -33,6 +33,10 @@ public class MachineFunction {
     //size of stack allocated for virtual register
     private int stackSize;
 
-    public
+    private CodeGenManager cgm;
+
+    public MachineFunction(CodeGenManager cgm){
+        this.cgm=cgm;
+    }
 
 }

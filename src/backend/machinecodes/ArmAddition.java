@@ -17,7 +17,7 @@ public class ArmAddition{
         return new Shift(t,imm);
     }
 
-    enum ShiftType{
+    public enum ShiftType{
         //no shift
         None,
         //arithmetic right

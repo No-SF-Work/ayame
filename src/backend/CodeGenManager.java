@@ -47,7 +47,7 @@ public class CodeGenManager {
         Iterator<INode<Function,MyModule>> fIt=fList.iterator();
         while (fIt.hasNext()){
             INode<Function, MyModule> fNode=fIt.next();
-            MachineFunction mf=new MachineFunction();
+            MachineFunction mf=new MachineFunction(this);
             HashMap<BasicBlock, MachineBlock> bMap=new HashMap<>();
             IList<BasicBlock,Function> bList=fNode.getVal().getList_();
             Iterator<INode<BasicBlock,Function>> bIt=bList.iterator();
