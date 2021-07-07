@@ -88,6 +88,16 @@ public abstract class Instruction extends User {
         && this.tag.ordinal() >= TAG_.Add.ordinal();
   }
 
+  public boolean isArithmeticBinary() {
+    return this.tag.ordinal() >= TAG_.Add.ordinal()
+        && this.tag.ordinal() <= TAG_.Mod.ordinal();
+  }
+
+  public boolean isLogicalBinary() {
+    return this.tag.ordinal() >= TAG_.Lt.ordinal()
+        && this.tag.ordinal() <= TAG_.Or.ordinal();
+  }
+
   public boolean isTerminator() {
     return this.tag.ordinal() >= TAG_.Br.ordinal()
         && this.tag.ordinal() <= TAG_.Ret.ordinal();
@@ -95,7 +105,7 @@ public abstract class Instruction extends User {
 
   public boolean isMemOP() {
     return this.tag.ordinal() >= TAG_.Alloca.ordinal()
-        && this.tag.ordinal() <= TAG_.Phi.ordinal();
+        && this.tag.ordinal() <= TAG_.MemPhi.ordinal();
   }
   public static int getHANDLE() {
     return HANDLE;

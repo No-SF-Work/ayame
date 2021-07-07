@@ -4,6 +4,7 @@ import ir.MyModule;
 import ir.types.Type;
 import ir.Use;
 
+import ir.values.instructions.Instruction;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ public abstract class Value {
     this.name = name;
     this.type = type;
   }
+
   public Value(Type type) {
     this.type = type;
     this.name = "";
@@ -84,7 +86,9 @@ public abstract class Value {
     return type;
   }//所有的Value都需要指明一个Type
 
-  public void setType(Type type_) { this.type = type_;}
+  public void setType(Type type_) {
+    this.type = type_;
+  }
 
   public boolean isFunction() {
     return this instanceof Function;
@@ -92,6 +96,10 @@ public abstract class Value {
 
   public boolean isBasicBlock() {
     return this instanceof BasicBlock;
+  }
+
+  public boolean isInstruction() {
+    return this instanceof Instruction;
   }
 
   private Value parent;

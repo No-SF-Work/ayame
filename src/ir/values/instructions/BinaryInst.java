@@ -2,6 +2,7 @@ package ir.values.instructions;
 
 import ir.types.Type;
 import ir.values.BasicBlock;
+import ir.values.Constants.ConstantInt;
 import ir.values.Value;
 
 public class BinaryInst extends Instruction {
@@ -36,6 +37,43 @@ public class BinaryInst extends Instruction {
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
     module.__instructions.put(this.handle, this);
+  }
+
+  // 假设调用时已经知道 lhs 和 rhs 都是 ConstantInt 了
+  public Integer evalSelf() {
+    Integer lhsVal = ((ConstantInt) (this.operands.get(0))).getVal();
+    Integer rhsVal = ((ConstantInt) (this.operands.get(1))).getVal();
+    switch (this.tag) {
+      case Add:
+        return lhsVal + rhsVal;
+      case Sub:
+        return lhsVal - rhsVal;
+      case Rsb:
+        return rhsVal - lhsVal;
+      case Mul:
+        return lhsVal * rhsVal;
+      case Div:
+        return lhsVal / rhsVal;
+      case Mod:
+        return lhsVal % rhsVal;
+      case Lt:
+        return (lhsVal < rhsVal) ? 1 : 0;
+      case Le:
+        return (lhsVal <= rhsVal) ? 1 : 0;
+      case Ge:
+        return (lhsVal >= rhsVal) ? 1 : 0;
+      case Gt:
+        return (lhsVal > rhsVal) ? 1 : 0;
+      case Eq:
+        return (lhsVal.equals(rhsVal)) ? 1 : 0;
+      case Ne:
+        return (!lhsVal.equals(rhsVal)) ? 1 : 0;
+      case And:
+        return (lhsVal != 0 && rhsVal != 0) ? 1 : 0;
+      case Or:
+        return (lhsVal != 0 || rhsVal != 0) ? 1 : 0;
+    }
+    return null;
   }
 
   public boolean isAdd() {
