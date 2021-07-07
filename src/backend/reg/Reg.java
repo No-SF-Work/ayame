@@ -18,4 +18,6 @@ public class Reg {
     }
 
     ArrayList<MachineCode> MClist=new ArrayList<>();
+
+    Reg(){}
 }

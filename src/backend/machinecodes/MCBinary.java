@@ -13,7 +13,12 @@ public class MCBinary extends MachineCode{
 
     private VirtualReg rhs;
 
-    private ArmAddition.Shift shift = ArmAddition.getAddition().getShiftInstance();
+    private ArmAddition.CondType cond;
+
+    @Override
+    public ArmAddition.CondType getCond() {
+        return cond;
+    }
 
     public MCBinary(TAG tag, MachineBlock mb){
         super(tag,mb);

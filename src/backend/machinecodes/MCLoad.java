@@ -10,8 +10,6 @@ public class MCLoad extends MachineCode{
 
     private VirtualReg data;
 
-    ArmAddition.Shift shift=ArmAddition.getAddition().getShiftInstance();
-
     MCLoad(MachineBlock mb){
         super(MachineCode.TAG.Branch,mb);
     }

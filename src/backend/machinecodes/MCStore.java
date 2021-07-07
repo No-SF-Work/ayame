@@ -10,8 +10,6 @@ public class MCStore extends MachineCode{
 
     private VirtualReg data;
 
-    ArmAddition.Shift shift=ArmAddition.getAddition().getShiftInstance();
-
     MCStore(MachineBlock mb){
         super(MachineCode.TAG.Branch,mb);
     }

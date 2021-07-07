@@ -56,6 +56,8 @@ public class ArmAddition{
             return isNone;
         }
 
+        public ShiftType getType(){return t;}
+
         public int getImm(){
             return imm;
         }
@@ -65,7 +67,7 @@ public class ArmAddition{
             this.t=t;
         }
 
-        public Shift(){ }
+        public Shift(){ this.t=ShiftType.None;}
 
         public Shift(ShiftType t, int imm){
             this.t=t;

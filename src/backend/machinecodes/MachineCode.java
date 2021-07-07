@@ -2,6 +2,7 @@ package backend.machinecodes;
 
 import backend.reg.*;
 import ir.types.Type;
+import backend.machinecodes.ArmAddition.Shift;
 
 import java.util.ArrayList;
 
@@ -20,11 +21,6 @@ public class MachineCode {
         Mul,
         Div,
         Mod,
-        Lt,
-        Le,
-        Ge,
-        Gt,
-        Eq,
         Ne,
         And,
         Or,
@@ -65,6 +61,14 @@ public class MachineCode {
         def.add(virtualReg);
         return def;
     }
+
+    private ArmAddition.Shift shift = ArmAddition.getAddition().getShiftInstance();
+
+    public Shift getShift(){return shift;}
+
+    public void setShift(Shift s){this.shift=s;}
+
+    public ArmAddition.CondType getCond(){return ArmAddition.CondType.Any;}
 
     //返回本MC使用的virtualreg
     public ArrayList<VirtualReg> getUse(){
