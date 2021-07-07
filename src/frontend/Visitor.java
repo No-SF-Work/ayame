@@ -398,8 +398,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitBlock(BlockContext ctx) {
-    //todo
-    return super.visitBlock(ctx);
+    scope_.addLayer();
+    ;
+    visit(ctx.getChild(0));
+    scope_.popLayer();
+    return null;
   }
 
   /**
@@ -407,9 +410,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitBlockItem(BlockItemContext ctx) {
-    scope_.addLayer();
-
-    return null;
+    return super.visitBlockItem(ctx);
   }
 
   /**
@@ -892,7 +893,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
           lhs = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
         }
         if (ctx.mulOp(i - 1).MOD() != null) {
-          lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
+          //x%y=x - (x/y)*y
+          var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+          var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
+          lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
         }
       }
       tmp_ = lhs;
