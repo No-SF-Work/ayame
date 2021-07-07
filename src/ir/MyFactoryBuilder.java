@@ -22,6 +22,7 @@ import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.StoreInst;
+import ir.values.instructions.MemInst.ZextInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
@@ -220,7 +221,7 @@ public class MyFactoryBuilder {
    * 以不同的情况build
    */
   public AllocaInst buildAlloca(BasicBlock bb, Type type) {
-    return new AllocaInst(bb, type);
+    return new AllocaInst(bb.getParent().getList_().getEntry().getVal(), type);
   }
 
   public AllocaInst buildAllocaBefore(Type type, Instruction inst) {
@@ -291,7 +292,14 @@ public class MyFactoryBuilder {
   public GEPInst buildGEPBefore(Value ptr, ArrayList<Value> indices, Instruction next) {
     return new GEPInst(ptr, indices, next);
   }
+
   /***/
 
-
+  /*
+   *@param value:原value
+   *@param dest:想要转为的类型
+   */
+  public ZextInst buildZext(Value value, Type dest, BasicBlock parent) {
+    return new ZextInst(value, dest, parent);
+  }
 }

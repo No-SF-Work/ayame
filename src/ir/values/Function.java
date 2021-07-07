@@ -47,6 +47,10 @@ public class Function extends Value {
     this.isBuiltin_ = isBuiltin;
   }
 
+  public ArrayList<Arg> getArgList() {
+    return argList_;
+  }
+
   public int getNumArgs() {
     return argList_.size();
   }
