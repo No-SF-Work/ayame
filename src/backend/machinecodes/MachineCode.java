@@ -62,6 +62,8 @@ public class MachineCode {
         return def;
     }
 
+    public TAG getTag(){return tag;}
+
     private ArmAddition.Shift shift = ArmAddition.getAddition().getShiftInstance();
 
     public Shift getShift(){return shift;}
