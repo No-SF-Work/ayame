@@ -55,9 +55,9 @@ public class Mem2reg implements IRPass {
 
   public void runMem2reg(Function func) {
     // prepare
-    log.info("Running compute dominance info");
+//    log.info("Running compute dominance info");
     DomInfo.computeDominanceInfo(func);
-    log.info("Running compute dominance frontier");
+//    log.info("Running compute dominance frontier");
     DomInfo.computeDominanceFrontier(func);
 
     ArrayList<ArrayList<BasicBlock>> defBlocks = new ArrayList<>();
