@@ -27,6 +27,30 @@ public abstract class MemInst extends Instruction {
     super(next, tag, type, numOP);
   }
 
+  public static class ZextInst extends MemInst {
+
+    private Type destTy;
+
+    public ZextInst(Value val, Type dest) {
+      super(TAG_.Zext, dest, 1);
+      destTy = dest;
+      this.CoSetOperand(0, val);
+    }
+
+    public Type getDest() {
+      return this.destTy;
+    }
+
+    public ZextInst(Value val, Type dest, BasicBlock parent) {
+      super(TAG_.Zext, dest, 1, parent);
+      destTy = dest;
+      this.CoSetOperand(0, val);
+    }
+
+
+  }
+
+
   public static class AllocaInst extends MemInst {
 
     //todo typecheck
@@ -125,7 +149,6 @@ public abstract class MemInst extends Instruction {
     /**
      * 拿到这个pointer指向的数组/值的指针的type
      * <p>
-     * 实际上就是i32,可以考虑在这里加typeCheck
      */
     private static Type getElementType(Value ptr, ArrayList<Value> indices) {
       assert ptr.getType().isPointerTy();
@@ -138,7 +161,7 @@ public abstract class MemInst extends Instruction {
           type = ((ArrayType) type).getELeType();
           assert (i < indices.size() - 1) || !type.isArrayTy();
         }
-        return type;//which should always be i32 in SysY
+        return type;
       } else {
         //todo typecheck
         return null;
@@ -193,8 +216,10 @@ public abstract class MemInst extends Instruction {
       super(tag, type, numOP);
     }
 
+    // Phi 指令需要放在基本块最前面
     public Phi(TAG_ tag, Type type, int numOP, BasicBlock parent) {
-      super(tag, type, numOP, parent);
+      super(tag, type, numOP);
+      this.node.insertAtEntry(parent.getList());
     }
 
     public Phi(TAG_ tag, Type type, int numOP, Instruction prev) {
@@ -203,6 +228,12 @@ public abstract class MemInst extends Instruction {
 
     public Phi(Instruction next, TAG_ tag, Type type, int numOP) {
       super(next, tag, type, numOP);
+    }
+
+    private ArrayList<Value> incomingVals = new ArrayList<>();
+
+    public ArrayList<Value> getIncomingVals() {
+      return incomingVals;
     }
   }
 

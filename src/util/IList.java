@@ -96,6 +96,16 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
     }
 
 
+    public void insertAtEntry(IList<T, P> father) {
+      this.setParent(father);
+      if (father.getEntry() == null && father.getLast() == null) {
+        father.setEntry(this);
+        father.setLast(this);
+      } else {
+        insertBefore(father.getEntry());
+      }
+    }
+
     public void insertAtEnd(IList<T, P> father) {
       this.setParent(father);
       if (father.getEntry() == null && father.getLast() == null) {
@@ -105,6 +115,7 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
         insertAfter(father.getLast());
       }
     }
+
 
     //将自己从链表中移除
     public INode<T, P> removeSelf() {

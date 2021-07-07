@@ -21,7 +21,7 @@ import java.util.LinkedList;
 public abstract class Value {
 
   //module is approachable for all value
-  //module 对所有Value暴露，因为我们只需要考虑单文件编译的情况
+  //module 对所有Value暴露，因为我们只需要考虑单文件编译的情况,这很难看，但是方便
   public static MyModule module = MyModule.getInstance();
 
   /**

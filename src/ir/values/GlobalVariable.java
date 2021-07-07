@@ -7,16 +7,20 @@ import ir.types.Type;
  */
 public class GlobalVariable extends User {
 
-  public GlobalVariable(String name, final Type type, int numOP, Constant init) {
-    super(name, type, numOP);
+  public GlobalVariable(String name, final Type type, Constant init) {
+    super(name, type);
+    module.__globalVariables.add(this);
+    if (init != null) {
+      this.COaddOperand(init);
+    }
     this.init = init;
   }
 
-  public void setConstant() {
-    isConstant = true;
+  public void setConst() {
+    isConst = true;
   }
 
-  public boolean isConstant = false;
+  public boolean isConst = false;
   public Constant init;
 
 }

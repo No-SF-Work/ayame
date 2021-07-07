@@ -9,8 +9,11 @@ import ir.types.Type;
 import ir.types.Type.LabelType;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
+import ir.values.Constant;
+import ir.values.Constants.ConstantArray;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
+import ir.values.GlobalVariable;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
@@ -19,6 +22,7 @@ import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.StoreInst;
+import ir.values.instructions.MemInst.ZextInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
@@ -59,6 +63,14 @@ public class MyFactoryBuilder {
 
   public ConstantInt getConstantInt(int val) {
     return ConstantInt.newOne(IntegerType.getI32(), val);
+  }
+
+  public ConstantArray getConstantArray(Type type, ArrayList<Constant> arr) {
+    return new ConstantArray(type, arr);
+  }
+
+  public GlobalVariable getGlobalvariable(String name, Type type, Constant init) {
+    return new GlobalVariable(name, type, init);
   }
 
   public ConstantInt CONST0() {
@@ -112,15 +124,15 @@ public class MyFactoryBuilder {
   }
 
   //只有一个module，在module末尾插入function
-  public void buildFunction(String name, Type functype) {
+  public Function buildFunction(String name, Type functype) {
     log.info("new Function : " + name + " return type :" + functype);
-    new Function(name, functype, MyModule.getInstance());
+    return new Function(name, functype, MyModule.getInstance());
   }
 
   // 内置函数，isBuiltin 为 true，其他函数用上面的方法 build
-  public void buildFunction(String name, Type functype, boolean isBuiltin) {
+  public Function buildFunction(String name, Type functype, boolean isBuiltin) {
     log.info("new Function : " + name + " return type :" + functype + " isBuiltin");
-    new Function(name, functype, MyModule.getInstance(), true);
+    return new Function(name, functype, MyModule.getInstance(), true);
   }
 
   //获得一个BasicBlock
@@ -129,8 +141,8 @@ public class MyFactoryBuilder {
   }
 
   //在func末尾插入bb
-  public void buildBasicBloock(String name, Function func) {
-    new BasicBlock(name, func);
+  public BasicBlock buildBasicBlock(String name, Function func) {
+    return new BasicBlock(name, func);
   }
 
   /**
@@ -146,53 +158,54 @@ public class MyFactoryBuilder {
    *
    * @param tag:手动标记的binary运算的类型
    */
-  public void buildBinaryAfter(TAG_ tag, Value lhs, Value rhs, Instruction inst) {
+  public BinaryInst buildBinaryAfter(TAG_ tag, Value lhs, Value rhs, Instruction inst) {
     assert lhs.getType() == rhs.getType();
-    new BinaryInst(tag, lhs.getType(), lhs, rhs, inst);
+    return new BinaryInst(tag, lhs.getType(), lhs, rhs, inst);
   }
 
   /**
    * 在bb末尾插入个binary
    */
-  public void buildBinary(TAG_ tag, Value lhs, Value rhs, BasicBlock bb) {
+  public BinaryInst buildBinary(TAG_ tag, Value lhs, Value rhs, BasicBlock bb) {
     assert lhs.getType() == rhs.getType();
-    new BinaryInst(tag, lhs.getType(), lhs, rhs, bb);
+    return new BinaryInst(tag, lhs.getType(), lhs, rhs, bb);
   }
 
   /**
    * 在Inst前面造一个Binary
    */
-  public void buildBinaryBefore(Instruction inst, TAG_ tag, Value lhs, Value rhs) {
+  public BinaryInst buildBinaryBefore(Instruction inst, TAG_ tag, Value lhs, Value rhs) {
     assert lhs.getType() == rhs.getType();
-    new BinaryInst(inst, tag, lhs.getType(), lhs, rhs);
+    return new BinaryInst(inst, tag, lhs.getType(), lhs, rhs);
   }
 
   /**
    * 在bb末尾造一个无条件转移
    */
-  public void buildBr(BasicBlock trueblock, BasicBlock parent) {
-    new BrInst(trueblock, parent);
+  public BrInst buildBr(BasicBlock trueblock, BasicBlock parent) {
+    return new BrInst(trueblock, parent);
   }
 
   /**
    * 在bb末尾造一个条件转移
    */
-  public void buildBr(Value cond, BasicBlock trueblock, BasicBlock falseBlock, BasicBlock parent) {
-    new BrInst(cond, trueblock, falseBlock, parent);
+  public BrInst buildBr(Value cond, BasicBlock trueblock, BasicBlock falseBlock,
+      BasicBlock parent) {
+    return new BrInst(cond, trueblock, falseBlock, parent);
   }
 
   /**
    * 在bb末尾造一个return void
    */
-  public void buildRet(BasicBlock bb) {
-    new RetInst(bb);
+  public RetInst buildRet(BasicBlock bb) {
+    return new RetInst(bb);
   }
 
   /**
    * 在bb末尾造一个 return i32
    */
-  public void buildRet(Value val, BasicBlock bb) {
-    new RetInst(val, bb);
+  public RetInst buildRet(Value val, BasicBlock bb) {
+    return new RetInst(val, bb);
   }
 
   /**
@@ -207,16 +220,16 @@ public class MyFactoryBuilder {
   /**
    * 以不同的情况build
    */
-  public void buildAlloca(BasicBlock bb, Type type) {
-    new AllocaInst(bb, type);
+  public AllocaInst buildAlloca(BasicBlock bb, Type type) {
+    return new AllocaInst(bb.getParent().getList_().getEntry().getVal(), type);
   }
 
-  public void buildAllocaBefore(Type type, Instruction inst) {
-    new AllocaInst(type, inst);
+  public AllocaInst buildAllocaBefore(Type type, Instruction inst) {
+    return new AllocaInst(type, inst);
   }
 
-  public void buildAllocaAfter(Type type, Instruction inst) {
-    new AllocaInst(inst, type);
+  public AllocaInst buildAllocaAfter(Type type, Instruction inst) {
+    return new AllocaInst(inst, type);
   }
 
   /**
@@ -228,16 +241,16 @@ public class MyFactoryBuilder {
     return new LoadInst(type, value);
   }
 
-  public void buildLoad(Type type, Value value, BasicBlock bb) {
-    new LoadInst(type, value, bb);
+  public LoadInst buildLoad(Type type, Value value, BasicBlock bb) {
+    return new LoadInst(type, value, bb);
   }
 
-  public void buildAfter(Type type, Value value, Instruction prev) {
-    new LoadInst(type, value, prev);
+  public LoadInst buildAfter(Type type, Value value, Instruction prev) {
+    return new LoadInst(type, value, prev);
   }
 
-  public void buildBefore(Type type, Value value, Instruction next) {
-    new LoadInst(next, value, type);
+  public LoadInst buildBefore(Type type, Value value, Instruction next) {
+    return new LoadInst(next, value, type);
   }
 
   /**
@@ -248,16 +261,16 @@ public class MyFactoryBuilder {
     return new StoreInst(val, pointer);
   }
 
-  public void buildStore(Value val, Value pointer, BasicBlock bb) {
-    new StoreInst(val, pointer, bb);
+  public StoreInst buildStore(Value val, Value pointer, BasicBlock bb) {
+    return new StoreInst(val, pointer, bb);
   }
 
-  public void buildStoreAfter(Value val, Value pointer, Instruction prev) {
-    new StoreInst(val, pointer, prev);
+  public StoreInst buildStoreAfter(Value val, Value pointer, Instruction prev) {
+    return new StoreInst(val, pointer, prev);
   }
 
-  public void buildStoreBefore(Value val, Value pointer, Instruction next) {
-    new StoreInst(next, val, pointer);
+  public StoreInst buildStoreBefore(Value val, Value pointer, Instruction next) {
+    return new StoreInst(next, val, pointer);
   }
 
   /**
@@ -268,18 +281,25 @@ public class MyFactoryBuilder {
     return new GEPInst(ptr, indices);
   }
 
-  public void buildGEP(Value ptr, ArrayList<Value> indices, BasicBlock parent) {
-    new GEPInst(ptr, indices, parent);
+  public GEPInst buildGEP(Value ptr, ArrayList<Value> indices, BasicBlock parent) {
+    return new GEPInst(ptr, indices, parent);
   }
 
-  public void buildGEPAfter(Value ptr, ArrayList<Value> indices, Instruction prev) {
-    new GEPInst(prev, ptr, indices);
+  public GEPInst buildGEPAfter(Value ptr, ArrayList<Value> indices, Instruction prev) {
+    return new GEPInst(prev, ptr, indices);
   }
 
-  public void buildGEPBefore(Value ptr, ArrayList<Value> indices, Instruction next) {
-    new GEPInst(ptr, indices, next);
+  public GEPInst buildGEPBefore(Value ptr, ArrayList<Value> indices, Instruction next) {
+    return new GEPInst(ptr, indices, next);
   }
+
   /***/
 
-
+  /*
+   *@param value:原value
+   *@param dest:想要转为的类型
+   */
+  public ZextInst buildZext(Value value, Type dest, BasicBlock parent) {
+    return new ZextInst(value, dest, parent);
+  }
 }

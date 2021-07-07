@@ -77,6 +77,14 @@ public class BasicBlock extends Value {
     this.domers = domers;
   }
 
+  public boolean isDirty() {
+    return dirty;
+  }
+
+  public void setDirty(boolean dirty) {
+    this.dirty = dirty;
+  }
+
   public ArrayList<BasicBlock> getDominanceFrontier() {
     return dominanceFrontier;
   }
@@ -86,6 +94,10 @@ public class BasicBlock extends Value {
   protected Function parent;//它所属的函数
   protected ArrayList<BasicBlock> predecessor_;//前驱
   protected ArrayList<BasicBlock> successor_;//后继
+
+  private boolean dirty; // 在一些对基本块的遍历中，表示已经遍历过
+
+
 
   // domination info
   // FIXME maybe change `ArrayList` to `HashSet` is better.
