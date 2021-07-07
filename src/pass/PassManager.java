@@ -2,25 +2,21 @@ package pass;
 
 import ir.MyModule;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import pass.Pass.MAPass;
-import util.Mylogger;
 
 public class PassManager {
 
   private static PassManager passManager = new PassManager();
-  private ArrayList<String> offedPasses_ = new ArrayList<>();
+  private ArrayList<String> openedPasses_ = new ArrayList<>() {{
+    add("typeCheck");
+  }};
   private ArrayList<IRPass> irPasses = new ArrayList<>();
   private ArrayList<MAPass> maPasses = new ArrayList<>();
 
   private PassManager() {
-    //pass执行的顺序在这里决定
+    //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new DeadCodeEmit());
-    //irPasses.add(new opt);
-
-    //todo  maPasses.add(new opt );
 
   }
 
@@ -29,25 +25,24 @@ public class PassManager {
   }
 
   public void addOffedPasses_(String passName) {
-    offedPasses_.add(passName);
+    openedPasses_.add(passName);
   }
 
-  //todo
   //把pass手动加上来
   public void runIRPasses(MyModule m) {
-    for (IRPass irPass : irPasses) {
-      if (!offedPasses_.contains(irPass.getName())) {
-        irPass.run(m);
+    irPasses.forEach(pass -> {
+      if (!openedPasses_.contains(pass.getName())) {
+        pass.run(m);
       }
-    }
+    });
+
   }
 
-  //todo
   public void runMAPasses(/*MaModule ma*/) {
-    for (MAPass maPass : maPasses) {
-      if (!offedPasses_.contains(maPass.getName())) {
-        maPass.run();
+    maPasses.forEach(pass -> {
+      if (!openedPasses_.contains(pass.getName())) {
+        pass.run();
       }
-    }
+    });
   }
 }

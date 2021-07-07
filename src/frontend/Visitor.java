@@ -399,7 +399,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitBlock(BlockContext ctx) {
     scope_.addLayer();
-    ;
     visit(ctx.getChild(0));
     scope_.popLayer();
     return null;
@@ -440,7 +439,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitExpStmt(ExpStmtContext ctx) {
-    //todo
     return super.visitExpStmt(ctx);
   }
 
