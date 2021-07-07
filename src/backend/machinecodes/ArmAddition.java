@@ -32,7 +32,7 @@ public class ArmAddition{
         Rrx
     };
 
-    enum CondType{
+    public enum CondType{
         Any,
         Eq,
         Ne,
