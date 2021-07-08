@@ -2,6 +2,7 @@ package backend.machinecodes;
 
 import backend.reg.*;
 import ir.types.Type;
+import backend.reg.MachineOperand;
 import backend.machinecodes.ArmAddition.Shift;
 
 import java.util.ArrayList;
@@ -90,20 +91,24 @@ public class MachineCode {
         return phyDef;
     }
 
-    public void addVirtualUse(VirtualReg vr){
-        virtualUses.add(vr);
+    public void addVirtualUse(MachineOperand vr){
+        if(vr.getState()== MachineOperand.state.virtual)
+            virtualUses.add((VirtualReg) vr);
     }
 
-    public void addVirtualDef(VirtualReg vr){
-        virtualDef.add(vr);
+    public void addVirtualDef(MachineOperand vr){
+        if(vr.getState()== MachineOperand.state.virtual)
+            virtualDef.add((VirtualReg)vr);
     }
 
-    public void addPhyUse(PhyReg pr){
-        phyUses.add(pr);
+    public void addPhyUse(MachineOperand pr){
+        if(pr.getState()== MachineOperand.state.phy)
+            phyUses.add((PhyReg) pr);
     }
 
-    public void addPhyDef(PhyReg pr){
-        phyDef.add(pr);
+    public void addPhyDef(MachineOperand pr){
+        if(pr.getState()== MachineOperand.state.phy)
+            phyDef.add((PhyReg) pr);
     }
 
     public boolean isAllocated(){
