@@ -91,25 +91,20 @@ public class MachineCode {
         return phyDef;
     }
 
-    public void addVirtualUse(MachineOperand vr){
-        if(vr.getState()== MachineOperand.state.virtual)
-            virtualUses.add((VirtualReg) vr);
+    public void addUse(MachineOperand r){
+        if(r.getState()== MachineOperand.state.virtual)
+            virtualUses.add((VirtualReg) r);
+        if(r.getState()== MachineOperand.state.phy)
+            phyUses.add((PhyReg) r);
     }
 
-    public void addVirtualDef(MachineOperand vr){
-        if(vr.getState()== MachineOperand.state.virtual)
-            virtualDef.add((VirtualReg)vr);
+    public void addDef(MachineOperand r){
+        if(r.getState()== MachineOperand.state.virtual)
+            virtualDef.add((VirtualReg)r);
+        if(r.getState()== MachineOperand.state.phy)
+            phyDef.add((PhyReg) r);
     }
 
-    public void addPhyUse(MachineOperand pr){
-        if(pr.getState()== MachineOperand.state.phy)
-            phyUses.add((PhyReg) pr);
-    }
-
-    public void addPhyDef(MachineOperand pr){
-        if(pr.getState()== MachineOperand.state.phy)
-            phyDef.add((PhyReg) pr);
-    }
 
     public boolean isAllocated(){
         return phyReg != null;

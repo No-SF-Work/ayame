@@ -88,7 +88,8 @@ public class CodeGenManager {
                 }
                 if (i < 4) {
                     MachineCode mc=new MCMove(bMap.get(fNode.getVal()));
-
+                    ((MCMove)mc).setDst(vr);
+                    ((MCMove)mc).setRhs(mf.getPhyReg(i));
                 }
             }
         }

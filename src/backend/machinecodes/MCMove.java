@@ -1,31 +1,36 @@
 package backend.machinecodes;
 
 import backend.reg.VirtualReg;
+import backend.reg.MachineOperand;
+
 
 /**
  * Add,Sub,Rsb, Mul, Div, Mod, Lt, Le, Ge, Gt, Eq, Ne, And, Or
  */
 public class MCMove extends MachineCode{
 
-    public VirtualReg getDst() {
+    public MachineOperand getDst() {
         return dst;
     }
 
-    public void setDst(VirtualReg dst) {
+    public void setDst(MachineOperand dst) {
+
         this.dst = dst;
+        addDef(dst);
     }
 
-    public VirtualReg getRhs() {
+    public MachineOperand getRhs() {
         return rhs;
     }
 
-    public void setRhs(VirtualReg rhs) {
+    public void setRhs(MachineOperand rhs) {
         this.rhs = rhs;
+        addUse(rhs);
     }
 
-    private VirtualReg dst;
+    private MachineOperand dst;
 
-    private VirtualReg rhs;
+    private MachineOperand rhs;
 
     private ArmAddition.CondType cond;
 

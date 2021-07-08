@@ -6,6 +6,7 @@ import backend.reg.VirtualReg;
 import util.IList;
 import util.IList.INode;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MachineFunction {
@@ -30,7 +31,7 @@ public class MachineFunction {
 
     public IList<MachineBlock,MachineFunction> getmbList(){return mbList;}
 
-    private HashMap<String, PhyReg> phyRegs;
+    private ArrayList<PhyReg> phyRegs=new ArrayList<>();
 
     //all the virtual regs in this function
     private HashMap<String, VirtualReg> regMap=new HashMap<>();
@@ -49,28 +50,42 @@ public class MachineFunction {
 
     private CodeGenManager cgm;
 
+    public PhyReg getPhyReg(String name){
+        return phyRegs.get(regNameMap.get(name));
+    }
+
+    public PhyReg getPhyReg(int n){
+        return phyRegs.get(n);
+    }
+
+    public HashMap<String,Integer>regNameMap=new HashMap<>();
+
     public MachineFunction(CodeGenManager cgm){
         this.cgm=cgm;
-        phyRegs.put("r0",new PhyReg("r0"));
-        phyRegs.put("r1",new PhyReg("r1"));
-        phyRegs.put("r2",new PhyReg("r2"));
-        phyRegs.put("r3",new PhyReg("r3"));
-        phyRegs.put("r4",new PhyReg("r4"));
-        phyRegs.put("r5",new PhyReg("r5"));
-        phyRegs.put("r6",new PhyReg("r6"));
-        phyRegs.put("r7",new PhyReg("r7"));
-        phyRegs.put("r8",new PhyReg("r8"));
-        phyRegs.put("r9",new PhyReg("r9"));
-        phyRegs.put("r11",new PhyReg("r11"));
-        phyRegs.put("r12",new PhyReg("r12"));
-        phyRegs.put("r13",new PhyReg("r13"));
-        phyRegs.put("r14",new PhyReg("r14"));
-        phyRegs.put("r15",new PhyReg("r15"));
-        phyRegs.put("fp",phyRegs.get("r11"));
-        phyRegs.put("ip",phyRegs.get("r12"));
-        phyRegs.put("sp",phyRegs.get("r13"));
-        phyRegs.put("lr",phyRegs.get("r14"));
-        phyRegs.put("pc",phyRegs.get("r15"));
+        regNameMap.put("r0",0);
+        regNameMap.put("r1",1);
+        regNameMap.put("r2",2);
+        regNameMap.put("r3",3);
+        regNameMap.put("r4",4);
+        regNameMap.put("r5",5);
+        regNameMap.put("r6",6);
+        regNameMap.put("r7",7);
+        regNameMap.put("r8",8);
+        regNameMap.put("r9",9);
+        regNameMap.put("r10",10);
+        regNameMap.put("r11",11);
+        regNameMap.put("r12",12);
+        regNameMap.put("r13",13);
+        regNameMap.put("r14",14);
+        regNameMap.put("r15",15);
+        regNameMap.put("fp",11);
+        regNameMap.put("ip",12);
+        regNameMap.put("sp",13);
+        regNameMap.put("lr",14);
+        regNameMap.put("pc",15);
+        for(int i=0;i<=15;i++){
+            phyRegs.add(new PhyReg(i));
+        }
     }
 
 }
