@@ -15,6 +15,8 @@ public class MachineOperand {
         this.s=s;
     }
 
+    public state getState(){return s;}
+
     MachineOperand(int imme){
         this.s=state.imm;
         this.imme=imme;

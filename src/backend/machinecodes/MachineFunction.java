@@ -1,6 +1,7 @@
 package backend.machinecodes;
 
 import backend.CodeGenManager;
+import backend.reg.PhyReg;
 import backend.reg.VirtualReg;
 import util.IList;
 import util.IList.INode;
@@ -29,6 +30,8 @@ public class MachineFunction {
 
     public IList<MachineBlock,MachineFunction> getmbList(){return mbList;}
 
+    private HashMap<String, PhyReg> phyRegs;
+
     //all the virtual regs in this function
     private HashMap<String, VirtualReg> regMap=new HashMap<>();
 
@@ -48,6 +51,26 @@ public class MachineFunction {
 
     public MachineFunction(CodeGenManager cgm){
         this.cgm=cgm;
+        phyRegs.put("r0",new PhyReg("r0"));
+        phyRegs.put("r1",new PhyReg("r1"));
+        phyRegs.put("r2",new PhyReg("r2"));
+        phyRegs.put("r3",new PhyReg("r3"));
+        phyRegs.put("r4",new PhyReg("r4"));
+        phyRegs.put("r5",new PhyReg("r5"));
+        phyRegs.put("r6",new PhyReg("r6"));
+        phyRegs.put("r7",new PhyReg("r7"));
+        phyRegs.put("r8",new PhyReg("r8"));
+        phyRegs.put("r9",new PhyReg("r9"));
+        phyRegs.put("r11",new PhyReg("r11"));
+        phyRegs.put("r12",new PhyReg("r12"));
+        phyRegs.put("r13",new PhyReg("r13"));
+        phyRegs.put("r14",new PhyReg("r14"));
+        phyRegs.put("r15",new PhyReg("r15"));
+        phyRegs.put("fp",phyRegs.get("r11"));
+        phyRegs.put("ip",phyRegs.get("r12"));
+        phyRegs.put("sp",phyRegs.get("r13"));
+        phyRegs.put("lr",phyRegs.get("r14"));
+        phyRegs.put("pc",phyRegs.get("r15"));
     }
 
 }

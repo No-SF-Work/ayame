@@ -70,6 +70,7 @@ public class CodeGenManager {
                 while(bbIt.hasNext()){
                     mb.addPred(bMap.get(bbIt.next()));
                 }
+                //TODO
                 //翻译br指令的时候再指定后继基本块。有些情况下某个后继基本块必须要放在本基本块的下一个，跳转指令
 //                bbIt=b.getSuccessor_().iterator();
 //                while(bbIt.hasNext()){
