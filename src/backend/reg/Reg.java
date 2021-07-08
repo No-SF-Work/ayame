@@ -5,7 +5,7 @@ import backend.machinecodes.MachineCode;
 
 import java.util.ArrayList;
 
-public class Reg {
+public class Reg extends MachineOperand{
     //interval in;
     private LiveInterval liveInterval =new LiveInterval();
 
@@ -19,5 +19,5 @@ public class Reg {
 
     ArrayList<MachineCode> MClist=new ArrayList<>();
 
-    Reg(){}
+    Reg(state s){super(s);}
 }

@@ -1,17 +1,18 @@
 package backend.machinecodes;
 
 import backend.reg.VirtualReg;
+import backend.reg.MachineOperand;
 
 /**
  * Add,Sub,Rsb, Mul, Div, Mod, Lt, Le, Ge, Gt, Eq, Ne, And, Or
  */
 public class MCBinary extends MachineCode{
 
-    private VirtualReg dst;
+    private MachineOperand dst;
 
-    private VirtualReg lhs;
+    private MachineOperand lhs;
 
-    private VirtualReg rhs;
+    private MachineOperand rhs;
 
     private ArmAddition.CondType cond;
 

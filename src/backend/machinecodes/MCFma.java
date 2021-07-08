@@ -1,19 +1,20 @@
 package backend.machinecodes;
 
 import backend.reg.VirtualReg;
+import backend.reg.MachineOperand;
 
 /**
  * Fma
  */
 public class MCFma extends MachineCode{
 
-    private VirtualReg dst;
+    private MachineOperand dst;
 
-    private VirtualReg lhs;
+    private MachineOperand lhs;
 
-    private VirtualReg rhs;
+    private MachineOperand rhs;
 
-    private VirtualReg acc;
+    private MachineOperand acc;
 
     private ArmAddition.CondType cond;
 

@@ -1,12 +1,13 @@
 package backend.machinecodes;
 
+import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 
 public class MCCompare extends MachineCode{
 
-    private VirtualReg lhs;
+    private MachineOperand lhs;
 
-    private VirtualReg rhs;
+    private MachineOperand rhs;
 
     MCCompare(MachineBlock mb){
         super(TAG.Compare,mb);

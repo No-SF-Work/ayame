@@ -1,10 +1,11 @@
 package backend.machinecodes;
 
+import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 
 public class MCGlobal extends MachineCode{
 
-    private VirtualReg dst;
+    private MachineOperand dst;
 
 
     MCGlobal(MachineBlock mb){

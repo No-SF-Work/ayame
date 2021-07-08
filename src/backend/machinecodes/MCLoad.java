@@ -1,14 +1,15 @@
 package backend.machinecodes;
 
+import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 
 public class MCLoad extends MachineCode{
 
-    private VirtualReg addr;
+    private MachineOperand addr;
 
-    private VirtualReg offset;
+    private MachineOperand offset;
 
-    private VirtualReg data;
+    private MachineOperand data;
 
     MCLoad(MachineBlock mb){
         super(MachineCode.TAG.Branch,mb);

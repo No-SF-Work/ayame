@@ -1,5 +1,6 @@
 package backend.machinecodes;
 
+import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 
 /**
@@ -7,11 +8,11 @@ import backend.reg.VirtualReg;
  */
 public class MCLongMul extends MachineCode{
 
-    private VirtualReg dst;
+    private MachineOperand dst;
 
-    private VirtualReg lhs;
+    private MachineOperand lhs;
 
-    private VirtualReg rhs;
+    private MachineOperand rhs;
 
     public MCLongMul( MachineBlock mb){
         super(TAG.LongMul,mb);

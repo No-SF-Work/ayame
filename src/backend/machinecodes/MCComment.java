@@ -1,10 +1,12 @@
 package backend.machinecodes;
 
+import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
+
 
 public class MCComment extends MachineCode{
 
-    private VirtualReg dst;
+    private MachineOperand dst;
 
 
     MCComment(String str, MachineBlock mb){

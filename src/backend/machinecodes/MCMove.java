@@ -7,6 +7,22 @@ import backend.reg.VirtualReg;
  */
 public class MCMove extends MachineCode{
 
+    public VirtualReg getDst() {
+        return dst;
+    }
+
+    public void setDst(VirtualReg dst) {
+        this.dst = dst;
+    }
+
+    public VirtualReg getRhs() {
+        return rhs;
+    }
+
+    public void setRhs(VirtualReg rhs) {
+        this.rhs = rhs;
+    }
+
     private VirtualReg dst;
 
     private VirtualReg rhs;

@@ -18,16 +18,25 @@ public class MachineFunction {
         }
     }
 
+    //使基本块线性化，存储在mbList中
+    public void serializeBlocks(){}
+
     //get prev and next
     private INode<MachineFunction, CodeGenManager> node;
 
     //basic block list
-    private IList<MachineBlock,MachineFunction> mbList;
+    private IList<MachineBlock,MachineFunction> mbList = new IList<>(this);
 
     public IList<MachineBlock,MachineFunction> getmbList(){return mbList;}
 
     //all the virtual regs in this function
     private HashMap<String, VirtualReg> regMap=new HashMap<>();
+
+    public void addVirtualReg(VirtualReg vr){
+        regMap.put(vr.getName(),vr);
+    }
+
+    public HashMap<String,VirtualReg> getRegMap(){return regMap;}
 
     //PhyReg nums
     private int regNums=0;

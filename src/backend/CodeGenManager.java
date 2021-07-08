@@ -1,5 +1,6 @@
 package backend;
 import backend.LiveInterval;
+import backend.machinecodes.MCMove;
 import backend.machinecodes.MachineBlock;
 import backend.machinecodes.MachineCode;
 import backend.machinecodes.MachineFunction;
@@ -8,6 +9,7 @@ import ir.MyModule;
 import ir.values.BasicBlock;
 import ir.values.Function;
 import ir.values.GlobalVariable;
+import ir.values.Value;
 import util.IList;
 import util.IList.INode;
 
@@ -31,6 +33,8 @@ public class CodeGenManager {
 
     private static final CodeGenManager codeGenManager = new CodeGenManager(myModule);
 
+
+
     //ir->machinecode
     public static CodeGenManager getInstance(MyModule myModule){
         return codeGenManager;
@@ -43,7 +47,7 @@ public class CodeGenManager {
         Iterator<GlobalVariable> itgVs=gVs.iterator();
         while(itgVs.hasNext()){
             GlobalVariable gV = itgVs.next();
-            globalVirtualRegs.add(new VirtualReg(gV.getName()));
+            globalVirtualRegs.add(new VirtualReg(gV.getName(),true));
         }
         IList<Function,MyModule> fList=myModule.__functions;
         Iterator<INode<Function,MyModule>> fIt=fList.iterator();
@@ -66,13 +70,26 @@ public class CodeGenManager {
                 while(bbIt.hasNext()){
                     mb.addPred(bMap.get(bbIt.next()));
                 }
-                bbIt=b.getSuccessor_().iterator();
-                while(bbIt.hasNext()){
-                    mb.addSucc(bMap.get(bbIt.next()));
+                //翻译br指令的时候再指定后继基本块。有些情况下某个后继基本块必须要放在本基本块的下一个，跳转指令
+//                bbIt=b.getSuccessor_().iterator();
+//                while(bbIt.hasNext()){
+//                    mb.addSucc(bMap.get(bbIt.next()));
+//                }
+            }
+            for(int i=0;i<fNode.getVal().getNumArgs();i++) {
+                Value v = fNode.getVal().getArgList().get(i);
+                VirtualReg vr;
+                if (mf.getRegMap().get(v.getName()) == null) {
+                    vr=new VirtualReg(v.getName());
+                    mf.addVirtualReg(vr);
+                }else {
+                    vr=mf.getRegMap().get(v.getName());
+                }
+                if (i < 4) {
+                    MachineCode mc=new MCMove(bMap.get(fNode.getVal()));
+
                 }
             }
-
-
         }
     }
 
