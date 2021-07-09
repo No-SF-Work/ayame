@@ -33,6 +33,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   private class Scope {
 
+    Scope() {
+      tables_ = new ArrayList<>();
+      tables_.add(new HashMap<>());
+    }
+
     //因为涉及了往上层查找参数，所以这里不用stack用arraylist
     private ArrayList<HashMap<String, Value>> tables_;
 
@@ -88,7 +93,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   // pass values between `visit` functions
   private ArrayList<Value> tmpArr_;//只允许赋值以及被赋值，不能直接操作
-  private Type tmpType_;
   private Value tmp_;
   private Value tmpPtr_;
   private int tmpInt_;
@@ -496,16 +500,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   /**
    * funcType : VOID_KW | INT_KW ; * @value : tmpType-> stored type
    */
-  @Override
-  public Void visitFuncType(FuncTypeContext ctx) {
-    if (ctx.INT_KW() != null) {
-      tmpType_ = voidType_;
-    } else if (ctx.VOID_KW() != null) {
-      tmpType_ = i32Type_;
-    }
-    return null;
-  }
-
   /**
    * funcFParams : funcFParam (COMMA funcFParam)* ;
    */
