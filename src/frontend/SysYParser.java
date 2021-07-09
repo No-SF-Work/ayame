@@ -875,7 +875,7 @@ public class SysYParser extends Parser {
   }
 
   public static class InitValContext extends ParserRuleContext {
-
+    public ArrayList<Integer> dimInfo_;
     public ExpContext exp() {
       return getRuleContext(ExpContext.class, 0);
     }
