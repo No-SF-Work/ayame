@@ -134,6 +134,9 @@ public class MachineCode {
         this.mf = mf;
     }
 
+    public int getSlotIndex() {
+        return slotIndex;
+    }
 }
 
 
