@@ -84,6 +84,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
   }
 
+  private void changeCurFunc(Function f) {
+    curFunc_ = f;
+  }
+
+  private void changeCurBB(BasicBlock b) {
+    curBB_ = b;
+  }
+
   // translation context
   private final MyModule m = MyModule.getInstance();
   private final MyFactoryBuilder f = MyFactoryBuilder.getInstance();
@@ -96,6 +104,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private Value tmp_;
   private Value tmpPtr_;
   private int tmpInt_;
+  private Type tmpTy_;
   // singleton variables
   private final ConstantInt CONST0 = ConstantInt.CONST0();
   private final Type i32Type_ = f.getI32Ty();
@@ -475,38 +484,27 @@ public class Visitor extends SysYBaseVisitor<Void> {
     // get function params information
     ArrayList<Type> paramTypeList = new ArrayList<>();
     if (ctx.funcFParams() != null) {
-      FuncFParamsContext paramsContext = ctx.funcFParams();
-      int paramNum = (ctx.funcFParams().getChildCount() + 1) / 2;
-      for (int i = 0; i < paramNum; i++) {
-        FuncFParamContext paramContext = paramsContext.funcFParam(i);
-        // get each parameter information
-      }
+      ctx.funcFParams().funcFParam().forEach(param -> {
+        visit(param);
+        paramTypeList.add(tmpTy_);
+      });
     }
 
     // build function object
     FunctionType functionType = f.getFuncTy(retType, paramTypeList);
-    curFunc_ = f.buildFunction(functionName, functionType);
-
+    var func = f.buildFunction(functionName, functionType);
+    changeCurFunc(func);
     // add to symbol table
-
+    scope_.put(functionName, curFunc_);
     // visit block and create basic blocks
-
+    var bb = f.buildBasicBlock(curFunc_.getName() + "_ENTRY", curFunc_);
+    changeCurBB(bb);
+    visit(ctx.block());
     log.info("funcDef end@" + functionName);
-
     return null;
-//    return super.visitFuncDef(ctx);
+    //todo
   }
 
-  /**
-   * funcType : VOID_KW | INT_KW ; * @value : tmpType-> stored type
-   */
-  /**
-   * funcFParams : funcFParam (COMMA funcFParam)* ;
-   */
-  @Override
-  public Void visitFuncFParams(FuncFParamsContext ctx) {
-    return super.visitFuncFParams(ctx);
-  }
 
   /**
    * funcFParam : bType IDENT (L_BRACKT R_BRACKT (L_BRACKT exp R_BRACKT)*)? ;
@@ -659,7 +657,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var trueBlock = (BasicBlock) curInstr.getOperands().get(0);
 
             if (trueBlock.getName().equals(key)) {
-              curInstr.getOperands().set(0, targetBlock);
+              curInstr.CoSetOperand(0, targetBlock);
             } else if (trueBlock != endBlock) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
               blockList.add(trueBlock);
             }
@@ -670,7 +668,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var trueBlock = (BasicBlock) curInstr.getOperands().get(1);
 
             if (trueBlock.getName().equals(key)) {
-              curInstr.getOperands().set(1, targetBlock);
+              curInstr.CoSetOperand(1, targetBlock);
             } else if (trueBlock != endBlock) {
               blockList.add(trueBlock);
             }
@@ -680,7 +678,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var falseBlock = (BasicBlock) curInstr.getOperands().get(2);
 
             if (falseBlock.getName().equals(key)) {
-              curInstr.getOperands().set(2, targetBlock);
+              curInstr.CoSetOperand(2, targetBlock);
             } else if (falseBlock != endBlock) {
               blockList.add(falseBlock);
             }
