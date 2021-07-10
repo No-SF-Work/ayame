@@ -11,6 +11,8 @@ public class VirtualReg extends Reg {
     //是否是由SSA指令定义的
     private boolean isSSA=false;
 
+    private static int Name = 0;
+
     private boolean isGlobal=false;
 
     private String name;
@@ -34,6 +36,11 @@ public class VirtualReg extends Reg {
     public VirtualReg(String name){
         super(state.virtual);
         this.name=name;
+    }
+
+    public VirtualReg(){
+        super(state.virtual);
+        this.name="%%"+Integer.toString(Name++);
     }
 
     public VirtualReg(String name, boolean isGlobal){

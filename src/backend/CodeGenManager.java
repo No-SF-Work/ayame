@@ -1,9 +1,7 @@
 package backend;
 import backend.LiveInterval;
-import backend.machinecodes.MCMove;
-import backend.machinecodes.MachineBlock;
-import backend.machinecodes.MachineCode;
-import backend.machinecodes.MachineFunction;
+import backend.machinecodes.*;
+import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 import ir.MyModule;
 import ir.values.BasicBlock;
@@ -26,28 +24,38 @@ public class CodeGenManager {
     private ArrayList<MachineFunction> machineFunctions;
 
     //global virtualregs
-    private ArrayList<VirtualReg> globalVirtualRegs;
+    private ArrayList<VirtualReg> globalVirtualRegs = new ArrayList<>();
+
+    //map value in ir to vr in mc
+    private HashMap<Value,VirtualReg> vMap=new HashMap<>();
 
     //ir moudle
     private static MyModule myModule;
 
-    private static final CodeGenManager codeGenManager = new CodeGenManager(myModule);
+    private CodeGenManager(MyModule myModule) {
+        this.myModule=myModule;
+    }
 
-
+    private static CodeGenManager codeGenManager;
 
     //ir->machinecode
-    public static CodeGenManager getInstance(MyModule myModule){
-        return codeGenManager;
+    public CodeGenManager getInstance(MyModule myModule){
+        if(this.codeGenManager==null){
+            this.codeGenManager=new CodeGenManager(myModule);
+        }
+        return this.codeGenManager;
     }
 
     public ArrayList<MachineFunction> getMachineFunctions(){return machineFunctions;}
 
-    private void MachineCodeGeneration(MyModule myModule){
+    private void MachineCodeGeneration(){
         ArrayList<GlobalVariable> gVs= myModule.__globalVariables;
         Iterator<GlobalVariable> itgVs=gVs.iterator();
         while(itgVs.hasNext()){
             GlobalVariable gV = itgVs.next();
-            globalVirtualRegs.add(new VirtualReg(gV.getName(),true));
+            VirtualReg gVr=new VirtualReg(gV.getName(),true);
+            vMap.put(gV,gVr);
+            globalVirtualRegs.add(gVr);
         }
         IList<Function,MyModule> fList=myModule.__functions;
         Iterator<INode<Function,MyModule>> fIt=fList.iterator();
@@ -77,25 +85,45 @@ public class CodeGenManager {
 //                    mb.addSucc(bMap.get(bbIt.next()));
 //                }
             }
-            for(int i=0;i<fNode.getVal().getNumArgs();i++) {
-                Value v = fNode.getVal().getArgList().get(i);
-                VirtualReg vr;
-                if (mf.getRegMap().get(v.getName()) == null) {
-                    vr=new VirtualReg(v.getName());
-                    mf.addVirtualReg(vr);
-                }else {
-                    vr=mf.getRegMap().get(v.getName());
+
+
+        }
+    }
+
+    private VirtualReg analyzeValue(Value v,MachineFunction mf, Function f,HashMap<BasicBlock, MachineBlock> bMap){
+        if(v instanceof Function.Arg){
+            VirtualReg vr;
+            if (mf.getVRegMap().get(v.getName()) == null) {
+                vr=new VirtualReg(v.getName());
+                mf.addVirtualReg(vr);
+                for(int i=0;i<f.getNumArgs();i++) {
+                    if (i < 4) {
+                        MachineCode mc=new MCMove(bMap.get(f.getList_().getEntry()),0);
+                        ((MCMove)mc).setDst(vr);
+                        ((MCMove)mc).setRhs(mf.getPhyReg(i));
+                    }else{
+                        MachineCode mcLD=new MCLoad(bMap.get(f.getList_().getEntry()),0);
+                        ((MCLoad)mcLD).setAddr(mf.getPhyReg("sp"));
+                        ((MCLoad)mcLD).setOffset(new MachineOperand((i-4)*4));
+                        ((MCLoad)mcLD).setDst(vr);
+                    }
+                    break;
                 }
-                if (i < 4) {
-                    MachineCode mc=new MCMove(bMap.get(fNode.getVal()));
-                    ((MCMove)mc).setDst(vr);
-                    ((MCMove)mc).setRhs(mf.getPhyReg(i));
-                }
+                return vr;
+            }else {
+                return mf.getVRegMap().get(v.getName());
+            }
+        } else if(myModule.__globalVariables.contains(v)){
+            assert(vMap.containsKey(v));
+            return vMap.get(v);
+        }else{
+            if (mf.getVRegMap().get(v.getName()) == null){
+                VirtualReg vr = new VirtualReg(v.getName());
+                return vr;
+            }else{
+                return mf.getVRegMap().get(v.getName());
             }
         }
     }
 
-    private CodeGenManager(MyModule myModule){
-        MachineCodeGeneration(myModule);
-    }
 }

@@ -65,11 +65,12 @@ public class MachineCode {
 
     public TAG getTag(){return tag;}
 
-    private ArmAddition.Shift shift = ArmAddition.getAddition().getShiftInstance();
+    //所有的MC都有一个shift对象，初始值为无偏移。可以通过setShift设置Shift
+    private ArmAddition.Shift shift = ArmAddition.getAddition().getNewShiftInstance();
 
     public Shift getShift(){return shift;}
 
-    public void setShift(Shift s){this.shift=s;}
+    public void setShift(ArmAddition.ShiftType t,int i) { this.shift.setType(t,i); }
 
     public ArmAddition.CondType getCond(){return ArmAddition.CondType.Any;}
 
@@ -118,7 +119,13 @@ public class MachineCode {
     public MachineCode(TAG tag, MachineBlock mb) {
         this.tag = tag;
         this.mb = mb;
-        mb.addMC(this);
+        mb.addAtEndMC(this);
+    }
+
+    public MachineCode(TAG tag, MachineBlock mb,int num) {
+        this.tag = tag;
+        this.mb = mb;
+        mb.addAtEntryMC(this);
     }
 
     public MachineCode(TAG tag, MachineFunction mf) {

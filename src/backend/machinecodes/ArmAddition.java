@@ -9,11 +9,11 @@ public class ArmAddition{
 
     private static ArmAddition addition=new ArmAddition();
 
-    public Shift getShiftInstance(){
+    public Shift getNewShiftInstance(){
         return new Shift();
     }
 
-    public Shift getShiftInstance(ShiftType t, int imm){
+    public Shift getNewShiftInstance(ShiftType t, int imm){
         return new Shift(t,imm);
     }
 
