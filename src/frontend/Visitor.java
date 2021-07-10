@@ -84,11 +84,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
   }
 
-  private void changeCurFunc(Function f) {
+  private void changeFunc(Function f) {
     curFunc_ = f;
   }
 
-  private void changeCurBB(BasicBlock b) {
+  private void changeBB(BasicBlock b) {
     curBB_ = b;
   }
 
@@ -482,6 +482,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
 
     // get function params information
+    //在此处只生成Func的param的TypeList,Func作为value的形参delay到funcDef的block里面做
     ArrayList<Type> paramTypeList = new ArrayList<>();
     if (ctx.funcFParams() != null) {
       ctx.funcFParams().funcFParam().forEach(param -> {
@@ -489,20 +490,22 @@ public class Visitor extends SysYBaseVisitor<Void> {
         paramTypeList.add(tmpTy_);
       });
     }
-
     // build function object
     FunctionType functionType = f.getFuncTy(retType, paramTypeList);
     var func = f.buildFunction(functionName, functionType);
-    changeCurFunc(func);
+    changeFunc(func);
     // add to symbol table
     scope_.put(functionName, curFunc_);
-    // visit block and create basic blocks
+    //在entryBlock加入函数的形参
     var bb = f.buildBasicBlock(curFunc_.getName() + "_ENTRY", curFunc_);
-    changeCurBB(bb);
+    // visit block and create basic blocks
+    //将函数的形参放到block中，将对Function的arg的初始化delay到visit(ctx.block)
+    ctx.block().entryBlockParams = ctx.funcFParams();
+    changeBB(bb);
     visit(ctx.block());
     log.info("funcDef end@" + functionName);
     return null;
-    //todo
+
   }
 
 
@@ -511,7 +514,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitFuncFParam(FuncFParamContext ctx) {
-    //todo
     return super.visitFuncFParam(ctx);
   }
 
@@ -521,6 +523,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitBlock(BlockContext ctx) {
     scope_.addLayer();
+    if (ctx.entryBlockParams != null) {// 做关于fuction形参初始化的处理
+
+    }
+
     visit(ctx.getChild(0));
     scope_.popLayer();
     return null;
