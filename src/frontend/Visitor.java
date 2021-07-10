@@ -40,7 +40,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     //因为涉及了往上层查找参数，所以这里不用stack用arraylist
     private ArrayList<HashMap<String, Value>> tables_;
-
+    private ArrayList<HashMap<String, ArrayList<Value>>> paramTables_;
     private HashMap<String, Value> top() {
       return tables_.get(tables_.size() - 1);
     }
@@ -105,6 +105,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private Value tmpPtr_;
   private int tmpInt_;
   private Type tmpTy_;
+  private ArrayList<Type> tmpTyArr;
   // singleton variables
   private final ConstantInt CONST0 = ConstantInt.CONST0();
   private final Type i32Type_ = f.getI32Ty();
@@ -483,13 +484,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     // get function params information
     //在此处只生成Func的param的TypeList,Func作为value的形参delay到funcDef的block里面做
-    ArrayList<Type> paramTypeList = new ArrayList<>();
+    ArrayList<Type> paramTypeList;
+    //get type to create function`
     if (ctx.funcFParams() != null) {
-      ctx.funcFParams().funcFParam().forEach(param -> {
-        visit(param);
-        paramTypeList.add(tmpTy_);
-      });
+      visit(ctx.funcFParams());
     }
+    paramTypeList = tmpTyArr;
     // build function object
     FunctionType functionType = f.getFuncTy(retType, paramTypeList);
     var func = f.buildFunction(functionName, functionType);
@@ -500,21 +500,69 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var bb = f.buildBasicBlock(curFunc_.getName() + "_ENTRY", curFunc_);
     // visit block and create basic blocks
     //将函数的形参放到block中，将对Function的arg的初始化delay到visit(ctx.block)
-    ctx.block().entryBlockParams = ctx.funcFParams();
     changeBB(bb);
+    if (ctx.funcFParams() != null) {
+      ctx.funcFParams().initBB = true;
+      visit(ctx.funcFParams());
+    }
     visit(ctx.block());
     log.info("funcDef end@" + functionName);
     return null;
-
   }
 
+  @Override
+  public Void visitFuncFParams(FuncFParamsContext ctx) {
+    if (ctx.initBB) {// 做关于fuction形参初始化的处理
+      ctx.initBB = false;
+      if (curFunc_.getNumArgs() != 0) {
+        var argList = curFunc_.getArgList();
+        for (int i = 0; i < ctx.funcFParam().size(); i++) {
+          var p = ctx.funcFParam(i);
+          if (!p.isEmpty()) { //which means this param is not arr
+            var paramList = new ArrayList<Value>();
+            var arrAlloc = f.buildAlloca(curBB_, ptri32Type_);
+            f.buildStore(argList.get(i), arrAlloc, curBB_);
+            paramList.add(CONST0);//第一个置空
+            p.exp().forEach(exp -> {
+              visit(exp);
+              paramList.add(tmp_);
+            });
+            scope_.put(p.IDENT().getText(), arrAlloc);
+            //todo
+          } else {
+            var alloc = f.getAlloca(i32Type_);
+
+          }
+
+        }
+
+
+      }
+      return null;
+    }
+    //获得用来初始化Function的FuncType
+    ArrayList<Type> types = new ArrayList<>();
+    ctx.funcFParam().forEach(param -> {
+      visit(param);
+      types.add(tmpTy_);
+    });
+    tmpTyArr = types;
+    return null;
+  }
 
   /**
    * funcFParam : bType IDENT (L_BRACKT R_BRACKT (L_BRACKT exp R_BRACKT)*)? ;
    */
   @Override
   public Void visitFuncFParam(FuncFParamContext ctx) {
-    return super.visitFuncFParam(ctx);
+    if (!ctx.L_BRACKT().isEmpty()) {
+      //只要是个数组，就全部拿i32ptr代替
+      //因为只有常量数组，所以偏移可以直接在函数里拿Arg算
+      tmpTy_ = ptri32Type_;
+    } else {
+      tmpTy_ = i32Type_;
+    }
+    return null;
   }
 
   /**
@@ -523,10 +571,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitBlock(BlockContext ctx) {
     scope_.addLayer();
-    if (ctx.entryBlockParams != null) {// 做关于fuction形参初始化的处理
-
-    }
-
     visit(ctx.getChild(0));
     scope_.popLayer();
     return null;
