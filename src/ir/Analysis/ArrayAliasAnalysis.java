@@ -141,7 +141,7 @@ public class ArrayAliasAnalysis {
 
         MemPhi memPhiInst = (MemPhi) inst;
         int predIndex = data.bb.getPredecessor_().indexOf(data.pred);
-        memPhiInst.getIncomingVals().set(predIndex, data.values.get(phiToArrayMap.get(memPhiInst)));
+        memPhiInst.setIncomingVals(predIndex, data.values.get(phiToArrayMap.get(memPhiInst)));
       }
 
       if (data.bb.isDirty()) {

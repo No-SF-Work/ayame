@@ -144,4 +144,11 @@ public class BinaryInst extends Instruction {
     return null;
   }
 
+  public Value selfAlgebraOpt() {
+    switch (this.tag) {
+      case TAG_.Add: {
+
+      }
+    }
+  }
 }

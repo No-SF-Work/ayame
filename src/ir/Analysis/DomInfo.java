@@ -108,6 +108,9 @@ public class DomInfo {
         }
       }
     }
+
+    // calculate dom level
+    computeDominanceLevel(entry, 0);
   }
 
   /**
@@ -124,14 +127,21 @@ public class DomInfo {
       BasicBlock a = iterator.getVal();
       for (BasicBlock b : a.getSuccessor_()) {
         BasicBlock x = a;
-        while (x == b || b.getDomers().indexOf(x) == -1) {
-          if (x.getDominanceFrontier().indexOf(b) == -1) {
+        while (x == b || !b.getDomers().contains(x)) {
+          if (!x.getDominanceFrontier().contains(b)) {
             // maybe better to design the data structure of dominance frontier as a set
             x.getDominanceFrontier().add(b);
           }
           x = x.getIdomer();
         }
       }
+    }
+  }
+
+  public static void computeDominanceLevel(BasicBlock bb, Integer domLevel) {
+    bb.setDomLevel(domLevel);
+    for (BasicBlock succ: bb.getIdoms()) {
+      computeDominanceLevel(succ, domLevel + 1);
     }
   }
 }
