@@ -1,5 +1,6 @@
 package ir.values.instructions;
 
+import ir.Use;
 import ir.types.ArrayType;
 import ir.types.PointerType;
 import ir.types.Type;
@@ -91,6 +92,8 @@ public abstract class MemInst extends Instruction {
   }
 
   public static class LoadInst extends MemInst {
+
+    public Use directContent;
 
     //todo typecheck
     public LoadInst(Type type, Value v/**指针*/) {
@@ -220,6 +223,7 @@ public abstract class MemInst extends Instruction {
     public Phi(TAG_ tag, Type type, int numOP, BasicBlock parent) {
       super(tag, type, numOP);
       this.node.insertAtEntry(parent.getList());
+      this.numOP = parent.getPredecessor_().size();
     }
 
     public Phi(TAG_ tag, Type type, int numOP, Instruction prev) {
@@ -230,10 +234,12 @@ public abstract class MemInst extends Instruction {
       super(next, tag, type, numOP);
     }
 
-    private ArrayList<Value> incomingVals = new ArrayList<>();
-
     public ArrayList<Value> getIncomingVals() {
-      return incomingVals;
+      return operands;
+    }
+
+    public void setIncomingVals(int index, Value val) {
+      CoSetOperand(index, val);
     }
   }
 
@@ -246,19 +252,14 @@ public abstract class MemInst extends Instruction {
     // MemPhi 指令需要放在基本块最前面
     public MemPhi(TAG_ tag, Type type, int numOP, Value array, BasicBlock parent) {
       super(tag, type, numOP);
-      this.array = array;
+      CoSetOperand(0, array); // operands[0]: array
       this.node.insertAtEntry(parent.getList());
+      this.numOP = parent.getPredecessor_().size();
     }
 
-    private Value array;
-    private ArrayList<Value> incomingVals = new ArrayList<>();
-
-    public Value getArray() {
-      return array;
-    }
-
-    public ArrayList<Value> getIncomingVals() {
-      return incomingVals;
+    public void setIncomingVals(int index, Value val) {
+      // operands[0] is array
+      CoSetOperand(index + 1, val);
     }
   }
 

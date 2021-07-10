@@ -47,6 +47,10 @@ public class Use {
     return this.u;
   }
 
+  public Value getValue() {
+    return v;
+  }
+
   public int getOperandRank() {
     return operandRank;
   }
@@ -54,4 +58,6 @@ public class Use {
   private int operandRank;
   private User u;
   private Value v;
+
+
 }

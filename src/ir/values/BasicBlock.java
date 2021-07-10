@@ -98,11 +98,19 @@ public class BasicBlock extends Value {
   private boolean dirty; // 在一些对基本块的遍历中，表示已经遍历过
 
 
-
   // domination info
   // FIXME maybe change `ArrayList` to `HashSet` is better.
   protected BasicBlock idomer;  // 直接支配节点
   protected ArrayList<BasicBlock> idoms; // 直接支配的节点集
   protected ArrayList<BasicBlock> domers; // 支配者节点集
   protected ArrayList<BasicBlock> dominanceFrontier;
+  protected Integer domLevel;
+
+  public Integer getDomLevel() {
+    return domLevel;
+  }
+
+  public void setDomLevel(Integer domLevel) {
+    this.domLevel = domLevel;
+  }
 }

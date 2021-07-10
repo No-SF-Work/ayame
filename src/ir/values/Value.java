@@ -90,6 +90,10 @@ public abstract class Value {
     this.type = type_;
   }
 
+  public LinkedList<Use> getUsesList() {
+    return usesList;
+  }
+
   public boolean isFunction() {
     return this instanceof Function;
   }
