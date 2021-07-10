@@ -78,7 +78,7 @@ public abstract class MemInst extends Instruction {
       return allocatedType_;
     }
 
-    public void setInit(boolean init) {
+    public void setInit() {
       isInit = true;
     }
 

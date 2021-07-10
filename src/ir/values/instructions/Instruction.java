@@ -20,7 +20,6 @@ public abstract class Instruction extends User {
     Rsb,
     Mul,
     Div,
-    Mod,
     Lt,
     Le,
     Ge,
@@ -90,7 +89,7 @@ public abstract class Instruction extends User {
 
   public boolean isArithmeticBinary() {
     return this.tag.ordinal() >= TAG_.Add.ordinal()
-        && this.tag.ordinal() <= TAG_.Mod.ordinal();
+        && this.tag.ordinal() <= TAG_.Div.ordinal();
   }
 
   public boolean isLogicalBinary() {
@@ -107,6 +106,7 @@ public abstract class Instruction extends User {
     return this.tag.ordinal() >= TAG_.Alloca.ordinal()
         && this.tag.ordinal() <= TAG_.MemPhi.ordinal();
   }
+
   public static int getHANDLE() {
     return HANDLE;
   }

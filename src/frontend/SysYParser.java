@@ -875,7 +875,7 @@ public class SysYParser extends Parser {
   }
 
   public static class InitValContext extends ParserRuleContext {
-
+    public ArrayList<Integer> dimInfo_;
     public ExpContext exp() {
       return getRuleContext(ExpContext.class, 0);
     }
@@ -1318,7 +1318,7 @@ public class SysYParser extends Parser {
   }
 
   public static class BlockContext extends ParserRuleContext {
-
+    public FuncFParamsContext entryBlockParams;
     public TerminalNode L_BRACE() {
       return getToken(SysYParser.L_BRACE, 0);
     }

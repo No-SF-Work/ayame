@@ -17,7 +17,6 @@ import ir.values.instructions.Instruction.TAG_;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Stack;
 import java.util.logging.Logger;
 
 import ir.values.instructions.Instruction;
@@ -34,9 +33,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   private class Scope {
 
+    Scope() {
+      tables_ = new ArrayList<>();
+      tables_.add(new HashMap<>());
+    }
+
     //因为涉及了往上层查找参数，所以这里不用stack用arraylist
     private ArrayList<HashMap<String, Value>> tables_;
-    private Stack<HashMap<String, Value>> params;
 
     private HashMap<String, Value> top() {
       return tables_.get(tables_.size() - 1);
@@ -60,23 +63,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
       }
     }
 
-
     public void addLayer() {
       tables_.add(new HashMap<>());
-      params.add(new HashMap<>());
     }
 
-    public void pop() {
+    public void popLayer() {
       tables_.remove(tables_.size() - 1);
-      params.pop();
-    }
-
-    public void addParams() {
-      //todo for functionDef
-    }
-
-    public void popParams() {
-      //todo
     }
 
     public boolean isGlobal() {
@@ -92,6 +84,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
   }
 
+  private void changeFunc(Function f) {
+    curFunc_ = f;
+  }
+
+  private void changeBB(BasicBlock b) {
+    curBB_ = b;
+  }
+
   // translation context
   private final MyModule m = MyModule.getInstance();
   private final MyFactoryBuilder f = MyFactoryBuilder.getInstance();
@@ -100,11 +100,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private Function curFunc_; // current function
 
   // pass values between `visit` functions
-  private ArrayList<Value> tmpArr_;//只能赋值以及被赋值，不能直接在上面add
-  private Type tmpType_;
+  private ArrayList<Value> tmpArr_;//只允许赋值以及被赋值，不能直接操作
   private Value tmp_;
   private Value tmpPtr_;
   private int tmpInt_;
+  private Type tmpTy_;
   // singleton variables
   private final ConstantInt CONST0 = ConstantInt.CONST0();
   private final Type i32Type_ = f.getI32Ty();
@@ -133,7 +133,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitCompUnit(CompUnitContext ctx) {
-    return super.visitCompUnit(ctx);
+    ctx.children.forEach(this::visit);
+    return null;
   }
 
   /**
@@ -141,7 +142,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitDecl(DeclContext ctx) {
-    return super.visitDecl(ctx);
+    ctx.children.forEach(this::visit);
+    return null;
   }
 
   /**
@@ -150,19 +152,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   @Override
   public Void visitConstDecl(ConstDeclContext ctx) {
-    //Btyoe is always int
-    for (ConstDefContext constDefContext : ctx.constDef()) {
-      visit(constDefContext);
-    }
+    ctx.constDef().forEach(this::visitConstDef);
     return null;
-  }
-
-  /**
-   * bType : INT_KW ;
-   */
-  @Override
-  public Void visitBType(BTypeContext ctx) {
-    return super.visitBType(ctx);
   }
 
   //把一堆Constant封装为一个按照dims排列的ConstArr
@@ -197,8 +188,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitConstDef(ConstDefContext ctx) {
-    log.info("visit ConstDef ");
     var name = ctx.IDENT().getText();
+    log.info("visiting ConstDef name :" + name);
     if (scope_.top().get(name) != null) {
       throw new SyntaxException("name already exists");
     }
@@ -206,25 +197,24 @@ public class Visitor extends SysYBaseVisitor<Void> {
       if (ctx.constInitVal() != null) {
         visit(ctx.constInitVal());
         scope_.put(ctx.IDENT().getText(), tmp_);
-      } else {
-        throw new SyntaxException("Defining const without initVal");
       }
-
     } else {// array
       //calculate dims of array
       var arrty = i32Type_;
       var dims = new ArrayList<Integer>();//ndims
-      for (ConstExpContext constExpContext : ctx.constExp()) {
-        visit(constExpContext);
+      ctx.constExp().forEach(context -> {
+        visit(context);
         dims.add(((ConstantInt) tmp_).getVal());
-      }
+      });
       for (var i = dims.size() - 1; i > 0; i--) {
         arrty = f.getArrayTy(arrty, dims.get(i));// arr(arr(arr(i32,dim1),dim2),dim3)
       }
       if (scope_.isGlobal()) {
         if (ctx.constInitVal() != null) {
-          ctx.constInitVal().dimInfo_ = dims;//todo check
+          ctx.constInitVal().dimInfo_ = dims;
+          globalInit_ = true;
           visit(ctx.constInitVal());//dim.size()=n
+          globalInit_ = false;
           var initializer = genConstArr(dims, tmpArr_);
           var variable = f.getGlobalvariable(ctx.IDENT().getText(), arrty, initializer);
           variable.setConst();
@@ -234,12 +224,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
           scope_.put(ctx.IDENT().getText(), variable);
         }
       } else {
-        //todo
         var allocatedArray = f
             .buildAlloca(curBB_, arrty);//alloca will be move to first bb in cur functioon
         scope_.put(ctx.IDENT().getText(), allocatedArray);
         if (ctx.constInitVal() != null) {
-          allocatedArray.setInit(true);
+          allocatedArray.setInit();
           ctx.constInitVal().dimInfo_ = dims;
           visit(ctx.constInitVal());
           var arr = tmpArr_;
@@ -317,9 +306,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitVarDecl(VarDeclContext ctx) {
-    //todo
-
-    return super.visitVarDecl(ctx);
+    ctx.varDef().forEach(this::visit);
+    return null;
   }
 
   /**
@@ -327,8 +315,96 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitVarDef(VarDefContext ctx) {
-    //todo
-    return super.visitVarDef(ctx);
+    var varName = ctx.IDENT().getText();
+    log.info("visiting VarDef name:" + varName);
+    if (scope_.top().get(varName) != null) {
+      throw new SyntaxException("name already exists in cur scope");
+    }
+
+    if (ctx.constExp().isEmpty()) {
+      if (scope_.isGlobal()) {    // 非数组全局变量
+        if (ctx.initVal() != null) {
+          //global变量的 initelement 只能是 constant
+          globalInit_ = true;
+          visit(ctx.initVal());
+          globalInit_ = false;
+          var initializer = (Constant) tmp_;
+          var v = f.getGlobalvariable(varName, i32Type_, initializer);
+          scope_.put(varName, v);
+        }
+      } else {//非数组局部
+        var allocator = f.buildAlloca(curBB_, i32Type_);
+        scope_.put(varName, allocator);
+        if (ctx.initVal() != null) {
+          visit(ctx.initVal());
+          f.buildStore(tmp_, allocator, curBB_);
+        }
+      }
+    } else {//array
+      var arrTy = i32Type_;
+      var dims = new ArrayList<Integer>();
+      ctx.constExp().forEach(context -> {
+        visit(context);
+        dims.add(((ConstantInt) tmp_).getVal());
+      });
+      for (var i = dims.size() - 1; i > 0; i--) {
+        arrTy = f.getArrayTy(arrTy, dims.get(i));
+      }
+      if (scope_.isGlobal()) {
+        if (!ctx.initVal().isEmpty()) {
+
+          ctx.initVal().dimInfo_ = dims;
+          globalInit_ = true;
+          visit(ctx.initVal());
+          globalInit_ = false;
+
+          var arr = tmpArr_;
+          var init = genConstArr(dims, arr);
+          var glo = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, init);
+          scope_.put(ctx.IDENT().getText(), glo);
+        } else {
+          var v = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, CONST0);
+          scope_.put(ctx.IDENT().getText(), v);
+        }
+      } else {//local arr init
+        var alloc = f.buildAlloca(curBB_, arrTy);
+        scope_.put(ctx.IDENT().getText(), alloc);
+        if (!ctx.initVal().isEmpty()) {
+          alloc.setInit();
+          ctx.initVal().dimInfo_ = dims;
+          visit(ctx.initVal());
+          var arr = tmpArr_;
+          var pointer = f.buildGEP(alloc, new ArrayList<>() {{
+            add(CONST0);
+          }}, curBB_);
+
+          for (var i = 1; i < dims.size(); i++) {
+            pointer = f.buildGEP(pointer, new ArrayList<>() {{
+              add(CONST0);
+            }}, curBB_);
+          }
+
+          for (int i = 0; i < arr.size(); i++) {
+            var t = arr.get(i);
+            if (t instanceof ConstantInt) {
+              if (((ConstantInt) t).getVal() == 0) {
+                continue;
+              }
+            }
+            if (i != 0) {
+              int finalI = i;
+              var ptr = f.buildGEP(pointer, new ArrayList<>() {{
+                add(ConstantInt.newOne(i32Type_, finalI));
+              }}, curBB_);
+              f.buildStore(t, ptr, curBB_);
+            } else {
+              f.buildStore(t, pointer, curBB_);
+            }
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -336,8 +412,55 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitInitVal(InitValContext ctx) {
-    //todo
-    return super.visitInitVal(ctx);
+    if (ctx.exp() != null && ctx.dimInfo_ == null) {
+      if (globalInit_) {
+        usingInt_ = true;
+        visit(ctx.exp());
+        usingInt_ = false;
+        tmp_ = ConstantInt.newOne(i32Type_, tmpInt_);
+      } else {
+        visit(ctx.exp());
+      }
+    } else {
+      var curDimLength = ctx.dimInfo_.get(0);
+      var sizeOfEachEle = 1;//每个元素（i32或者是数组）的长度,i32 长度为1
+      var arrOfCurDim = new ArrayList<Value>();//
+      //calculate Size of Ele in cur dim
+      for (int i = 1; i < ctx.dimInfo_.size(); i++) {
+        sizeOfEachEle *= ctx.dimInfo_.get(i);
+      }
+      int finalSizeOfEachEle = sizeOfEachEle;
+      int finalSizeOfEachEle1 = sizeOfEachEle;
+      ctx.initVal().forEach(context -> {
+        if (context.exp() == null) {
+          var pos = arrOfCurDim.size();
+          for (var i = 0; i < finalSizeOfEachEle - (pos % finalSizeOfEachEle) % finalSizeOfEachEle;
+              i++) {
+            arrOfCurDim.add(CONST0);
+          }
+          context.dimInfo_ = new ArrayList<>(ctx.dimInfo_.
+              subList(1, ctx.dimInfo_.size()));
+          visit(context);
+          arrOfCurDim.addAll(tmpArr_);
+        } else {
+          if (globalInit_) {
+            usingInt_ = true;
+            visit(context.exp());
+            usingInt_ = false;
+            tmp_ = ConstantInt.newOne(i32Type_, tmpInt_);
+          } else {
+            visit(context.exp());
+          }
+          arrOfCurDim.add(tmp_);
+        }
+        for (int i = arrOfCurDim.size(); i < curDimLength * finalSizeOfEachEle1; i++) {
+          arrOfCurDim.add(CONST0);
+        }
+        tmpArr_ = arrOfCurDim;
+      });
+    }
+    return null;
+
   }
 
   /**
@@ -359,57 +482,38 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
 
     // get function params information
+    //在此处只生成Func的param的TypeList,Func作为value的形参delay到funcDef的block里面做
     ArrayList<Type> paramTypeList = new ArrayList<>();
     if (ctx.funcFParams() != null) {
-      FuncFParamsContext paramsContext = ctx.funcFParams();
-      int paramNum = (ctx.funcFParams().getChildCount() + 1) / 2;
-      for (int i = 0; i < paramNum; i++) {
-        FuncFParamContext paramContext = paramsContext.funcFParam(i);
-        // get each parameter information
-      }
+      ctx.funcFParams().funcFParam().forEach(param -> {
+        visit(param);
+        paramTypeList.add(tmpTy_);
+      });
     }
-
     // build function object
     FunctionType functionType = f.getFuncTy(retType, paramTypeList);
-    curFunc_ = f.buildFunction(functionName, functionType);
-
+    var func = f.buildFunction(functionName, functionType);
+    changeFunc(func);
     // add to symbol table
-
+    scope_.put(functionName, curFunc_);
+    //在entryBlock加入函数的形参
+    var bb = f.buildBasicBlock(curFunc_.getName() + "_ENTRY", curFunc_);
     // visit block and create basic blocks
-
+    //将函数的形参放到block中，将对Function的arg的初始化delay到visit(ctx.block)
+    ctx.block().entryBlockParams = ctx.funcFParams();
+    changeBB(bb);
+    visit(ctx.block());
     log.info("funcDef end@" + functionName);
-
     return null;
-//    return super.visitFuncDef(ctx);
+
   }
 
-  /**
-   * funcType : VOID_KW | INT_KW ; * @value : tmpType-> stored type
-   */
-  @Override
-  public Void visitFuncType(FuncTypeContext ctx) {
-    if (ctx.INT_KW() != null) {
-      tmpType_ = voidType_;
-    } else if (ctx.VOID_KW() != null) {
-      tmpType_ = i32Type_;
-    }
-    return null;
-  }
-
-  /**
-   * funcFParams : funcFParam (COMMA funcFParam)* ;
-   */
-  @Override
-  public Void visitFuncFParams(FuncFParamsContext ctx) {
-    return super.visitFuncFParams(ctx);
-  }
 
   /**
    * funcFParam : bType IDENT (L_BRACKT R_BRACKT (L_BRACKT exp R_BRACKT)*)? ;
    */
   @Override
   public Void visitFuncFParam(FuncFParamContext ctx) {
-    //todo
     return super.visitFuncFParam(ctx);
   }
 
@@ -418,8 +522,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitBlock(BlockContext ctx) {
-    //todo
-    return super.visitBlock(ctx);
+    scope_.addLayer();
+    if (ctx.entryBlockParams != null) {// 做关于fuction形参初始化的处理
+
+    }
+
+    visit(ctx.getChild(0));
+    scope_.popLayer();
+    return null;
   }
 
   /**
@@ -427,7 +537,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitBlockItem(BlockItemContext ctx) {
-    //todo
     return super.visitBlockItem(ctx);
   }
 
@@ -458,7 +567,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitExpStmt(ExpStmtContext ctx) {
-    //todo
     return super.visitExpStmt(ctx);
   }
 
@@ -543,7 +651,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
       // 否则加入待替换的列表
       for (var curEntry = firstEntry; curEntry != lastEntry; curEntry = curEntry.getNext()) {
         var curInstr = curEntry.getVal();
-
         if (curInstr.tag.equals(Instruction.TAG_.Br)) { // Instruction found, then [backpatch]
           var operandCount = curInstr.getOperands().size();
 
@@ -556,7 +663,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var trueBlock = (BasicBlock) curInstr.getOperands().get(0);
 
             if (trueBlock.getName().equals(key)) {
-              curInstr.getOperands().set(0, targetBlock);
+              curInstr.CoSetOperand(0, targetBlock);
             } else if (trueBlock != endBlock) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
               blockList.add(trueBlock);
             }
@@ -567,7 +674,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var trueBlock = (BasicBlock) curInstr.getOperands().get(1);
 
             if (trueBlock.getName().equals(key)) {
-              curInstr.getOperands().set(1, targetBlock);
+              curInstr.CoSetOperand(1, targetBlock);
             } else if (trueBlock != endBlock) {
               blockList.add(trueBlock);
             }
@@ -577,13 +684,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var falseBlock = (BasicBlock) curInstr.getOperands().get(2);
 
             if (falseBlock.getName().equals(key)) {
-              curInstr.getOperands().set(2, targetBlock);
+              curInstr.CoSetOperand(2, targetBlock);
             } else if (falseBlock != endBlock) {
               blockList.add(falseBlock);
             }
           }
         }
       }
+
     }
   }
 
@@ -603,7 +711,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitContinueStmt(ContinueStmtContext ctx) {
     f.buildBr(f.getBasicBlock(ContinueInstructionMark), curBB_);
-    //todo
     return null;
   }
 
@@ -629,7 +736,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitCond(CondContext ctx) {
-    //todo
     return super.visitCond(ctx);
   }
 
@@ -846,8 +952,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitCallee(CalleeContext ctx) {
 
-    //todo
-    return super.visitCallee(ctx);
+    return null;
   }
 
   /**
@@ -855,8 +960,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitFuncRParams(FuncRParamsContext ctx) {
-    //todo
-    return super.visitFuncRParams(ctx);
+    return null;
   }
 
   /**
@@ -864,7 +968,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitParam(ParamContext ctx) {
-    //todo
     return super.visitParam(ctx);
   }
 
@@ -873,7 +976,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitMulExp(MulExpContext ctx) {
-    //todo
     if (usingInt_) {
       visit(ctx.unaryExp(0));
       var s = tmpInt_;
@@ -912,7 +1014,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
           lhs = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
         }
         if (ctx.mulOp(i - 1).MOD() != null) {
-          lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
+          //x%y=x - (x/y)*y
+          var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+          var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
+          lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
         }
       }
       tmp_ = lhs;
@@ -927,7 +1032,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitAddExp(AddExpContext ctx) {
-    //todo
     if (usingInt_) {//所有值包括ident都必须是常量
       visit(ctx.mulExp(0));
       var s = tmpInt_;
