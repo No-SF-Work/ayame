@@ -252,9 +252,9 @@ public abstract class MemInst extends Instruction {
     // MemPhi 指令需要放在基本块最前面
     public MemPhi(TAG_ tag, Type type, int numOP, Value array, BasicBlock parent) {
       super(tag, type, numOP);
+      this.numOP = parent.getPredecessor_().size() + 1;
       CoSetOperand(0, array); // operands[0]: array
       this.node.insertAtEntry(parent.getList());
-      this.numOP = parent.getPredecessor_().size();
     }
 
     public void setIncomingVals(int index, Value val) {
