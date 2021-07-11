@@ -4,6 +4,7 @@ import ir.MyModule;
 import ir.types.Type;
 import ir.Use;
 
+import ir.types.Type.NoType;
 import ir.values.instructions.Instruction;
 import java.lang.reflect.Array;
 import java.util.ArrayList;

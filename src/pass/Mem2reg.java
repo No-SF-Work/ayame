@@ -3,8 +3,10 @@ package pass;
 import ir.Analysis.DomInfo;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
+import ir.types.Type.NoType;
 import ir.values.BasicBlock;
 import ir.values.Function;
+import ir.values.UndefValue;
 import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
@@ -68,7 +70,7 @@ public class Mem2reg implements IRPass {
     for (INode<BasicBlock, Function> bbNode : func.getList_()) {
       BasicBlock bb = bbNode.getVal();
       for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
-        Instruction inst = instNode.getVal();
+        var inst = instNode.getVal();
         if (inst.tag == TAG_.Alloca) {
           AllocaInst allocaInst = (AllocaInst) inst;
           // only local int
@@ -132,7 +134,7 @@ public class Mem2reg implements IRPass {
     log.info("mem2reg: variable renaming");
     ArrayList<Value> values = new ArrayList<>();
     for (int i = 0; i < allocas.size(); i++) {
-      values.set(i, null);
+      values.set(i, new UndefValue());
     }
     for (INode<BasicBlock, Function> bbNode : func.getList_()) {
       bbNode.getVal().setDirty(false);
@@ -169,7 +171,6 @@ public class Mem2reg implements IRPass {
         Instruction inst = instNode.getVal();
         // AllocaInst
         if (inst.tag == TAG_.Alloca) {
-          AllocaInst allocaInst = (AllocaInst) inst;
           instNode.removeSelf();
         }
         // LoadInst

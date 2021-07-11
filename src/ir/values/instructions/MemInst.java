@@ -93,7 +93,7 @@ public abstract class MemInst extends Instruction {
 
   public static class LoadInst extends MemInst {
 
-    public Use directContent;
+    public Use useStore;
 
     //todo typecheck
     public LoadInst(Type type, Value v/**指针*/) {

@@ -40,10 +40,10 @@ public class BinaryInst extends Instruction {
   }
 
   // 假设调用时已经知道 lhs 和 rhs 都是 ConstantInt 了
-  public Integer evalSelf() {
-    Integer lhsVal = ((ConstantInt) (this.operands.get(0))).getVal();
-    Integer rhsVal = ((ConstantInt) (this.operands.get(1))).getVal();
-    switch (this.tag) {
+  public static int evalBinary(TAG_ tag, ConstantInt clhs, ConstantInt crhs) {
+    Integer lhsVal = clhs.getVal();
+    Integer rhsVal = crhs.getVal();
+    switch (tag) {
       case Add:
         return lhsVal + rhsVal;
       case Sub:
@@ -73,7 +73,7 @@ public class BinaryInst extends Instruction {
       case Or:
         return (lhsVal != 0 || rhsVal != 0) ? 1 : 0;
     }
-    return null;
+    return 0;
   }
 
   public boolean isAdd() {
@@ -98,6 +98,16 @@ public class BinaryInst extends Instruction {
 
   public boolean isMod() {
     return this.tag == TAG_.Mod;
+  }
+
+  public boolean isCommutative() {
+    return this.tag == TAG_.Add || this.tag == TAG_.Mul || this.tag == TAG_.Eq
+        || this.tag == TAG_.Ne || this.tag == TAG_.And || this.tag == TAG_.Or;
+  }
+
+  public static boolean isRev(TAG_ a, TAG_ b) {
+    return (a == TAG_.Lt && b == TAG_.Gt) || (a == TAG_.Gt && b == TAG_.Lt) || (a == TAG_.Le
+        && b == TAG_.Ge) || (a == TAG_.Ge && b == TAG_.Le);
   }
 
   public boolean isLt() {
