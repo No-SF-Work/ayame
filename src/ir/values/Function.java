@@ -6,6 +6,7 @@ import ir.types.FunctionType;
 import ir.types.Type;
 
 import java.util.ArrayList;
+import java.util.List;
 import util.IList;
 import util.IList.INode;
 
@@ -17,19 +18,43 @@ public class Function extends Value {
   //参数声明，不含值
   public class Arg extends Value {
 
-    //todo 做对函数内联方便的架构设计
     private int rank;//排第几,非负
+
+    public int rank() {
+      return this.rank;
+    }
 
     public Arg(Type type, int rank) {
       super("", type);
       this.rank = rank;
     }
+
+    public List<Value> getBounds() {
+      return bounds;
+    }
+
+    public void setBounds(List<Value> bounds) {
+      this.bounds = bounds;
+    }
+
+    private List<Value> bounds;
+
   }
+
+  private void buildArgs() {
+    var funcTy = this.getType();
+    var arr = funcTy.getParams();
+    for (int i = 0; i < funcTy.getParams().size(); i++) {
+      argList_.add(new Arg(arr.get(i), i));
+    }
+  }
+
 
   public Function(String name, Type type) {
     super(name, type);
     list_ = new IList<>(this);
     node = new INode<>(this);
+    buildArgs();
   }
 
   public Function(String name, Type type, MyModule module) {
@@ -37,6 +62,7 @@ public class Function extends Value {
     list_ = new IList<>(this);
     node = new INode<>(this);
     this.node.insertAtEnd(module.__functions);
+    buildArgs();
   }
 
   public Function(String name, Type type, MyModule module, boolean isBuiltin) {
