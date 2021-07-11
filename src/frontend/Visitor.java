@@ -632,16 +632,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     // Parse [cond]
     visitCond(ctx.cond());
-    f.buildBr(tmp_, trueBlock, falseBlock, parentBB);
-
     // Parse [then] branch
-    curBB_ = trueBlock;
+    changeBB(trueBlock);
     visitStmt(ctx.stmt(0));
     f.buildBr(nxtBlock, trueBlock);
 
     // Parse [else] branch
     if (ctx.ELSE_KW() != null) {
-      curBB_ = falseBlock;
+      changeBB(falseBlock);
       visitStmt(ctx.stmt(1));
       f.buildBr(nxtBlock, falseBlock);
     }
@@ -667,11 +665,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
     f.buildBr(whileCondBlock, parentBB);
 
     // Parse [whileCond]
+    ctx.cond().falseblock = nxtBlock;
+    ctx.cond().trueblock = trueBlock;
+    changeBB(whileCondBlock);
     visitCond(ctx.cond());
-    f.buildBr(tmp_, trueBlock, nxtBlock, whileCondBlock);
-
     // Parse [loop]
-    curBB_ = trueBlock;
+    changeBB(trueBlock);
     visitStmt(ctx.stmt());
     f.buildBr(whileCondBlock, trueBlock);
 
@@ -679,7 +678,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     backpatch(BreakInstructionMark, trueBlock, nxtBlock, nxtBlock);
     backpatch(ContinueInstructionMark, trueBlock, nxtBlock, whileCondBlock);
 
-    curBB_ = nxtBlock;
+    changeBB(nxtBlock);
     return null;
   }
 
@@ -749,7 +748,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitBreakStmt(BreakStmtContext ctx) {
     f.buildBr(f.getBasicBlock(BreakInstructionMark), curBB_);
-    //todo
     return null;
   }
 
@@ -767,8 +765,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitReturnStmt(ReturnStmtContext ctx) {
-    //todo
-    return super.visitReturnStmt(ctx);
+    visit(ctx.exp());
+    f.buildRet(tmp_, curBB_);
+    return null;
   }
 
   /**
@@ -777,14 +776,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitExp(ExpContext ctx) {
     return super.visitExp(ctx);
-  }
-
-  /**
-   * cond : lOrExp ;
-   */
-  @Override
-  public Void visitCond(CondContext ctx) {
-    return super.visitCond(ctx);
   }
 
   /**
@@ -942,7 +933,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   @Override
   public Void visitIntConst(IntConstContext ctx) {
-    //todo
     if (ctx.DECIMAL_CONST() != null) {
       tmpInt_ = Integer.parseInt(ctx.DECIMAL_CONST().getText(), 10);
       return null;
@@ -1154,8 +1144,24 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitRelExp(RelExpContext ctx) {
-    //todo
-
+    visit(ctx.addExp(0));
+    var lhs = tmp_;
+    for (int i = 1; i < ctx.addExp().size(); i++) {
+      visit(ctx.addExp(i));
+      if (ctx.relOp(i - 1).LE() != null) {
+        lhs = f.buildBinary(TAG_.Le, lhs, tmp_, curBB_);
+      }
+      if (ctx.relOp(i - 1).GE() != null) {
+        lhs = f.buildBinary(TAG_.Ge, lhs, tmp_, curBB_);
+      }
+      if (ctx.relOp(i - 1).GT() != null) {
+        lhs = f.buildBinary(TAG_.Gt, lhs, tmp_, curBB_);
+      }
+      if (ctx.relOp(i - 1).LT() != null) {
+        lhs = f.buildBinary(TAG_.Lt, lhs, tmp_, curBB_);
+      }
+    }
+    tmp_ = lhs;
     return null;
   }
 
@@ -1165,25 +1171,67 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitEqExp(EqExpContext ctx) {
-    //todo
-
-    return super.visitEqExp(ctx);
+    visit(ctx.relExp(0));
+    var lhs = tmp_;
+    for (int i = 1; i < ctx.relExp().size(); i++) {
+      visit(ctx.relExp(i));
+      lhs = f.buildBinary(TAG_.Eq, lhs, tmp_, curBB_);
+    }
+    tmp_ = lhs;
+    return null;
   }
 
   /**
    * lAndExp : eqExp (AND eqExp)* ;
    */
   @Override
-  public Void visitLAndExp(LAndExpContext ctx) {//todo
-    return super.visitLAndExp(ctx);
+  public Void visitLAndExp(LAndExpContext ctx) {
+    ctx.eqExp().forEach(exp -> {
+      var nb = f.buildBasicBlock("", curFunc_);
+      visit(exp);
+      f.buildBr(tmp_, nb, ctx.falseblock, curBB_);
+      changeBB(nb);
+    });
+    f.buildBr(ctx.trueblock, curBB_);
+    return null;
   }
 
   /**
    * lOrExp : lAndExp (OR lAndExp)* ;
    */
   @Override
-  public Void visitLOrExp(LOrExpContext ctx) {//todo
-    return super.visitLOrExp(ctx);
+  public Void visitLOrExp(LOrExpContext ctx) {
+    for (int i = 0; i < ctx.lAndExp().size() - 1; i++) {
+      var nb = f.buildBasicBlock("", curFunc_);
+      ctx.lAndExp(i).trueblock = ctx.trueblock;
+      ctx.lAndExp(i).falseblock = nb;
+      visit(ctx.lAndExp(i));
+      changeBB(nb);
+    }
+    ctx.lAndExp(ctx.lAndExp().size() - 1).falseblock = ctx.falseblock;
+    ctx.lAndExp(ctx.lAndExp().size() - 1).trueblock = ctx.trueblock;
+    visit(ctx.lAndExp(ctx.lAndExp().size() - 1));
+
+  /*  ctx.lAndExp(0).falseblock = ctx.falseblock;
+    ctx.lAndExp(0).trueblock = ctx.trueblock;
+    visit(ctx.lAndExp(0));
+    for (int i = 1; i < ctx.lAndExp().size(); i++) {
+      var nb = f.buildBasicBlock("", curFunc_);
+      ctx.lAndExp(i).falseblock = nb;
+      visit(ctx.lAndExp(i));
+    }*/
+    return null;
+  }
+
+  /**
+   * cond : lOrExp ;
+   */
+  @Override
+  public Void visitCond(CondContext ctx) {
+    ctx.lOrExp().falseblock = ctx.falseblock;
+    ctx.lOrExp().trueblock = ctx.trueblock;
+    visit(ctx.lOrExp());
+    return null;
   }
 
   /**
