@@ -62,5 +62,7 @@ public class MachineBlock {
         pred.add(mb);
     }
 
+    public ArrayList<MachineBlock> getPred(){return pred;}
+
 
 }

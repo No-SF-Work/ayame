@@ -57,6 +57,10 @@ public class MachineCode {
     //定义的virtualreg
     private ArrayList<VirtualReg> virtualDef = new ArrayList<>();
 
+    private ArrayList<Reg> regDef = new ArrayList<>();
+
+    private ArrayList<Reg> regUse = new ArrayList<>();
+
     //使用的phyreg
     private ArrayList<PhyReg> phyUses = new ArrayList<>();
 
@@ -97,6 +101,9 @@ public class MachineCode {
             virtualUses.add((VirtualReg) r);
         if(r.getState()== MachineOperand.state.phy)
             phyUses.add((PhyReg) r);
+        if(r instanceof VirtualReg||r instanceof PhyReg){
+            regUse.add((Reg) r);
+        }
     }
 
     public void addDef(MachineOperand r){
@@ -104,7 +111,50 @@ public class MachineCode {
             virtualDef.add((VirtualReg)r);
         if(r.getState()== MachineOperand.state.phy)
             phyDef.add((PhyReg) r);
+        if(r instanceof VirtualReg||r instanceof PhyReg){
+            regDef.add((Reg) r);
+        }
     }
+
+//    public void removeReg(VirtualReg vr){
+//        if(virtualUses.contains(vr)){
+//            virtualUses.remove(vr);
+//        }
+//        if(virtualDef.contains(vr)){
+//            virtualDef.remove(vr);
+//        }
+//        if(regUse.contains(vr)){
+//            regUse.remove(vr);
+//        }
+//        if(regDef.contains(vr)){
+//            regDef.remove(vr);
+//        }
+//    }
+
+    public void removeReg(Reg r){
+        if(regUse.contains(r)){
+            regUse.remove(r);
+        }
+        if(regDef.contains(r)){
+            regDef.remove(r);
+        }
+    }
+
+
+//    public void removeReg(PhyReg pr){
+//        if(phyDef.contains(pr)){
+//            phyDef.remove(pr);
+//        }
+//        if(phyUses.contains(pr)){
+//            phyUses.remove(pr);
+//        }
+//        if(regUse.contains(pr)){
+//            regUse.remove(pr);
+//        }
+//        if(regDef.contains(pr)){
+//            regDef.remove(pr);
+//        }
+//    }
 
 
     public boolean isAllocated(){

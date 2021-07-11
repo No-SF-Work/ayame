@@ -36,6 +36,10 @@ public class MCMove extends MachineCode{
         super(TAG.Mv,mb);
     }
 
+    public MCMove(){
+        super(TAG.Mv);
+    }
+
     public MCMove(MachineBlock mb,int num){
         super(TAG.Mv,mb,num);
     }
