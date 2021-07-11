@@ -6,6 +6,7 @@ import ir.types.FunctionType;
 import ir.types.Type;
 
 import java.util.ArrayList;
+import java.util.List;
 import util.IList;
 import util.IList.INode;
 
@@ -27,6 +28,17 @@ public class Function extends Value {
       super("", type);
       this.rank = rank;
     }
+
+    public List<Value> getBounds() {
+      return bounds;
+    }
+
+    public void setBounds(List<Value> bounds) {
+      this.bounds = bounds;
+    }
+
+    private List<Value> bounds;
+
   }
 
   private void buildArgs() {

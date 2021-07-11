@@ -17,10 +17,12 @@ import ir.values.instructions.Instruction.TAG_;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.logging.Logger;
 
 import ir.values.instructions.Instruction;
 import util.Mylogger;
+import util.Pair;
 
 /**
  * 我们并不需要用返回值传递信息，所以将类型标注为Void
@@ -40,7 +42,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     //因为涉及了往上层查找参数，所以这里不用stack用arraylist
     private ArrayList<HashMap<String, Value>> tables_;
-    private ArrayList<HashMap<String, ArrayList<Value>>> paramTables_;
+    private HashMap<String, ArrayList<Value>> params_;
+
     private HashMap<String, Value> top() {
       return tables_.get(tables_.size() - 1);
     }
@@ -115,6 +118,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   //status word
   private boolean usingInt_ = false;//常量初始化要对表达式求值，并且用的Ident也要是常量
   private boolean globalInit_ = false;
+  private boolean requireAddr = false;
 
   /**
    * program : compUnit ;
@@ -514,11 +518,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
   public Void visitFuncFParams(FuncFParamsContext ctx) {
     if (ctx.initBB) {// 做关于fuction形参初始化的处理
       ctx.initBB = false;
+
       if (curFunc_.getNumArgs() != 0) {
         var argList = curFunc_.getArgList();
         for (int i = 0; i < ctx.funcFParam().size(); i++) {
           var p = ctx.funcFParam(i);
-          if (!p.isEmpty()) { //which means this param is not arr
+          if (!p.isEmpty()) { //which means this param is  arr
             var paramList = new ArrayList<Value>();
             var arrAlloc = f.buildAlloca(curBB_, ptri32Type_);
             f.buildStore(argList.get(i), arrAlloc, curBB_);
@@ -528,15 +533,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
               paramList.add(tmp_);
             });
             scope_.put(p.IDENT().getText(), arrAlloc);
-            //todo
+            scope_.params_.put(ctx.funcFParam(i).IDENT().getText(), paramList);
+            argList.get(i).setBounds(paramList);
           } else {
             var alloc = f.getAlloca(i32Type_);
-
+            f.buildStore(argList.get(i), alloc, curBB_);
+            scope_.put(ctx.funcFParam().get(i).IDENT().getText(), alloc);
           }
-
         }
-
-
       }
       return null;
     }
@@ -788,7 +792,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitLVal(LValContext ctx) {
-    //todo
     var name = ctx.IDENT().getText();
     var t = scope_.find(name);
     if (t == null) {
@@ -801,11 +804,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
       return null;
     }
     //直接指向int
-    var INT = ((PointerType) t.getType()).getContained().isIntegerTy();
+    boolean INT = false, PTR = false, ARR = false;
+    if (t.getType().isPointerTy()) {
+      INT = ((PointerType) t.getType()).getContained().isIntegerTy();
+      PTR = ((PointerType) t.getType()).getContained().isPointerTy();
+      //指向一个数组
+      ARR = ((PointerType) t.getType()).getContained().isArrayTy();
+    }
     //function call
-    var PTR = ((PointerType) t.getType()).getContained().isPointerTy();
-    //指向一个数组
-    var ARR = ((PointerType) t.getType()).getContained().isArrayTy();
     if (INT) {
       if (!ctx.exp().isEmpty()) {
         tmp_ = t;
@@ -825,10 +831,22 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     if (PTR) {
       if (!ctx.exp().isEmpty()) {
-        tmp_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
+        tmpPtr_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         return null;
       } else {
-        //todo function call
+        var arrayParams = scope_.params_.get(ctx.IDENT().getText());
+        tmpPtr_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
+        for (int i = 0; i < ctx.exp().size(); i++) {
+          visit(ctx.exp().get(i));
+          var val = tmp_;
+          for (int j = i + 1; j < arrayParams.size(); j++) {
+            val = f.buildBinary(TAG_.Mul, val, arrayParams.get(j), curBB_);
+          }
+          Value finalVal = val;
+          tmpPtr_ = f.buildGEP(tmpPtr_, new ArrayList<>() {{
+            add(finalVal);
+          }}, curBB_);
+        }
         return null;
       }
     }
@@ -879,8 +897,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
         return null;
       }
       if (ctx.lVal() != null) {
-        if (true) {
-          //todo function call
+        if (requireAddr) {
+          requireAddr = false;
+          visit(ctx.lVal());
+          while (!((PointerType) (tmp_.getType())).getContained().isIntegerTy()) {
+            tmp_ = f.buildGEP(tmp_, new ArrayList<>() {{
+              add(CONST0);
+            }}, curBB_);
+          }
         } else {
           visit(ctx.lVal());
           if (tmp_.getType().isIntegerTy()) {
@@ -979,7 +1003,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
         return null;
       }
       if (ctx.callee() != null) {
-        //todo
+        visit(ctx.callee());
+        return null;
       }
       if (ctx.primaryExp() != null) {
         visit(ctx.primaryExp());
@@ -995,15 +1020,23 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitCallee(CalleeContext ctx) {
-
-    return null;
-  }
-
-  /**
-   * funcRParams : param (COMMA param)* ;
-   */
-  @Override
-  public Void visitFuncRParams(FuncRParamsContext ctx) {
+    var func = scope_.find(ctx.IDENT().getText());
+    var args = new ArrayList<Value>();
+    var paramsCtx = ctx.funcRParams().param();
+    var paramTys = ((Function) func).getType().getParams();
+    for (int i = 0; i < paramsCtx.size(); i++) {
+      var param = paramsCtx.get(i);
+      var paramTy = paramTys.get(i);
+      if (paramTy.isIntegerTy()) {
+        requireAddr = false;
+      } else {
+        requireAddr = true;
+      }
+      visit(param.exp());// 没有String
+      requireAddr = false;
+      args.add(tmp_);
+    }
+    tmp_ = f.buildFuncCall((Function) func, args, curBB_);
     return null;
   }
 
@@ -1161,7 +1194,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    * 表达式求和
    */
   @Override
-  public Void visitConstExp(ConstExpContext ctx) {//todo
+  public Void visitConstExp(ConstExpContext ctx) {
     usingInt_ = true;
     visit(ctx.addExp());
     tmp_ = f.getConstantInt(tmpInt_);
