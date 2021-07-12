@@ -250,6 +250,10 @@ public abstract class MemInst extends Instruction {
       return elementType_;
     }
 
+    public Value getAimTo() {
+      return this.aimTo;
+    }
+
     private Value aimTo;
     private Type elementType_;
   }
