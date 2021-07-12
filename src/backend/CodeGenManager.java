@@ -6,12 +6,14 @@ import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 import ir.MyModule;
 import ir.values.*;
+import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import util.IList;
 import util.IList.INode;
 import ir.values.instructions.MemInst.Phi;
 import util.Pair;
 
+import javax.crypto.Mac;
 import java.util.*;
 
 /**
@@ -175,10 +177,9 @@ public class CodeGenManager {
                                 }
                                 phiSet.add((VirtualReg) phiArg);
                             }
-                            phiSets.put((VirtualReg) phiTarget, phiSet);
                             phiRows.put((VirtualReg) phiTarget,new ArrayList<>());
                         } else {
-                            continue;
+                            break;
                         }
                     }
                     //大风车吱呀吱哟哟地转 见SSA Elimination after Register Allocation
@@ -195,11 +196,10 @@ public class CodeGenManager {
                             if(ir.tag==Instruction.TAG_.Phi){
                                 MachineOperand phiTarget= aV.analyzeValue(ir);
                                 assert(phiTarget instanceof VirtualReg);
-                                Value vv=((Phi)ir).getIncomingVals().get(i);
                                 MachineOperand phiParam=aV.analyzeValue(((Phi)ir).getIncomingVals().get(i));
                                 edges.put((VirtualReg) phiTarget,(VirtualReg) phiParam);
                             }else{
-                                continue;
+                                break;
                             }
                         }
                         ArrayList<ArrayList<VirtualReg>> circles=calcCircle(edges,i);
@@ -224,15 +224,60 @@ public class CodeGenManager {
                                 waiting.get(bMap.get(bb.getPredecessor_().get(i))).get(mbb).add(mc);
                             }
                         }
-
-//                        phiGraph.put(bMap.get(bb.getPredecessor_().get(i)),edges);
+                        Iterator<INode<Instruction,BasicBlock>> irItt=irList.iterator();
+                        //对于没有环的正常插入copy：phiParam->phiTarget
+                        while(irItt.hasNext()){
+                            Instruction ir=irItt.next().getVal();
+                            if(ir.tag==Instruction.TAG_.Phi){
+                                MachineOperand phiTarget= aV.analyzeValue(ir);
+                                assert(phiTarget instanceof VirtualReg);
+                                assert(phiRows.containsKey(phiTarget));
+                                if(phiRows.get(phiTarget).get(i)){
+                                    MachineOperand phiParam=aV.analyzeValue(((Phi)ir).getIncomingVals().get(i));
+                                    MachineCode mv=new MCMove();
+                                    ((MCMove)mv).setRhs(phiParam);
+                                    ((MCMove)mv).setDst(phiTarget);
+                                    waiting.get(bMap.get(bb.getPredecessor_().get(i))).get(mbb).add(mv);
+                                }
+                            }else{
+                                break;
+                            }
+                        }
 
                     }
-
-
-
                 }
             };
+            //处理phi指令
+            handlePhi.handlephi();
+            bIt=bList.iterator();
+            for(bIt=bList.iterator();bIt.hasNext();){
+                BasicBlock bb=bIt.next().getVal();
+                MachineBlock mb=bMap.get(bb);
+                for(Iterator<INode<Instruction,BasicBlock>>iIt=bb.getList().iterator();iIt.hasNext();){
+                    Instruction ir=iIt.next().getVal();
+                    if(ir.tag== Instruction.TAG_.Phi){
+                        continue;
+                    }else if(ir instanceof BinaryInst){
+
+                    }else if(ir .tag== Instruction.TAG_.Br){
+
+                    }else if(ir.tag==Instruction.TAG_.Call){
+
+                    }else if(ir.tag==Instruction.TAG_.Ret){
+
+                    }else if(ir.tag==Instruction.TAG_.Alloca){
+
+                    }else if(ir.tag==Instruction.TAG_.Load){
+
+                    }else if(ir.tag==Instruction.TAG_.Store){
+
+                    }else if(ir.tag==Instruction.TAG_.GEP){
+
+                    }else if(ir.tag==Instruction.TAG_.Zext){
+                        
+                    }
+                }
+            }
 
 
         }
