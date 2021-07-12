@@ -24,6 +24,7 @@ import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.MemInst.ZextInst;
 import ir.values.instructions.TerminatorInst.BrInst;
+import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -111,6 +112,10 @@ public class MyFactoryBuilder {
 
   public ArrayType getArrayTy(Type containedTy, int numElem) {
     return new ArrayType(containedTy, numElem);
+  }
+
+  public CallInst buildFuncCall(Function func, ArrayList<Value> args, BasicBlock bb) {
+    return new CallInst(func, args, bb);
   }
 
   //获得一个function

@@ -1,5 +1,6 @@
 package frontend;// Generated from SysY.g4 by ANTLR 4.9.2
 
+import ir.values.BasicBlock;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
@@ -559,7 +560,9 @@ public class SysYParser extends Parser {
   }
 
   public static class ConstInitValContext extends ParserRuleContext {
+
     public ArrayList<Integer> dimInfo_;
+
     public ConstExpContext constExp() {
       return getRuleContext(ConstExpContext.class, 0);
     }
@@ -875,7 +878,9 @@ public class SysYParser extends Parser {
   }
 
   public static class InitValContext extends ParserRuleContext {
+
     public ArrayList<Integer> dimInfo_;
+
     public ExpContext exp() {
       return getRuleContext(ExpContext.class, 0);
     }
@@ -1141,6 +1146,8 @@ public class SysYParser extends Parser {
 
   public static class FuncFParamsContext extends ParserRuleContext {
 
+    public boolean initBB = false;
+
     public List<FuncFParamContext> funcFParam() {
       return getRuleContexts(FuncFParamContext.class);
     }
@@ -1318,7 +1325,7 @@ public class SysYParser extends Parser {
   }
 
   public static class BlockContext extends ParserRuleContext {
-    public FuncFParamsContext entryBlockParams;
+
     public TerminalNode L_BRACE() {
       return getToken(SysYParser.L_BRACE, 0);
     }
@@ -2102,6 +2109,9 @@ public class SysYParser extends Parser {
   }
 
   public static class CondContext extends ParserRuleContext {
+
+    public BasicBlock falseblock;
+    public BasicBlock trueblock;
 
     public LOrExpContext lOrExp() {
       return getRuleContext(LOrExpContext.class, 0);
@@ -3060,6 +3070,9 @@ public class SysYParser extends Parser {
 
   public static class RelExpContext extends ParserRuleContext {
 
+    public BasicBlock falseblock;
+    public BasicBlock trueblock;
+
     public List<AddExpContext> addExp() {
       return getRuleContexts(AddExpContext.class);
     }
@@ -3201,6 +3214,9 @@ public class SysYParser extends Parser {
 
   public static class EqExpContext extends ParserRuleContext {
 
+    public BasicBlock falseblock;
+    public BasicBlock trueblock;
+
     public List<RelExpContext> relExp() {
       return getRuleContexts(RelExpContext.class);
     }
@@ -3332,6 +3348,9 @@ public class SysYParser extends Parser {
 
   public static class LAndExpContext extends ParserRuleContext {
 
+    public BasicBlock falseblock;
+    public BasicBlock trueblock;
+
     public List<EqExpContext> eqExp() {
       return getRuleContexts(EqExpContext.class);
     }
@@ -3404,6 +3423,9 @@ public class SysYParser extends Parser {
   }
 
   public static class LOrExpContext extends ParserRuleContext {
+
+    public BasicBlock falseblock;
+    public BasicBlock trueblock;
 
     public List<LAndExpContext> lAndExp() {
       return getRuleContexts(LAndExpContext.class);
