@@ -29,6 +29,7 @@ public abstract class Value {
    * 每个Value应该有一个独一无二的name以及一个type
    */
   public Value(String name, Type type) {
+    this.usesList = new LinkedList<>();
     this.name = name;
     this.type = type;
   }
@@ -36,6 +37,7 @@ public abstract class Value {
   public Value(Type type) {
     this.type = type;
     this.name = "";
+    this.usesList = new LinkedList<>();
     //todo this.name = auto generated name;
   }
 
