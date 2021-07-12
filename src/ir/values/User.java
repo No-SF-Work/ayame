@@ -1,9 +1,12 @@
 package ir.values;
 
 import ir.Use;
+import ir.types.IntegerType;
 import ir.types.Type;
+import ir.values.Constants.ConstantInt;
 import java.awt.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  * User对象，记录了自身操作的 Value 的状态
@@ -18,7 +21,6 @@ import java.util.ArrayList;
  * <p>
  * operand 0 是a，operand 1是b，显然将a和b颠倒会出现错误。
  * <p>
- *
  */
 public abstract class User extends Value {
 
@@ -28,12 +30,13 @@ public abstract class User extends Value {
   public User(String name, Type type, int numOP) {
     super(name, type);
     this.numOP = numOP;
-    this.operands = new ArrayList<>(numOP);
+    this.operands = new ArrayList<>(
+        Collections.nCopies(numOP, ConstantInt.newOne(IntegerType.getI32(), 0)));
   }
 
   public User(String name, Type type) {
     super(name, type);
-    this.operands = new ArrayList<>(numOP);
+    this.operands = new ArrayList<>();
     this.numOP = 0;
   }
 
@@ -128,7 +131,6 @@ public abstract class User extends Value {
   }
 
   public void replaceValue(Value lhs, Value rhs) {
-
   }
 
   public ArrayList<Value> getOperands() {
@@ -138,4 +140,3 @@ public abstract class User extends Value {
   protected ArrayList<Value> operands;
   protected int numOP;
 }
-//todo

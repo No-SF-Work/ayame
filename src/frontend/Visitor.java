@@ -37,6 +37,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     Scope() {
       tables_ = new ArrayList<>();
+      params_ = new HashMap<>();
       tables_.add(new HashMap<>());
     }
 
@@ -488,12 +489,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     // get function params information
     //在此处只生成Func的param的TypeList,Func作为value的形参delay到funcDef的block里面做
-    ArrayList<Type> paramTypeList;
+    ArrayList<Type> paramTypeList = new ArrayList<>();
     //get type to create function`
     if (ctx.funcFParams() != null) {
       visit(ctx.funcFParams());
+      paramTypeList.addAll(tmpTyArr);
     }
-    paramTypeList = tmpTyArr;
     // build function object
     FunctionType functionType = f.getFuncTy(retType, paramTypeList);
     var func = f.buildFunction(functionName, functionType);
@@ -510,6 +511,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       visit(ctx.funcFParams());
     }
     visit(ctx.block());
+    scope_.params_.clear();
     log.info("funcDef end@" + functionName);
     return null;
   }
@@ -575,7 +577,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitBlock(BlockContext ctx) {
     scope_.addLayer();
-    visit(ctx.getChild(0));
+    ctx.blockItem().forEach(this::visit);
     scope_.popLayer();
     return null;
   }
@@ -918,7 +920,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitNumber(NumberContext ctx) {
-    visit(ctx);
+    visit(ctx.intConst());
     if (!usingInt_) {
       tmp_ = f.getConstantInt(tmpInt_);
     }//using int 会在visitConst里面处理

@@ -31,6 +31,7 @@ public class CompilerDriver {
   private static Logger logger;
 
   public static void run(String[] args) {
+    Mylogger.init();
     Config config = Config.getInstance();
     PassManager pm = PassManager.getPassManager();
     ArgumentParser argParser =
