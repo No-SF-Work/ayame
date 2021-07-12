@@ -31,7 +31,7 @@ public abstract class User extends Value {
     super(name, type);
     this.numOP = numOP;
     this.operands = new ArrayList<>(
-        Collections.nCopies(numOP, ConstantInt.newOne(IntegerType.getI32(), 0)));
+        Collections.nCopies(numOP, ConstantInt.CONST0()));
   }
 
   public User(String name, Type type) {
