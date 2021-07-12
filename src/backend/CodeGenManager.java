@@ -8,10 +8,13 @@ import ir.MyModule;
 import ir.values.*;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
+import ir.values.instructions.TerminatorInst;
 import util.IList;
 import util.IList.INode;
 import ir.values.instructions.MemInst.Phi;
 import util.Pair;
+import backend.machinecodes.ArmAddition.CondType;
+import backend.machinecodes.ArmAddition.Shift;
 
 import javax.crypto.Mac;
 import java.util.*;
@@ -249,7 +252,7 @@ public class CodeGenManager {
             };
             //处理phi指令
             handlePhi.handlephi();
-            bIt=bList.iterator();
+            HashMap<Instruction,Pair<MachineCode,ArmAddition.CondType>>condMap=new HashMap<>();
             for(bIt=bList.iterator();bIt.hasNext();){
                 BasicBlock bb=bIt.next().getVal();
                 MachineBlock mb=bMap.get(bb);
@@ -260,6 +263,31 @@ public class CodeGenManager {
                     }else if(ir instanceof BinaryInst){
 
                     }else if(ir .tag== Instruction.TAG_.Br){
+                        if(ir.getNumOP()==3){
+                            CondType cond=getCond((BinaryInst) ir.getOperands().get(0));
+                            MachineCode br=new MCBranch(mb);
+                            ((MCBranch)br).setCond(cond);
+                            //set trueblock to branch target
+                            ((MCBranch)br).setTarget(bMap.get(ir.getOperands().get(1)));
+                            mb.setFalseSucc(bMap.get(ir.getOperands().get(2)));
+                            mb.setTrueSucc(bMap.get(ir.getOperands().get(1)));
+                        }else{
+                            assert(ir.getNumOP()==1);
+                            //如果只有一个后继块，那么此跳转指令就是废的
+                            if(bb.getPredecessor_().size()==1){
+                                mb.setFalseSucc(bMap.get(ir.getOperands().get(0)));
+                                continue;
+                            }
+                            MachineCode j=new MCJump(mb);
+                            ((MCJump)j).setTarget(bMap.get(ir.getOperands().get(0)));
+                            mb.setTrueSucc(bMap.get(ir.getOperands().get(0)));
+                            if(ir.getOperands().get(0)==bb.getPredecessor_().get(0)){
+                                mb.setFalseSucc(bMap.get(bb.getPredecessor_().get(1)));
+                            }else{
+                                assert(ir.getOperands().get(0)==bb.getPredecessor_().get(1));
+                                mb.setFalseSucc(bMap.get(bb.getPredecessor_().get(0)));
+                            }
+                        }
 
                     }else if(ir.tag==Instruction.TAG_.Call){
 
@@ -274,12 +302,31 @@ public class CodeGenManager {
                     }else if(ir.tag==Instruction.TAG_.GEP){
 
                     }else if(ir.tag==Instruction.TAG_.Zext){
-                        
+
                     }
                 }
             }
 
 
+        }
+    }
+
+    private CondType getCond(BinaryInst bI){
+        if (bI.isLt()){
+            return CondType.Lt;
+        }else if(bI.isLe()){
+            return CondType.Le;
+        }else if(bI.isGe()){
+            return CondType.Ge;
+        }else if(bI.isGt()){
+            return CondType.Gt;
+        }else if(bI.isEq()){
+            return CondType.Eq;
+        }else if(bI.isNe()){
+            return CondType.Ne;
+        }else {
+            assert(false);
+            return CondType.Ge;
         }
     }
 

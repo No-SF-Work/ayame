@@ -11,6 +11,14 @@ public class MCBranch extends MachineCode{
 
     private ArmAddition.CondType cond;
 
+    public void setCond(ArmAddition.CondType cond){
+        this.cond=cond;
+    }
+
+    public void setTarget(MachineBlock target){
+        this.target=target;
+    }
+
     @Override
     public ArmAddition.CondType getCond() {
         return cond;

@@ -50,6 +50,17 @@ public class MachineBlock {
         mf.insertBlock(this);
     }
 
+    public MachineCode getControlTransferInst() {
+        return controlTransferInst;
+    }
+
+    public void setControlTransferInst(MachineCode controlTransferInst) {
+        this.controlTransferInst = controlTransferInst;
+    }
+
+    private MachineCode controlTransferInst;
+
+
     public void setFalseSucc(MachineBlock mb) {
         falseSucc = mb;
     }
