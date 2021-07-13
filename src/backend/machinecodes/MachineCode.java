@@ -4,6 +4,7 @@ import backend.reg.*;
 import ir.types.Type;
 import backend.reg.MachineOperand;
 import backend.machinecodes.ArmAddition.Shift;
+import util.IList;
 
 import java.util.ArrayList;
 
@@ -71,6 +72,17 @@ public class MachineCode {
 
     //所有的MC都有一个shift对象，初始值为无偏移。可以通过setShift设置Shift
     private ArmAddition.Shift shift = ArmAddition.getAddition().getNewShiftInstance();
+
+    public void insteadReg(MachineOperand mo){
+        if(mo == null){
+            return ;
+        }
+        if(mo.getState()==MachineOperand.state.imm){
+            return;
+        }else if(mo instanceof Reg){
+            removeReg((Reg)mo);
+        }
+    }
 
     public Shift getShift(){return shift;}
 
@@ -170,30 +182,53 @@ public class MachineCode {
         return phyReg != null;
     }
 
+    private IList.INode node;
 
     public MachineCode(TAG tag) {
         this.tag = tag;
+        node=new IList.INode(this);
     }
 
     public MachineCode(TAG tag, MachineBlock mb) {
         this.tag = tag;
         this.mb = mb;
-        mb.addAtEndMC(this);
+        node=new IList.INode(this);
+        node.setParent(mb.getmclist());
+        mb.addAtEndMC(node);
+    }
+
+    public void insertBeforeNode(MachineCode mc){
+        node.setParent(mc.node.getParent());
+        this.node.insertBefore(mc.node);
+    }
+
+    public void insertAfterNode(MachineCode mc){
+        node.setParent(mc.node.getParent());
+        this.node.insertAfter(mc.node);
     }
 
     public MachineCode(TAG tag, MachineBlock mb,int num) {
         this.tag = tag;
         this.mb = mb;
-        mb.addAtEntryMC(this);
+        node=new IList.INode(this);
+        node.setParent(mb.getmclist());
+        mb.addAtEntryMC(node);
     }
 
-    public MachineCode(TAG tag, MachineFunction mf) {
-        this.tag = tag;
-        this.mf = mf;
-    }
+//    public MachineCode(TAG tag, MachineFunction mf) {
+//        this.tag = tag;
+//        this.mf = mf;
+//        node=new IList.INode(this);
+//        node.setParent(mb.getmclist());
+//    }
 
     public void setMb(MachineBlock mb) {
         this.mb = mb;
+        node.setParent(mb.getmclist());
+    }
+
+    public MachineBlock getMb(){
+        return this.mb;
     }
 
     public void setMf(MachineFunction mf) {

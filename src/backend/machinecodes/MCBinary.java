@@ -10,6 +10,33 @@ public class MCBinary extends MachineCode{
 
     private MachineOperand dst;
 
+    public MachineOperand getDst() {
+        return dst;
+    }
+
+    public void setDst(MachineOperand dst) {
+        super.insteadReg(this.dst);
+        this.dst = dst;
+    }
+
+    public MachineOperand getLhs() {
+        return lhs;
+    }
+
+    public void setLhs(MachineOperand lhs) {
+        super.insteadReg(this.lhs);
+        this.lhs = lhs;
+    }
+
+    public MachineOperand getRhs() {
+        return rhs;
+    }
+
+    public void setRhs(MachineOperand rhs) {
+        super.insteadReg(this.rhs);
+        this.rhs = rhs;
+    }
+
     private MachineOperand lhs;
 
     private MachineOperand rhs;

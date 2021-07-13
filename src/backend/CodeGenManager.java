@@ -5,6 +5,7 @@ import backend.machinecodes.*;
 import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 import ir.MyModule;
+import ir.types.Type;
 import ir.values.*;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
@@ -17,6 +18,7 @@ import backend.machinecodes.ArmAddition.CondType;
 import backend.machinecodes.ArmAddition.Shift;
 
 import javax.crypto.Mac;
+import java.rmi.registry.Registry;
 import java.util.*;
 
 /**
@@ -38,7 +40,7 @@ public class CodeGenManager {
 
 
     //key为phi指令的目标vr，value为一串01序列，长度等同于phi指令所在基本块的前驱块，如果有环该位为0
-    private HashMap<VirtualReg,ArrayList<Boolean>> phiRows=new HashMap<>();
+    private HashMap<VirtualReg, ArrayList<Boolean>> phiRows = new HashMap<>();
 
     //ir moudle
     private static MyModule myModule;
@@ -49,13 +51,30 @@ public class CodeGenManager {
 
     private static CodeGenManager codeGenManager;
 
-    private boolean canEncodeImm(int imm){
-
+    private boolean canEncodeImm(int imm) {
+        int n = imm;
+        for (int ror = 0; ror < 32; ror += 2) {
+            if ((n & ~0xFF) == 0) {
+                return true;
+            }
+            n = (n << 2) | (n >>> 30);
+        }
+        return false;
     }
 
-    private MachineOperand genImm(int imm, MachineBlock mb){
-        MachineOperand mo=new MachineOperand(imm);
+    private MachineOperand genImm(int imm, MachineBlock mb) {
+        MachineOperand mo = new MachineOperand(imm);
+        if (canEncodeImm(imm)) {
+            return mo;
+        } else {
+            VirtualReg vr = new VirtualReg();
+            mb.getMF().addVirtualReg(vr);
 
+            MachineCode mc = new MCMove(mb);
+            ((MCMove) mc).setDst(vr);
+            ((MCMove) mc).setDst(mo);
+            return vr;
+        }
     }
 
     //ir->machinecode
@@ -74,8 +93,12 @@ public class CodeGenManager {
         void handlephi();
     }
 
-    interface AnalyzeValue{
+    interface AnalyzeValue {
         MachineOperand analyzeValue(Value v);
+    }
+
+    interface AnalyzeNoImm {
+        MachineOperand analyzeNoImm(Value v,MachineBlock mb);
     }
 
     private void MachineCodeGeneration() {
@@ -89,10 +112,16 @@ public class CodeGenManager {
         }
         IList<Function, MyModule> fList = myModule.__functions;
         Iterator<INode<Function, MyModule>> fIt = fList.iterator();
+        HashMap<Function,MachineFunction> fMap=new HashMap<>();
+        while(fIt.hasNext()){
+            MachineFunction mf = new MachineFunction(this);
+            fMap.put(fIt.next().getVal(),mf);
+        }
+        fIt = fList.iterator();
         while (fIt.hasNext()) {
             INode<Function, MyModule> fNode = fIt.next();
-            Function f= fNode.getVal();
-            MachineFunction mf = new MachineFunction(this);
+            Function f = fNode.getVal();
+            MachineFunction mf = fMap.get(f);
             machineFunctions.add(mf);
             HashMap<BasicBlock, MachineBlock> bMap = new HashMap<>();
             IList<BasicBlock, Function> bList = f.getList_();
@@ -118,7 +147,7 @@ public class CodeGenManager {
 
             }
 
-            AnalyzeValue aV=(Value v)->{
+            AnalyzeValue aV = (Value v) -> {
                 if (v instanceof Function.Arg && f.getArgList().contains(v)) {
                     VirtualReg vr;
                     if (mf.getVRegMap().get(v.getName()) == null) {
@@ -157,19 +186,32 @@ public class CodeGenManager {
                 }
             };
 
+            AnalyzeNoImm ani = (Value v, MachineBlock mb) -> {
+                if (v instanceof Constants.ConstantInt) {
+                    VirtualReg vr = new VirtualReg();
+                    mb.getMF().addVirtualReg(vr);
+                    MachineCode mv = new MCMove(mb);
+                    ((MCMove) mv).setDst(vr);
+                    ((MCMove)mv).setRhs(new MachineOperand(((Constants.ConstantInt) v).getVal()));
+                    return vr;
+                } else {
+                    return aV.analyzeValue(v);
+                }
+            };
+
             HandlePhi handlePhi = () -> {
                 Iterator<INode<BasicBlock, Function>> bItt = bList.iterator();
                 while (bItt.hasNext()) {
                     BasicBlock bb = bItt.next().getVal();
                     MachineBlock mbb = bMap.get(bb);
-                    Iterator<MachineBlock> mbItt=mbb.getPred().iterator();
-                    while(mbItt.hasNext()){
-                        MachineBlock predM=mbItt.next();
+                    Iterator<MachineBlock> mbItt = mbb.getPred().iterator();
+                    while (mbItt.hasNext()) {
+                        MachineBlock predM = mbItt.next();
                         //prd,succ
-                        HashMap<MachineBlock,ArrayList<MachineCode>> map=new HashMap<>();
-                        map.put(mbb,new ArrayList<>());
+                        HashMap<MachineBlock, ArrayList<MachineCode>> map = new HashMap<>();
+                        map.put(mbb, new ArrayList<>());
                         //create waiting
-                        waiting.put(predM,map);
+                        waiting.put(predM, map);
 
                     }
                     IList<Instruction, BasicBlock> irList = bb.getList();
@@ -190,7 +232,7 @@ public class CodeGenManager {
                                 }
                                 phiSet.add((VirtualReg) phiArg);
                             }
-                            phiRows.put((VirtualReg) phiTarget,new ArrayList<>());
+                            phiRows.put((VirtualReg) phiTarget, new ArrayList<>());
                         } else {
                             break;
                         }
@@ -198,61 +240,61 @@ public class CodeGenManager {
                     //大风车吱呀吱哟哟地转 见SSA Elimination after Register Allocation
                     //key是每个前驱块，value的map为phiTarget->phiParam
 //                    HashMap<MachineBlock,HashMap<VirtualReg,VirtualReg>> phiGraph=new HashMap<>();
-                    int predNum=bb.getPredecessor_().size();
+                    int predNum = bb.getPredecessor_().size();
                     //遍历该块的所有pred块
-                    for(int i=0;i<predNum;i++){
-                        IList<Instruction,BasicBlock> irrList=bb.getList();
-                        Iterator<INode<Instruction,BasicBlock>> irrIt=irrList.iterator();
-                        HashMap<VirtualReg,VirtualReg> edges=new HashMap<>();
-                        while(irrIt.hasNext()){
-                            Instruction ir=irIt.next().getVal();
-                            if(ir.tag==Instruction.TAG_.Phi){
-                                MachineOperand phiTarget= aV.analyzeValue(ir);
-                                assert(phiTarget instanceof VirtualReg);
-                                MachineOperand phiParam=aV.analyzeValue(((Phi)ir).getIncomingVals().get(i));
-                                edges.put((VirtualReg) phiTarget,(VirtualReg) phiParam);
-                            }else{
+                    for (int i = 0; i < predNum; i++) {
+                        IList<Instruction, BasicBlock> irrList = bb.getList();
+                        Iterator<INode<Instruction, BasicBlock>> irrIt = irrList.iterator();
+                        HashMap<VirtualReg, VirtualReg> edges = new HashMap<>();
+                        while (irrIt.hasNext()) {
+                            Instruction ir = irIt.next().getVal();
+                            if (ir.tag == Instruction.TAG_.Phi) {
+                                MachineOperand phiTarget = aV.analyzeValue(ir);
+                                assert (phiTarget instanceof VirtualReg);
+                                MachineOperand phiParam = aV.analyzeValue(((Phi) ir).getIncomingVals().get(i));
+                                edges.put((VirtualReg) phiTarget, (VirtualReg) phiParam);
+                            } else {
                                 break;
                             }
                         }
-                        ArrayList<ArrayList<VirtualReg>> circles=calcCircle(edges,i);
-                        if(!circles.isEmpty()){
-                            Iterator<ArrayList<VirtualReg>> it1=circles.iterator();
-                            while(it1.hasNext()){
-                                ArrayList<VirtualReg> circle=it1.next();
-                                Iterator<VirtualReg> it2=circle.iterator();
-                                assert(!circle.isEmpty());
-                                VirtualReg temp=new VirtualReg();
+                        ArrayList<ArrayList<VirtualReg>> circles = calcCircle(edges, i);
+                        if (!circles.isEmpty()) {
+                            Iterator<ArrayList<VirtualReg>> it1 = circles.iterator();
+                            while (it1.hasNext()) {
+                                ArrayList<VirtualReg> circle = it1.next();
+                                Iterator<VirtualReg> it2 = circle.iterator();
+                                assert (!circle.isEmpty());
+                                VirtualReg temp = new VirtualReg();
                                 mf.addVirtualReg(temp);
-                                MachineCode mc=new MCMove();
-                                ((MCMove)mc).setDst(temp);
-                                while(it2.hasNext()){
-                                    VirtualReg vr=it2.next();
-                                    ((MCMove)mc).setRhs(vr);
+                                MachineCode mc = new MCMove();
+                                ((MCMove) mc).setDst(temp);
+                                while (it2.hasNext()) {
+                                    VirtualReg vr = it2.next();
+                                    ((MCMove) mc).setRhs(vr);
                                     waiting.get(bMap.get(bb.getPredecessor_().get(i))).get(mbb).add(mc);
-                                    mc=new MCMove();
-                                    ((MCMove)mc).setDst(vr);
+                                    mc = new MCMove();
+                                    ((MCMove) mc).setDst(vr);
                                 }
-                                ((MCMove)mc).setRhs(temp);
+                                ((MCMove) mc).setRhs(temp);
                                 waiting.get(bMap.get(bb.getPredecessor_().get(i))).get(mbb).add(mc);
                             }
                         }
-                        Iterator<INode<Instruction,BasicBlock>> irItt=irList.iterator();
+                        Iterator<INode<Instruction, BasicBlock>> irItt = irList.iterator();
                         //对于没有环的正常插入copy：phiParam->phiTarget
-                        while(irItt.hasNext()){
-                            Instruction ir=irItt.next().getVal();
-                            if(ir.tag==Instruction.TAG_.Phi){
-                                MachineOperand phiTarget= aV.analyzeValue(ir);
-                                assert(phiTarget instanceof VirtualReg);
-                                assert(phiRows.containsKey(phiTarget));
-                                if(phiRows.get(phiTarget).get(i)){
-                                    MachineOperand phiParam=aV.analyzeValue(((Phi)ir).getIncomingVals().get(i));
-                                    MachineCode mv=new MCMove();
-                                    ((MCMove)mv).setRhs(phiParam);
-                                    ((MCMove)mv).setDst(phiTarget);
+                        while (irItt.hasNext()) {
+                            Instruction ir = irItt.next().getVal();
+                            if (ir.tag == Instruction.TAG_.Phi) {
+                                MachineOperand phiTarget = aV.analyzeValue(ir);
+                                assert (phiTarget instanceof VirtualReg);
+                                assert (phiRows.containsKey(phiTarget));
+                                if (phiRows.get(phiTarget).get(i)) {
+                                    MachineOperand phiParam = aV.analyzeValue(((Phi) ir).getIncomingVals().get(i));
+                                    MachineCode mv = new MCMove();
+                                    ((MCMove) mv).setRhs(phiParam);
+                                    ((MCMove) mv).setDst(phiTarget);
                                     waiting.get(bMap.get(bb.getPredecessor_().get(i))).get(mbb).add(mv);
                                 }
-                            }else{
+                            } else {
                                 break;
                             }
                         }
@@ -262,69 +304,103 @@ public class CodeGenManager {
             };
             //处理phi指令
             handlePhi.handlephi();
-            HashMap<Instruction,Pair<MachineCode,ArmAddition.CondType>>condMap=new HashMap<>();
-            for(bIt=bList.iterator();bIt.hasNext();){
-                BasicBlock bb=bIt.next().getVal();
-                MachineBlock mb=bMap.get(bb);
-                for(Iterator<INode<Instruction,BasicBlock>>iIt=bb.getList().iterator();iIt.hasNext();){
-                    Instruction ir=iIt.next().getVal();
-                    if(ir.tag== Instruction.TAG_.Phi){
+            HashMap<Instruction, Pair<MachineCode, ArmAddition.CondType>> condMap = new HashMap<>();
+            for (bIt = bList.iterator(); bIt.hasNext(); ) {
+                BasicBlock bb = bIt.next().getVal();
+                MachineBlock mb = bMap.get(bb);
+                for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
+                    Instruction ir = iIt.next().getVal();
+                    if (ir.tag == Instruction.TAG_.Phi) {
                         continue;
-                    }else if(ir instanceof BinaryInst){
+                    } else if (ir instanceof BinaryInst) {
 
-                    }else if(ir .tag== Instruction.TAG_.Br){
-                        if(ir.getNumOP()==3){
-                            CondType cond=getCond((BinaryInst) ir.getOperands().get(0));
-                            MachineCode br=new MCBranch(mb);
-                            ((MCBranch)br).setCond(cond);
+                    } else if (ir.tag == Instruction.TAG_.Br) {
+                        if (ir.getNumOP() == 3) {
+                            CondType cond = getCond((BinaryInst) ir.getOperands().get(0));
+                            MachineCode br = new MCBranch(mb);
+                            ((MCBranch) br).setCond(cond);
                             //set trueblock to branch target
-                            ((MCBranch)br).setTarget(bMap.get(ir.getOperands().get(1)));
+                            ((MCBranch) br).setTarget(bMap.get(ir.getOperands().get(1)));
                             mb.setFalseSucc(bMap.get(ir.getOperands().get(2)));
                             mb.setTrueSucc(bMap.get(ir.getOperands().get(1)));
-                        }else{
-                            assert(ir.getNumOP()==1);
+                        } else {
+                            assert (ir.getNumOP() == 1);
                             //如果只有一个后继块，那么此跳转指令就是废的
-                            if(bb.getPredecessor_().size()==1){
+                            if (bb.getPredecessor_().size() == 1) {
                                 mb.setFalseSucc(bMap.get(ir.getOperands().get(0)));
                                 continue;
                             }
-                            MachineCode j=new MCJump(mb);
-                            ((MCJump)j).setTarget(bMap.get(ir.getOperands().get(0)));
+                            MachineCode j = new MCJump(mb);
+                            ((MCJump) j).setTarget(bMap.get(ir.getOperands().get(0)));
                             mb.setTrueSucc(bMap.get(ir.getOperands().get(0)));
-                            if(ir.getOperands().get(0)==bb.getPredecessor_().get(0)){
+                            if (ir.getOperands().get(0) == bb.getPredecessor_().get(0)) {
                                 mb.setFalseSucc(bMap.get(bb.getPredecessor_().get(1)));
-                            }else{
-                                assert(ir.getOperands().get(0)==bb.getPredecessor_().get(1));
+                            } else {
+                                assert (ir.getOperands().get(0) == bb.getPredecessor_().get(1));
                                 mb.setFalseSucc(bMap.get(bb.getPredecessor_().get(0)));
                             }
                         }
 
-                    }else if(ir.tag==Instruction.TAG_.Call) {
+                    } else if (ir.tag == Instruction.TAG_.Call) {
 
-                    }else if(ir.tag==Instruction.TAG_.Call){
+                    } else if (ir.tag == Instruction.TAG_.Call) {
                         //获取调用函数的参数数量
-                        int argNum=ir.getOperands().hashCode()-1;
-                        for(int i=0;i<argNum;i++){
-                            if(i<4){
-                                MachineOperand rhs= aV.analyzeValue(ir.getOperands().get(i+1));
-                                MachineCode mv=new MCMove(mb);
-                                ((MCMove)mv).setRhs(rhs);
-                                ((MCMove)mv).setDst(mf.getPhyReg(i));
-                            }else{
+                        int argNum = ir.getOperands().hashCode() - 1;
+                        for (int i = 0; i < argNum; i++) {
+                            if (i < 4) {
+                                MachineOperand rhs = aV.analyzeValue(ir.getOperands().get(i + 1));
+                                MachineCode mv = new MCMove(mb);
+                                ((MCMove) mv).setRhs(rhs);
+                                ((MCMove) mv).setDst(mf.getPhyReg(i));
+                            } else {
+                                VirtualReg vr=(VirtualReg) ani.analyzeNoImm(ir.getOperands().get(i+1),mb);
+                                MachineCode st=new MCStore(mb);
+                                ((MCStore)st).setData(vr);
+                                ((MCStore)st).setAddr(mf.getPhyReg("sp"));
+                                ((MCStore)st).setOffset(new MachineOperand(-(argNum-i)));
+                                st.setShift(ArmAddition.ShiftType.Lsl,2);
+                            }
+                            if(argNum>4){
+                                MachineCode sub=new MCBinary(MachineCode.TAG.Sub,mb);
+                                ((MCBinary)sub).setDst(mf.getPhyReg("sp"));
+                                ((MCBinary)sub).setLhs(mf.getPhyReg("sp"));
+                                ((MCBinary)sub).setRhs(new MachineOperand(4*(argNum-4)));
+                            }
 
+                            MachineCode call=new MCCall(mb);
+                            assert(ir.getOperands().get(0) instanceof Function);
+                            ((MCCall)call).setFunc(fMap.get((Function)ir.getOperands().get(0)));
+                            if(argNum>4){
+                                MachineCode add=new MCBinary(MachineCode.TAG.Add,mb);
+                                ((MCBinary)add).setDst(mf.getPhyReg("sp"));
+                                ((MCBinary)add).setLhs(mf.getPhyReg("sp"));
+                                ((MCBinary)add).setRhs(new MachineOperand(4*(argNum-4)));
+                            }
+                            if(!((Function)(ir.getOperands().get(0))).getType().getRetType().isVoidTy()){
+                                MCMove mv=new MCMove(mb);
+                                mv.setDst(aV.analyzeValue(ir));
+                                mv.setRhs(mf.getPhyReg("r0"));
                             }
                         }
-                    }else if(ir.tag==Instruction.TAG_.Ret){
+                    } else if (ir.tag == Instruction.TAG_.Ret) {
+                        //如果有返回值
+                        if (((TerminatorInst.RetInst) ir).getNumOP() != 0) {
+                            MachineOperand res= aV.analyzeValue(ir.getOperands().get(0));
+                            MCMove mv=new MCMove(mb);
+                            mv.setDst(mf.getPhyReg("r0"));
+                            mv.setRhs(res);
+                            MCReturn re=new MCReturn(mb);
+                        }else{
+                            MCReturn re=new MCReturn(mb);
+                        }
+                    } else if (ir.tag == Instruction.TAG_.Alloca) {
 
-                    }else if(ir.tag==Instruction.TAG_.Alloca){
+                    } else if (ir.tag == Instruction.TAG_.Load) {
 
-                    }else if(ir.tag==Instruction.TAG_.Load){
+                    } else if (ir.tag == Instruction.TAG_.Store) {
 
-                    }else if(ir.tag==Instruction.TAG_.Store){
-
-                    }else if(ir.tag==Instruction.TAG_.GEP){
-
-                    }else if(ir.tag==Instruction.TAG_.Zext){
+                    } else if (ir.tag == Instruction.TAG_.GEP) {
+                        MachineOperand dst= aV.analyzeValue(ir);
 
                     }
                 }
@@ -334,69 +410,69 @@ public class CodeGenManager {
         }
     }
 
-    private CondType getCond(BinaryInst bI){
-        if (bI.isLt()){
+    private CondType getCond(BinaryInst bI) {
+        if (bI.isLt()) {
             return CondType.Lt;
-        }else if(bI.isLe()){
+        } else if (bI.isLe()) {
             return CondType.Le;
-        }else if(bI.isGe()){
+        } else if (bI.isGe()) {
             return CondType.Ge;
-        }else if(bI.isGt()){
+        } else if (bI.isGt()) {
             return CondType.Gt;
-        }else if(bI.isEq()){
+        } else if (bI.isEq()) {
             return CondType.Eq;
-        }else if(bI.isNe()){
+        } else if (bI.isNe()) {
             return CondType.Ne;
-        }else {
-            assert(false);
+        } else {
+            assert (false);
             return CondType.Ge;
         }
     }
 
     //计算来自某一前驱块的一堆phiTarget中哪些在环中，共有几个环。
-    private ArrayList<ArrayList<VirtualReg>> calcCircle(HashMap<VirtualReg, VirtualReg> graph,int i){
-        ArrayList<ArrayList<VirtualReg>> result=new ArrayList<>();
-        while(!graph.isEmpty()){
+    private ArrayList<ArrayList<VirtualReg>> calcCircle(HashMap<VirtualReg, VirtualReg> graph, int i) {
+        ArrayList<ArrayList<VirtualReg>> result = new ArrayList<>();
+        while (!graph.isEmpty()) {
             //从剩余图中获得一个节点
-            Iterator<Map.Entry<VirtualReg,VirtualReg>> ite=graph.entrySet().iterator();
-            VirtualReg now=ite.next().getKey();
-            Stack<VirtualReg> stack=new Stack<>();
+            Iterator<Map.Entry<VirtualReg, VirtualReg>> ite = graph.entrySet().iterator();
+            VirtualReg now = ite.next().getKey();
+            Stack<VirtualReg> stack = new Stack<>();
             //深度优先搜索
-            while (true){
+            while (true) {
                 //如果一个节点没有出度，退出循环
-                if(!graph.containsKey(now)){
+                if (!graph.containsKey(now)) {
                     break;
-                }else if(stack.contains(now)){
+                } else if (stack.contains(now)) {
                     break;
-                }else{
+                } else {
                     stack.push(now);
-                    now=graph.get(now);
+                    now = graph.get(now);
                 }
             }
             //如果以该点出发没有环路，那么从graph中删去把栈内所有点
-            if(!graph.containsKey(now)){
-                while(!stack.isEmpty()){
-                    VirtualReg r=stack.pop();
-                    assert(graph.containsKey(r));
-                    assert(phiRows.get(r).size()==i);
+            if (!graph.containsKey(now)) {
+                while (!stack.isEmpty()) {
+                    VirtualReg r = stack.pop();
+                    assert (graph.containsKey(r));
+                    assert (phiRows.get(r).size() == i);
                     phiRows.get(r).add(true);
                     graph.remove(r);
                 }
-            }else{
-                ArrayList<VirtualReg> circle=new ArrayList<>();
-                assert(stack.contains(now));
-                while(stack.contains(now)){
-                    VirtualReg r=stack.pop();
+            } else {
+                ArrayList<VirtualReg> circle = new ArrayList<>();
+                assert (stack.contains(now));
+                while (stack.contains(now)) {
+                    VirtualReg r = stack.pop();
                     circle.add(r);
-                    assert(graph.containsKey(r));
-                    assert(phiRows.get(r).size()==i);
+                    assert (graph.containsKey(r));
+                    assert (phiRows.get(r).size() == i);
                     phiRows.get(r).add(false);
                     graph.remove(r);
                 }
-                while(!stack.isEmpty()){
-                    VirtualReg r=stack.pop();
-                    assert(graph.containsKey(r));
-                    assert(phiRows.get(r).size()==i);
+                while (!stack.isEmpty()) {
+                    VirtualReg r = stack.pop();
+                    assert (graph.containsKey(r));
+                    assert (phiRows.get(r).size() == i);
                     phiRows.get(r).add(true);
                     graph.remove(r);
                 }
@@ -407,7 +483,7 @@ public class CodeGenManager {
     }
 
     //pred->(succ->MCs)
-    private HashMap<MachineBlock,HashMap<MachineBlock, ArrayList<MachineCode>>> waiting = new HashMap<>();
+    private HashMap<MachineBlock, HashMap<MachineBlock, ArrayList<MachineCode>>> waiting = new HashMap<>();
 //
 //    private MachineOperand analyzeValue(Value v, MachineFunction mf, Function f, HashMap<BasicBlock, MachineBlock> bMap) {
 //
