@@ -140,7 +140,7 @@ public class ListScheduling {
                 for (var needUnit: curNode.needFU) {
                     for (var unit: units) {
                         if (unit.type.equals(needUnit) && unit.curNode == null) {
-                            block.addMC(curNode.instr);
+                            block.addAtEndMC(curNode.instr);
                             unit.runTask(curNode, cycle + curNode.latency, freeUnits);
                             iter.remove();
                             ++cntInflight;

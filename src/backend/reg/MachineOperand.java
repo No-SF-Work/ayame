@@ -17,6 +17,10 @@ public class MachineOperand {
 
     public state getState(){return s;}
 
+    public boolean isPrecolored() {
+        return this.s.equals(state.phy);
+    }
+
     public MachineOperand(int imme){
         this.s=state.imm;
         this.imme=imme;

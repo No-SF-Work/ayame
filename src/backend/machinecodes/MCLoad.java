@@ -20,6 +20,18 @@ public class MCLoad extends MachineCode{
         addDef(dst);
     }
 
+    public MachineOperand getAddr() {
+        return addr;
+    }
+
+    public MachineOperand getOffset() {
+        return offset;
+    }
+
+    public MachineOperand getDst() {
+        return dst;
+    }
+
     private MachineOperand addr;
 
     private MachineOperand offset;

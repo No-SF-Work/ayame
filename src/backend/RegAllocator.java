@@ -1,8 +1,20 @@
 package backend;
 
 import backend.machinecodes.ArmAddition;
+import backend.machinecodes.MCBinary;
+import backend.machinecodes.MCBranch;
+import backend.machinecodes.MCCall;
+import backend.machinecodes.MCComment;
+import backend.machinecodes.MCCompare;
+import backend.machinecodes.MCFma;
+import backend.machinecodes.MCGlobal;
+import backend.machinecodes.MCJump;
+import backend.machinecodes.MCLoad;
+import backend.machinecodes.MCLongMul;
 import backend.machinecodes.MCMove;
+import backend.machinecodes.MCStore;
 import backend.machinecodes.MachineBlock;
+import backend.machinecodes.MachineCode;
 import backend.machinecodes.MachineFunction;
 import backend.reg.MachineOperand;
 import backend.reg.PhyReg;
@@ -24,8 +36,6 @@ import java.util.stream.IntStream;
 
 // Graph-Coloring
 public class RegAllocator {
-    private final HashSet<PhyReg> allocatableMachineOperands = IntStream.range(1, 15).filter(i -> i != 13)
-            .mapToObj(PhyReg::new).collect(Collectors.toCollection(HashSet::new));
     private final int INF = 0x3f3f3f3f;
     private final int K = 14;
 
@@ -50,12 +60,11 @@ public class RegAllocator {
 
             for (var instrEntry : block.getmclist()) {
                 var instr = instrEntry.getVal();
-                // fixme: not getVirtualDef
-                instr.getVirtualDef().stream()
+                instr.getDef().stream()
                         .filter(useMachineOperand -> useMachineOperand instanceof VirtualReg)
                         .filter(useMachineOperand -> !blockLiveInfo.liveDef.contains(useMachineOperand))
                         .forEach(blockLiveInfo.liveUse::add);
-                instr.getVirtualUses().stream()
+                instr.getUse().stream()
                         .filter(defMachineOperand -> defMachineOperand instanceof VirtualReg)
                         .filter(defMachineOperand -> !blockLiveInfo.liveUse.contains(defMachineOperand))
                         .forEach(blockLiveInfo.liveDef::add);
@@ -97,10 +106,81 @@ public class RegAllocator {
         return liveInfoMap;
     }
 
+    private void replaceReg(MachineCode instr, MachineOperand origin, MachineOperand target) {
+        if (instr instanceof MCBinary binaryInstr) {
+            if (binaryInstr.getDst().equals(origin)) {
+                binaryInstr.setDst(target);
+            } else if (binaryInstr.getLhs().equals(origin)) {
+                binaryInstr.setLhs(target);
+            } else if (binaryInstr.getRhs().equals(origin)) {
+                binaryInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCBranch branchInstr) {
+            return;
+        } else if (instr instanceof MCCall callInstr) {
+            return;
+        } else if (instr instanceof MCComment commentInstr) {
+            return;
+        } else if (instr instanceof MCCompare compareInstr) {
+            return;
+        } else if (instr instanceof MCFma fmaInstr) {
+            if (fmaInstr.getDst().equals(origin)) {
+                fmaInstr.setDst(target);
+            } else if (fmaInstr.getLhs().equals(origin)) {
+                fmaInstr.setLhs(target);
+            } else if (fmaInstr.getRhs().equals(origin)) {
+                fmaInstr.setRhs(target);
+            } else if (fmaInstr.getAcc().equals(origin)) {
+                fmaInstr.setAcc(target);
+            }
+        } else if (instr instanceof MCGlobal globalInstr) {
+            if (globalInstr.getDst().equals(origin)) {
+                globalInstr.setDst(target);
+            }
+        } else if (instr instanceof MCJump jumpInstr) {
+            return;
+        } else if (instr instanceof MCLoad loadInstr) {
+            if (loadInstr.getAddr().equals(origin)) {
+                loadInstr.setAddr(target);
+            } else if (loadInstr.getOffset().equals(origin)) {
+                loadInstr.setOffset(target);
+            } else if (loadInstr.getDst().equals(origin)) {
+                loadInstr.setDst(target);
+            }
+        } else if (instr instanceof MCLongMul longMulInstr) {
+            if (longMulInstr.getDst().equals(origin)) {
+                longMulInstr.setDst(target);
+            } else if (longMulInstr.getLhs().equals(origin)) {
+                longMulInstr.setLhs(target);
+            } else if (longMulInstr.getRhs().equals(origin)) {
+                longMulInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCMove moveInstr) {
+            if (moveInstr.getDst().equals(origin)) {
+                moveInstr.setDst(target);
+            }
+            if (moveInstr.getRhs().equals(origin)) {
+                moveInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCStore storeInstr) {
+            if (storeInstr.getAddr().equals(origin)) {
+                storeInstr.setAddr(target);
+            } else if (storeInstr.getOffset().equals(origin)) {
+                storeInstr.setOffset(target);
+            } else if (storeInstr.getData().equals(origin)) {
+                storeInstr.setData(target);
+            }
+        }
+    }
+
     public void MachineOperandAlloc(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
+            HashSet<PhyReg> allocatable = IntStream.range(0, 14).filter(i -> i != 13)
+                    .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
+
             boolean done = false;
-            while(!done) {
+
+            while (!done) {
                 var liveInfoMap = livenessAnalysis(func);
 
                 var adjList = new HashMap<MachineOperand, HashSet<MachineOperand>>();
@@ -119,20 +199,25 @@ public class RegAllocator {
                 var frozenMoves = new HashSet<MCMove>();
                 var worklistMoves = new HashSet<MCMove>();
                 var activeMoves = new HashSet<MCMove>();
+                // maybe removed
+                var allocated = new HashSet<MachineOperand>();
 
-                Map<MachineOperand, Integer> degree = allocatableMachineOperands.stream().collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
+                Function<MachineOperand, Boolean> needsColor = n -> n.getState() != MachineOperand.state.imm && !allocated.contains(n);
+
+                Map<MachineOperand, Integer> degree = allocatable.stream()
+                        .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
                 BiConsumer<MachineOperand, MachineOperand> addEdge = (u, v) -> {
-                    if (adjSet.contains(new Pair<>(u, v)) && u != v) {
+                    if (!adjSet.contains(new Pair<>(u, v)) && !u.equals(v)) {
                         adjSet.add(new Pair<>(u, v));
                         adjSet.add(new Pair<>(v, u));
-                        if (u instanceof VirtualReg) {
+                        if (!u.isPrecolored()) {
                             adjList.putIfAbsent(u, new HashSet<>());
                             adjList.get(u).add(v);
                             degree.putIfAbsent(u, 0);
                             degree.compute(u, (key, value) -> value + 1);
                         }
-                        if (v instanceof VirtualReg) {
+                        if (!v.isPrecolored()) {
                             adjList.putIfAbsent(v, new HashSet<>());
                             adjList.get(v).add(u);
                             degree.putIfAbsent(v, 0);
@@ -142,43 +227,47 @@ public class RegAllocator {
                 };
 
                 Runnable build = () -> {
-                    for (var blockEntry : func.getmbList()) {
+                    for (var blockEntry = func.getmbList().getLast();
+                         blockEntry != null;
+                         blockEntry = blockEntry.getPrev()) {
                         var block = blockEntry.getVal();
                         var liveInfo = liveInfoMap.get(block);
                         var live = liveInfo.liveOut;
 
-                        for (var instrEntry : block.getmclist()) {
+                        for (var instrEntry = block.getmclist().getLast();
+                             instrEntry != null;
+                             instrEntry = instrEntry.getPrev()) {
                             var instr = instrEntry.getVal();
-                            // fixme
-                            var defs = instr.getPhyDef();
-                            var uses = instr.getPhyUses();
+                            var defs = instr.getDef();
+                            var uses = instr.getUse();
 
                             if (instr instanceof MCMove mcInstr) {
                                 var dst = mcInstr.getDst();
                                 var rhs = mcInstr.getRhs();
-                                if (dst instanceof VirtualReg && rhs instanceof VirtualReg &&
+                                if (needsColor.apply(dst) && needsColor.apply(rhs) &&
                                         mcInstr.getCond() == ArmAddition.CondType.Any &&
                                         mcInstr.getShift().getType() == ArmAddition.ShiftType.None) {
                                     live.remove(mcInstr.getRhs());
+
                                     moveList.putIfAbsent(rhs, new HashSet<>());
                                     moveList.get(rhs).add(mcInstr);
+
                                     moveList.putIfAbsent(dst, new HashSet<>());
-                                    moveList.get(rhs).add(mcInstr);
+                                    moveList.get(dst).add(mcInstr);
+
                                     worklistMoves.add(mcInstr);
                                 }
 
-                                defs.stream().filter(d -> d instanceof PhyReg).forEach(live::add);
-                                defs.stream().filter(d -> d instanceof PhyReg).forEach(d -> {
-                                    live.forEach(l -> addEdge.accept(l, d));
-                                });
-                                // fixme: add loop cnt
+                                defs.stream().filter(needsColor::apply).forEach(live::add);
+                                defs.stream().filter(needsColor::apply).forEach(d -> live.forEach(l -> addEdge.accept(l, d)));
+                                // todo: [heuristic] add loop cnt
                             }
                         }
                     }
                 };
 
                 Function<MachineOperand, Set<MachineOperand>> getAdjacent = n -> adjList.getOrDefault(n, new HashSet<>()).stream()
-                        .filter(MachineOperand -> !(selectStack.contains(MachineOperand) || coalescedNodes.contains(MachineOperand)))
+                        .filter(operand -> !(selectStack.contains(operand) || coalescedNodes.contains(operand)))
                         .collect(Collectors.toSet());
 
                 Function<MachineOperand, Set<MCMove>> nodeMoves = n -> moveList.getOrDefault(n, new HashSet<>()).stream()
@@ -187,9 +276,15 @@ public class RegAllocator {
 
                 Function<MachineOperand, Boolean> moveRelated = n -> !nodeMoves.apply(n).isEmpty();
 
-                Runnable makeWorklist = () -> {
-                    // fixme
-                };
+                Runnable makeWorklist = () -> func.getVRegMap().values().forEach(vreg -> {
+                    if (degree.get(vreg) >= K) {
+                        spillWorklist.add(vreg);
+                    } else if (moveRelated.apply(vreg)) {
+                        freezeWorklist.add(vreg);
+                    } else {
+                        simplifyWorklist.add(vreg);
+                    }
+                });
 
                 Consumer<MachineOperand> enableMoves = n -> {
                     nodeMoves.apply(n).stream()
@@ -199,18 +294,15 @@ public class RegAllocator {
                                 worklistMoves.add(m);
                             });
 
-                    getAdjacent.apply(n).forEach(a -> {
-                        nodeMoves.apply(a).stream()
-                                .filter(activeMoves::contains)
-                                .forEach(m -> {
-                                    activeMoves.remove(m);
-                                    worklistMoves.add(m);
-                                });
-                    });
+                    getAdjacent.apply(n).forEach(a -> nodeMoves.apply(a).stream()
+                            .filter(activeMoves::contains)
+                            .forEach(m -> {
+                                activeMoves.remove(m);
+                                worklistMoves.add(m);
+                            }));
                 };
 
                 Consumer<MachineOperand> decrementDegree = m -> {
-                    assert degree.containsKey(m);
                     var d = degree.get(m);
                     degree.put(m, d - 1);
                     if (d == K) {
@@ -227,23 +319,29 @@ public class RegAllocator {
                 Runnable simplify = () -> {
                     var n = simplifyWorklist.iterator().next();
                     simplifyWorklist.remove(n);
-                    selectStack.add(n);
+                    selectStack.push(n);
                     getAdjacent.apply(n).forEach(decrementDegree);
                 };
 
-                Function<MachineOperand, MachineOperand> getAlias = n -> coalescedNodes.contains(n) ? alias.get(n) : n;
+                Function<MachineOperand, MachineOperand> getAlias = n -> {
+                    while (coalescedNodes.contains(n)) {
+                        n = alias.get(n);
+                    }
+                    return n;
+                };
 
                 Consumer<MachineOperand> addWorklist = u -> {
-                    if (u instanceof VirtualReg && !moveRelated.apply(u) && degree.get(u) < K) {
+                    if (!u.isPrecolored() && !moveRelated.apply(u) && degree.get(u) < K) {
                         freezeWorklist.remove(u);
                         simplifyWorklist.add(u);
                     }
                 };
 
                 BiPredicate<MachineOperand, MachineOperand> ok = (t, r) ->
-                        degree.get(t) < K || t instanceof PhyReg || adjSet.contains(new Pair<>(t, r));
+                        degree.get(t) < K || t.isPrecolored() || adjSet.contains(new Pair<>(t, r));
 
-                BiPredicate<MachineOperand, MachineOperand> adjOk = (v, u) -> getAdjacent.apply(v).stream().allMatch(t -> ok.test(t, u));
+                BiPredicate<MachineOperand, MachineOperand> adjOk = (v, u) ->
+                        getAdjacent.apply(v).stream().allMatch(t -> ok.test(t, u));
 
                 BiConsumer<MachineOperand, MachineOperand> combine = (u, v) -> {
                     if (freezeWorklist.contains(v)) {
@@ -255,7 +353,7 @@ public class RegAllocator {
                     coalescedNodes.add(v);
                     alias.put(v, u);
                     moveList.get(u).addAll(moveList.get(v));
-                    enableMoves.accept(v);
+                    // enableMoves.accept(v);
                     getAdjacent.apply(v).forEach(t -> {
                         addEdge.accept(t, u);
                         decrementDegree.accept(t);
@@ -277,21 +375,21 @@ public class RegAllocator {
                     var m = worklistMoves.iterator().next();
                     var u = getAlias.apply(m.getDst());
                     var v = getAlias.apply(m.getRhs());
-                    if (v instanceof PhyReg) {
+                    if (v.isPrecolored()) {
                         var temp = u;
                         u = v;
                         v = temp;
                     }
                     worklistMoves.remove(m);
-                    if (u == v) {
+                    if (u.equals(v)) {
                         coalescedMoves.add(m);
                         addWorklist.accept(u);
-                    } else if (v instanceof PhyReg || adjSet.contains(new Pair<>(u, v))) {
+                    } else if (v.isPrecolored() || adjSet.contains(new Pair<>(u, v))) {
                         constrainedMoves.add(m);
                         addWorklist.accept(u);
                         addWorklist.accept(v);
-                    } else if ((u instanceof PhyReg && adjOk.test(v, u)) ||
-                            (!(u instanceof PhyReg) && conservative.test(getAdjacent.apply(u), getAdjacent.apply(v)))) {
+                    } else if ((u.isPrecolored() && adjOk.test(v, u)) ||
+                            (!u.isPrecolored() && conservative.test(getAdjacent.apply(u), getAdjacent.apply(v)))) {
                         coalescedMoves.add(m);
                         combine.accept(u, v);
                         addWorklist.accept(u);
@@ -300,20 +398,21 @@ public class RegAllocator {
                     }
                 };
 
-                Consumer<MachineOperand> freeMoves = u -> nodeMoves.apply(u).forEach(m -> {
-                    if (activeMoves.contains(m)) {
-                        activeMoves.remove(m);
-                    } else {
-                        worklistMoves.remove(m);
-                    }
-                    frozenMoves.add(m);
+                Consumer<MachineOperand> freeMoves = u ->
+                        nodeMoves.apply(u).forEach(m -> {
+                            if (activeMoves.contains(m)) {
+                                activeMoves.remove(m);
+                            } else {
+                                worklistMoves.remove(m);
+                            }
+                            frozenMoves.add(m);
 
-                    var v = m.getDst() == u ? m.getRhs() : m.getDst();
-                    if (!moveRelated.apply(v) && degree.get(v) < K) {
-                        freezeWorklist.remove(v);
-                        simplifyWorklist.add(v);
-                    }
-                });
+                            var v = m.getDst() == u ? m.getRhs() : m.getDst();
+                            if (!moveRelated.apply(v) && degree.get(v) < K) {
+                                freezeWorklist.remove(v);
+                                simplifyWorklist.add(v);
+                            }
+                        });
 
                 Runnable freeze = () -> {
                     var u = freezeWorklist.iterator().next();
@@ -322,16 +421,61 @@ public class RegAllocator {
                     freeMoves.accept(u);
                 };
 
-                Runnable select_spill = () -> {
-                    // fixme
+                Runnable selectSpill = () -> {
+                    // todo: heuristic
+                    var m = spillWorklist.iterator().next();
+                    simplifyWorklist.add(m);
+                    freeMoves.accept(m);
+                    spillWorklist.remove(m);
                 };
 
                 Runnable assignColors = () -> {
-                    // fixme
                     var colored = new HashMap<MachineOperand, MachineOperand>();
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
+                        var okColors = new HashSet<>(allocatable);
 
+                        adjList.get(n).forEach(w -> {
+                            var a = getAlias.apply(w);
+                            if (allocated.contains(a) || a.isPrecolored()) {
+                                assert a instanceof PhyReg;
+                                okColors.remove(a);
+                            } else if (a instanceof VirtualReg) {
+                                colored.remove(a);
+                            }
+                        });
+
+                        if (okColors.isEmpty()) {
+                            spilledNodes.add(n);
+                        } else {
+                            var color = okColors.iterator().next();
+                            colored.put(n, color);
+                        }
+                    }
+
+                    if (!spilledNodes.isEmpty()) {
+                        return;
+                    }
+
+                    coalescedNodes.forEach(n -> {
+                        var a = getAlias.apply(n);
+                        if (a.isPrecolored()) {
+                            colored.put(n, a);
+                        } else {
+                            colored.put(n, colored.get(a));
+                        }
+                    });
+
+                    for (var blockEntry : func.getmbList()) {
+                        var block = blockEntry.getVal();
+
+                        for (var instrEntry : block.getmclist()) {
+                            var instr = instrEntry.getVal();
+                            instr.getDef().stream().filter(colored::containsKey)
+                                    .forEach(origin -> replaceReg(instr, origin, colored.get(origin)));
+                            instr.getUse().stream().filter(colored::containsKey)
+                                    .forEach(origin -> replaceReg(instr, origin, colored.get(origin)));
+                        }
                     }
                 };
 
@@ -348,10 +492,10 @@ public class RegAllocator {
                         freeze.run();
                     }
                     if (!spillWorklist.isEmpty()) {
-                        select_spill.run();
+                        selectSpill.run();
                     }
-                } while (!simplifyWorklist.isEmpty() || !worklistMoves.isEmpty() ||
-                        !freezeWorklist.isEmpty() || !spillWorklist.isEmpty());
+                } while (!(simplifyWorklist.isEmpty() && worklistMoves.isEmpty() &&
+                        freezeWorklist.isEmpty() && spillWorklist.isEmpty()));
 
                 assignColors.run();
 
@@ -361,9 +505,64 @@ public class RegAllocator {
                     for (var n : spilledNodes) {
                         for (var blockEntry : func.getmbList()) {
                             var block = blockEntry.getVal();
-                            // fixme
+                            var offset = func.getStackSize();
+                            var offsetOperand = new MachineOperand(offset);
+
+                            Consumer<MachineCode> fixOffset = inst -> {
+                                // fixme
+                            };
+
+                            var ref = new Object() {
+                                VirtualReg vreg = null;
+                                MachineCode firstUse = null;
+                                MachineCode lastDef = null;
+                            };
+
+                            Runnable checkPoint = () -> {
+                                if (ref.firstUse != null) {
+                                    var loadInstr = new MCLoad(block);
+                                    loadInstr.setAddr(func.getPhyReg("sp"));
+                                    loadInstr.setDst(ref.vreg);
+                                    loadInstr.setShift(ArmAddition.ShiftType.None, 0);
+//                                    fixOffset(loadInstr);
+
+                                }
+                            };
+
+                            int cntInstr = 0;
+                            for (var instrEntry : block.getmclist()) {
+                                var instr = instrEntry.getVal();
+
+                                instr.getDef().stream().filter(def -> def.equals(n)).forEach(def -> {
+                                    if (ref.vreg == null) {
+                                        ref.vreg = new VirtualReg();
+                                    }
+
+                                    replaceReg(instr, def, ref.vreg);
+                                    ref.lastDef = instr;
+                                });
+
+                                instr.getUse().stream().filter(use -> use.equals(n)).forEach(use -> {
+                                    if (ref.vreg == null) {
+                                        ref.vreg = new VirtualReg();
+                                    }
+
+                                    replaceReg(instr, use, ref.vreg);
+                                    ref.firstUse = instr;
+                                });
+
+                                if (cntInstr > 30) {
+                                    checkPoint.run();
+                                }
+
+                                ++cntInstr;
+                            }
+
+                            checkPoint.run();
                         }
+                        func.addStackSize(4);
                     }
+                    done = false;
                 }
             }
         }
