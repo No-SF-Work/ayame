@@ -36,14 +36,30 @@ public class MachineBlock {
 
     MachineCode entry;// MC list entry
 
-    public void addMC(MachineCode mc){
+    public void addAtEndMC(MachineCode mc){
         INode<MachineCode,MachineBlock> mcNode=new INode<>(mc);
         mcNode.insertAtEnd(mclist);
+    }
+
+    public void addAtEntryMC(MachineCode mc){
+        INode<MachineCode,MachineBlock> mcNode=new INode<>(mc);
+        mcNode.insertAtEntry(mclist);
     }
 
     public MachineBlock(MachineFunction mf) {
         mf.insertBlock(this);
     }
+
+    public MachineCode getControlTransferInst() {
+        return controlTransferInst;
+    }
+
+    public void setControlTransferInst(MachineCode controlTransferInst) {
+        this.controlTransferInst = controlTransferInst;
+    }
+
+    private MachineCode controlTransferInst;
+
 
     public void setFalseSucc(MachineBlock mb) {
         falseSucc = mb;
@@ -60,6 +76,8 @@ public class MachineBlock {
     public MachineBlock getTrueSucc() {
         return trueSucc;
     }
+
+    public ArrayList<MachineBlock> getPred(){return pred;}
 
     public MachineBlock getFalseSucc() {
         return falseSucc;

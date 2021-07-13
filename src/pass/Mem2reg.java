@@ -157,7 +157,7 @@ public class Mem2reg implements IRPass {
           continue;
         }
         int predIndex = data.bb.getPredecessor_().indexOf(data.pred);
-        phiInst.getIncomingVals().set(predIndex, data.values.get(phiToAllocaMap.get(phiInst)));
+        phiInst.setIncomingVals(predIndex, data.values.get(phiToAllocaMap.get(phiInst)));
       }
 
       // 已经删除过 alloca/load/store，但是可能有来自其他前驱基本块的 incomingVals，所以在这里才 `continue;`

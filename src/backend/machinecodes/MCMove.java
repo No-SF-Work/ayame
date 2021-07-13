@@ -4,9 +4,7 @@ import backend.reg.VirtualReg;
 import backend.reg.MachineOperand;
 
 
-/**
- * Add,Sub,Rsb, Mul, Div, Mod, Lt, Le, Ge, Gt, Eq, Ne, And, Or
- */
+
 public class MCMove extends MachineCode{
 
     public MachineOperand getDst() {
@@ -38,4 +36,11 @@ public class MCMove extends MachineCode{
         super(TAG.Mv,mb);
     }
 
+    public MCMove(){
+        super(TAG.Mv);
+    }
+
+    public MCMove(MachineBlock mb,int num){
+        super(TAG.Mv,mb,num);
+    }
 }

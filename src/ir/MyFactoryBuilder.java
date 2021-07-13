@@ -24,6 +24,7 @@ import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.MemInst.ZextInst;
 import ir.values.instructions.TerminatorInst.BrInst;
+import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -111,6 +112,10 @@ public class MyFactoryBuilder {
 
   public ArrayType getArrayTy(Type containedTy, int numElem) {
     return new ArrayType(containedTy, numElem);
+  }
+
+  public CallInst buildFuncCall(Function func, ArrayList<Value> args, BasicBlock bb) {
+    return new CallInst(func, args, bb);
   }
 
   //获得一个function
@@ -221,7 +226,11 @@ public class MyFactoryBuilder {
    * 以不同的情况build
    */
   public AllocaInst buildAlloca(BasicBlock bb, Type type) {
-    return new AllocaInst(bb.getParent().getList_().getEntry().getVal(), type);
+    var t = new AllocaInst(type);
+    //
+    bb.getParent().getList_().getEntry()
+        .getVal().getList().getEntry().insertBefore(t.node);
+    return t;
   }
 
   public AllocaInst buildAllocaBefore(Type type, Instruction inst) {

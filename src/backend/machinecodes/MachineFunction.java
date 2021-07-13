@@ -38,15 +38,16 @@ public class MachineFunction {
 
     public void addVirtualReg(VirtualReg vr){
         regMap.put(vr.getName(),vr);
+        stackSize+=4;
     }
 
-    public HashMap<String,VirtualReg> getRegMap(){return regMap;}
+    public HashMap<String,VirtualReg> getVRegMap(){return regMap;}
 
     //PhyReg nums
     private int regNums=0;
 
     //size of stack allocated for virtual register
-    private int stackSize;
+    private int stackSize = 0;
 
     private CodeGenManager cgm;
 
@@ -58,10 +59,8 @@ public class MachineFunction {
         return phyRegs.get(n);
     }
 
-    public HashMap<String,Integer>regNameMap=new HashMap<>();
-
-    public MachineFunction(CodeGenManager cgm){
-        this.cgm=cgm;
+    private static HashMap<String,Integer>regNameMap=new HashMap<>();
+    static {
         regNameMap.put("r0",0);
         regNameMap.put("r1",1);
         regNameMap.put("r2",2);
@@ -83,6 +82,10 @@ public class MachineFunction {
         regNameMap.put("sp",13);
         regNameMap.put("lr",14);
         regNameMap.put("pc",15);
+    }
+
+    public MachineFunction(CodeGenManager cgm){
+        this.cgm=cgm;
         for(int i=0;i<=15;i++){
             phyRegs.add(new PhyReg(i));
         }

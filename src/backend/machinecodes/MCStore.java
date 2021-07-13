@@ -12,6 +12,6 @@ public class MCStore extends MachineCode{
     private MachineOperand data;
 
     MCStore(MachineBlock mb){
-        super(MachineCode.TAG.Branch,mb);
+        super(TAG.Store ,mb);
     }
 }

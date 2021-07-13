@@ -10,6 +10,6 @@ public class MCComment extends MachineCode{
 
 
     MCComment(String str, MachineBlock mb){
-        super(TAG.Global,mb);
+        super(TAG.Comment,mb);
     }
 }

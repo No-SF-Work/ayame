@@ -1,10 +1,12 @@
 package ir.values.instructions;
 
+import ir.Use;
 import ir.types.ArrayType;
 import ir.types.PointerType;
 import ir.types.Type;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
+import ir.values.GlobalVariable;
 import ir.values.Value;
 import java.util.ArrayList;
 import java.util.Set;
@@ -78,7 +80,7 @@ public abstract class MemInst extends Instruction {
       return allocatedType_;
     }
 
-    public void setInit(boolean init) {
+    public void setInit() {
       isInit = true;
     }
 
@@ -91,6 +93,8 @@ public abstract class MemInst extends Instruction {
   }
 
   public static class LoadInst extends MemInst {
+
+    public Use directContent;
 
     //todo typecheck
     public LoadInst(Type type, Value v/**指针*/) {
@@ -170,6 +174,15 @@ public abstract class MemInst extends Instruction {
 
     public GEPInst(Value pointer, ArrayList<Value> indices) {
       super(TAG_.GEP, new PointerType(getElementType(pointer, indices)), indices.size() + 1);
+      if (pointer instanceof GEPInst) {
+        aimTo = ((GEPInst) pointer).aimTo;
+      }
+      if (pointer instanceof AllocaInst) {
+        aimTo = pointer;
+      }
+      if (pointer instanceof GlobalVariable) {
+        aimTo = pointer;
+      }
       CoSetOperand(0, pointer);
       for (int i = 0; i < indices.size(); i++) {
         CoSetOperand(i + 1, indices.get(i));
@@ -180,6 +193,15 @@ public abstract class MemInst extends Instruction {
     public GEPInst(Value pointer, ArrayList<Value> indices, BasicBlock parent) {
       super(TAG_.GEP, new PointerType(getElementType(pointer, indices)), indices.size() + 1,
           parent);
+      if (pointer instanceof GEPInst) {
+        aimTo = ((GEPInst) pointer).aimTo;
+      }
+      if (pointer instanceof AllocaInst) {
+        aimTo = pointer;
+      }
+      if (pointer instanceof GlobalVariable) {
+        aimTo = pointer;
+      }
       CoSetOperand(0, pointer);
       for (int i = 0; i < indices.size(); i++) {
         CoSetOperand(i + 1, indices.get(i));
@@ -189,6 +211,15 @@ public abstract class MemInst extends Instruction {
 
     public GEPInst(Instruction prev, Value pointer, ArrayList<Value> indices) {
       super(TAG_.GEP, new PointerType(getElementType(pointer, indices)), indices.size() + 1, prev);
+      if (pointer instanceof GEPInst) {
+        aimTo = ((GEPInst) pointer).aimTo;
+      }
+      if (pointer instanceof AllocaInst) {
+        aimTo = pointer;
+      }
+      if (pointer instanceof GlobalVariable) {
+        aimTo = pointer;
+      }
       CoSetOperand(0, pointer);
       for (int i = 0; i < indices.size(); i++) {
         CoSetOperand(i + 1, indices.get(i));
@@ -199,6 +230,15 @@ public abstract class MemInst extends Instruction {
 
     public GEPInst(Value pointer, ArrayList<Value> indices, Instruction next) {
       super(next, TAG_.GEP, new PointerType(getElementType(pointer, indices)), indices.size() + 1);
+      if (pointer instanceof GEPInst) {
+        aimTo = ((GEPInst) pointer).aimTo;
+      }
+      if (pointer instanceof AllocaInst) {
+        aimTo = pointer;
+      }
+      if (pointer instanceof GlobalVariable) {
+        aimTo = pointer;
+      }
       CoSetOperand(0, pointer);
       for (int i = 0; i < indices.size(); i++) {
         CoSetOperand(i + 1, indices.get(i));
@@ -206,12 +246,20 @@ public abstract class MemInst extends Instruction {
       elementType_ = getElementType(pointer, indices);
     }
 
+    public Type getElementType_() {
+      return elementType_;
+    }
+
+    public Value getAimTo() {
+      return this.aimTo;
+    }
+
+    private Value aimTo;
     private Type elementType_;
   }
 
   public static class Phi extends MemInst {
 
-    //todo 还不知道咋实现
     public Phi(TAG_ tag, Type type, int numOP) {
       super(tag, type, numOP);
     }
@@ -220,6 +268,7 @@ public abstract class MemInst extends Instruction {
     public Phi(TAG_ tag, Type type, int numOP, BasicBlock parent) {
       super(tag, type, numOP);
       this.node.insertAtEntry(parent.getList());
+      this.numOP = parent.getPredecessor_().size();
     }
 
     public Phi(TAG_ tag, Type type, int numOP, Instruction prev) {
@@ -230,10 +279,12 @@ public abstract class MemInst extends Instruction {
       super(next, tag, type, numOP);
     }
 
-    private ArrayList<Value> incomingVals = new ArrayList<>();
-
     public ArrayList<Value> getIncomingVals() {
-      return incomingVals;
+      return operands;
+    }
+
+    public void setIncomingVals(int index, Value val) {
+      CoSetOperand(index, val);
     }
   }
 
@@ -246,19 +297,14 @@ public abstract class MemInst extends Instruction {
     // MemPhi 指令需要放在基本块最前面
     public MemPhi(TAG_ tag, Type type, int numOP, Value array, BasicBlock parent) {
       super(tag, type, numOP);
-      this.array = array;
+      CoSetOperand(0, array); // operands[0]: array
       this.node.insertAtEntry(parent.getList());
+      this.numOP = parent.getPredecessor_().size();
     }
 
-    private Value array;
-    private ArrayList<Value> incomingVals = new ArrayList<>();
-
-    public Value getArray() {
-      return array;
-    }
-
-    public ArrayList<Value> getIncomingVals() {
-      return incomingVals;
+    public void setIncomingVals(int index, Value val) {
+      // operands[0] is array
+      CoSetOperand(index + 1, val);
     }
   }
 

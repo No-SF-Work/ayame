@@ -18,12 +18,12 @@ public class PhyReg extends Reg{
         nameMap.put(7,"r7");
         nameMap.put(8,"r8");
         nameMap.put(9,"r9");
-        nameMap.put(10,"10");
-        nameMap.put(11,"11");
-        nameMap.put(12,"12");
-        nameMap.put(13,"14");
-        nameMap.put(14,"14");
-        nameMap.put(15,"15");
+        nameMap.put(10,"r10");
+        nameMap.put(11,"r11");
+        nameMap.put(12,"r12");
+        nameMap.put(13,"r14");
+        nameMap.put(14,"r14");
+        nameMap.put(15,"r15");
     }
     public PhyReg(String name){
         super(state.phy);

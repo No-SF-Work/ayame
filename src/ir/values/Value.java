@@ -4,6 +4,7 @@ import ir.MyModule;
 import ir.types.Type;
 import ir.Use;
 
+import ir.values.instructions.Instruction;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,12 +29,15 @@ public abstract class Value {
    * 每个Value应该有一个独一无二的name以及一个type
    */
   public Value(String name, Type type) {
+    this.usesList = new LinkedList<>();
     this.name = name;
     this.type = type;
   }
+
   public Value(Type type) {
     this.type = type;
     this.name = "";
+    this.usesList = new LinkedList<>();
     //todo this.name = auto generated name;
   }
 
@@ -84,7 +88,13 @@ public abstract class Value {
     return type;
   }//所有的Value都需要指明一个Type
 
-  public void setType(Type type_) { this.type = type_;}
+  public void setType(Type type_) {
+    this.type = type_;
+  }
+
+  public LinkedList<Use> getUsesList() {
+    return usesList;
+  }
 
   public boolean isFunction() {
     return this instanceof Function;
@@ -92,6 +102,10 @@ public abstract class Value {
 
   public boolean isBasicBlock() {
     return this instanceof BasicBlock;
+  }
+
+  public boolean isInstruction() {
+    return this instanceof Instruction;
   }
 
   private Value parent;
