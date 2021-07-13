@@ -116,6 +116,15 @@ public class MachineCode {
         }
     }
 
+    public ArrayList<Reg> getUse(){
+        return regUse;
+    }
+
+    public ArrayList<Reg> getDef(){
+        return regDef;
+    }
+
+
 //    public void removeReg(VirtualReg vr){
 //        if(virtualUses.contains(vr)){
 //            virtualUses.remove(vr);
