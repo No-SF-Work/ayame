@@ -36,15 +36,17 @@ public class MachineBlock {
 
     MachineCode entry;// MC list entry
 
-    public void addAtEndMC(MachineCode mc){
-        INode<MachineCode,MachineBlock> mcNode=new INode<>(mc);
-        mcNode.insertAtEnd(mclist);
+    public void addAtEndMC(INode<MachineCode,MachineBlock> node){
+        node.insertAtEnd(mclist);
     }
 
-    public void addAtEntryMC(MachineCode mc){
-        INode<MachineCode,MachineBlock> mcNode=new INode<>(mc);
-        mcNode.insertAtEntry(mclist);
+    public void addAtEntryMC(INode<MachineCode,MachineBlock> node){
+        node.insertAtEntry(mclist);
     }
+
+    private MachineFunction mf;
+
+    public MachineFunction getMF(){return mf;}
 
     public MachineBlock(MachineFunction mf) {
         mf.insertBlock(this);
