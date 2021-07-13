@@ -26,6 +26,14 @@ public class MachineFunction {
     //get prev and next
     private INode<MachineFunction, CodeGenManager> node;
 
+    public int getStackSize(){
+        return stackSize;
+    }
+
+    public void addStackSize(int n){
+        stackSize+=n;
+    }
+
     //basic block list
     private IList<MachineBlock,MachineFunction> mbList = new IList<>(this);
 
@@ -38,7 +46,6 @@ public class MachineFunction {
 
     public void addVirtualReg(VirtualReg vr){
         regMap.put(vr.getName(),vr);
-        stackSize+=4;
     }
 
     public HashMap<String,VirtualReg> getVRegMap(){return regMap;}

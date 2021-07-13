@@ -49,6 +49,15 @@ public class CodeGenManager {
 
     private static CodeGenManager codeGenManager;
 
+    private boolean canEncodeImm(int imm){
+
+    }
+
+    private MachineOperand genImm(int imm, MachineBlock mb){
+        MachineOperand mo=new MachineOperand(imm);
+
+    }
+
     //ir->machinecode
     public CodeGenManager getInstance(MyModule myModule) {
         if (this.codeGenManager == null) {
@@ -82,10 +91,11 @@ public class CodeGenManager {
         Iterator<INode<Function, MyModule>> fIt = fList.iterator();
         while (fIt.hasNext()) {
             INode<Function, MyModule> fNode = fIt.next();
+            Function f= fNode.getVal();
             MachineFunction mf = new MachineFunction(this);
             machineFunctions.add(mf);
             HashMap<BasicBlock, MachineBlock> bMap = new HashMap<>();
-            IList<BasicBlock, Function> bList = fNode.getVal().getList_();
+            IList<BasicBlock, Function> bList = f.getList_();
             Iterator<INode<BasicBlock, Function>> bIt = bList.iterator();
             while (bIt.hasNext()) {
                 INode<BasicBlock, Function> bNode = bIt.next();
@@ -109,18 +119,18 @@ public class CodeGenManager {
             }
 
             AnalyzeValue aV=(Value v)->{
-                if (v instanceof Function.Arg) {
+                if (v instanceof Function.Arg && f.getArgList().contains(v)) {
                     VirtualReg vr;
                     if (mf.getVRegMap().get(v.getName()) == null) {
                         vr = new VirtualReg(v.getName());
                         mf.addVirtualReg(vr);
-                        for (int i = 0; i < fNode.getVal().getNumArgs(); i++) {
+                        for (int i = 0; i < f.getNumArgs(); i++) {
                             if (i < 4) {
-                                MachineCode mc = new MCMove(bMap.get(fNode.getVal().getList_().getEntry()), 0);
+                                MachineCode mc = new MCMove(bMap.get(f.getList_().getEntry()), 0);
                                 ((MCMove) mc).setDst(vr);
                                 ((MCMove) mc).setRhs(mf.getPhyReg(i));
                             } else {
-                                MachineCode mcLD = new MCLoad(bMap.get(fNode.getVal().getList_().getEntry()), 0);
+                                MachineCode mcLD = new MCLoad(bMap.get(f.getList_().getEntry()), 0);
                                 ((MCLoad) mcLD).setAddr(mf.getPhyReg("sp"));
                                 ((MCLoad) mcLD).setOffset(new MachineOperand((i - 4) * 4));
                                 ((MCLoad) mcLD).setDst(vr);
@@ -289,8 +299,21 @@ public class CodeGenManager {
                             }
                         }
 
-                    }else if(ir.tag==Instruction.TAG_.Call){
+                    }else if(ir.tag==Instruction.TAG_.Call) {
 
+                    }else if(ir.tag==Instruction.TAG_.Call){
+                        //获取调用函数的参数数量
+                        int argNum=ir.getOperands().hashCode()-1;
+                        for(int i=0;i<argNum;i++){
+                            if(i<4){
+                                MachineOperand rhs= aV.analyzeValue(ir.getOperands().get(i+1));
+                                MachineCode mv=new MCMove(mb);
+                                ((MCMove)mv).setRhs(rhs);
+                                ((MCMove)mv).setDst(mf.getPhyReg(i));
+                            }else{
+
+                            }
+                        }
                     }else if(ir.tag==Instruction.TAG_.Ret){
 
                     }else if(ir.tag==Instruction.TAG_.Alloca){
