@@ -57,5 +57,11 @@ public class MachineBlock {
         pred.add(mb);
     }
 
+    public MachineBlock getTrueSucc() {
+        return trueSucc;
+    }
 
+    public MachineBlock getFalseSucc() {
+        return falseSucc;
+    }
 }
