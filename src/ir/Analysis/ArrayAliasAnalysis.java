@@ -42,7 +42,7 @@ public class ArrayAliasAnalysis {
   }
 
   // Use array as memory unit
-  public Value getArrayValue(Value pointer) {
+  public static Value getArrayValue(Value pointer) {
     while (((Instruction) pointer).tag == TAG_.GEP) {
       pointer = ((Instruction) pointer).getOperands().get(0);
     }
@@ -54,13 +54,13 @@ public class ArrayAliasAnalysis {
     }
   }
 
-  public boolean alias(Value arr1, Value arr2) {
+  public static boolean alias(Value arr1, Value arr2) {
     // TODO 需要了解 visitor 的设计
 
     return false;
   }
 
-  public void run(Function function) {
+  public static void run(Function function) {
     DomInfo.computeDominanceInfo(function);
     DomInfo.computeDominanceFrontier(function);
 
@@ -174,7 +174,7 @@ public class ArrayAliasAnalysis {
           int index = arraysLookup.get(loadInst.getOperands().get(0));
           loadInst.useStore.setValue(currValues.get(index));
         } else if (inst.tag == TAG_.Store || inst.tag == TAG_.Call) {
-          Integer index = null
+          Integer index = null;
           for (ArrayDefUses arrayDefUse : arrays) {
             if (arrayDefUse.defs.contains(inst)) {
               index = arraysLookup.get(arrayDefUse.array);
@@ -192,5 +192,33 @@ public class ArrayAliasAnalysis {
     }
 
     // THU also builds `load` to `store` dependency, but I don't know if it is useful.
+  }
+
+  public static void clear(Function function) {
+    for (INode<BasicBlock, Function> bbNode : function.getList_()) {
+      BasicBlock bb = bbNode.getVal();
+      for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
+        Instruction inst = instNode.getVal();
+        if (inst instanceof MemPhi) {
+          for (var i = 0; i < inst.getNumOP(); i++) {
+            inst.CoSetOperand(i, null);
+          }
+        } else if (inst instanceof LoadInst) {
+          LoadInst loadInst = (LoadInst) inst;
+          loadInst.useStore.setValue(null); // setValue 好像有点问题？
+        }
+      }
+    }
+
+    for (INode<BasicBlock, Function> bbNode : function.getList_()) {
+      BasicBlock bb = bbNode.getVal();
+      for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
+        Instruction inst = instNode.getVal();
+        if (!(inst instanceof MemPhi)) {
+          break;
+        }
+        instNode.removeSelf();
+      }
+    }
   }
 }

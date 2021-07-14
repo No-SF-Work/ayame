@@ -30,7 +30,7 @@ import util.IList.INode;
 import util.Mylogger;
 import util.Pair;
 
-// Not completed: findValueNumber, processInstruction on Load and pure call
+// TODO: LoadInst and CallInst
 public class GVNGCM implements IRPass {
 
   private Logger log = Mylogger.getLogger(IRPass.class);
@@ -160,7 +160,7 @@ public class GVNGCM implements IRPass {
       Instruction inst = (Instruction) val;
       if (inst.isBinary() || inst.tag == TAG_.GEP || inst.tag == TAG_.Load
           || inst.tag == TAG_.Call) {
-        valueTable.add(new Pair<>(val, findValueNumber(inst)));
+        valueTable.get(valueTable.size() - 1).setSecond(findValueNumber(inst));
       }
     }
     return valueTable.get(valueTable.size() - 1).getSecond();
@@ -175,10 +175,13 @@ public class GVNGCM implements IRPass {
   // Algorithm: Global Code Motion Global Value Numbering, Cliff Click
   // TODO: 研究更好的算法 "A Sparse Algorithm for Predicated Global Value Numbering" describes a better algorithm
   public void runGVNGCM(Function func) {
+    // ArrayAliasAnalysis 几乎不可用
     ArrayAliasAnalysis.run(func);
 
     runGVN(func);
 
+    ArrayAliasAnalysis.clear(func);
+    ArrayAliasAnalysis.run(func);
     // clear MemorySSA, dead code elimination, compute MemorySSA
 
     runGCM(func);
@@ -231,18 +234,18 @@ public class GVNGCM implements IRPass {
       return;
     }
 
-    inst = (Instruction) v;
+    Instruction simpInst = (Instruction) v;
 
     if (inst.isBinary()) {
-      replace(inst, lookupOrAdd(v));
+      replace(inst, lookupOrAdd(simpInst));
     } else if (inst.tag == TAG_.GEP) {
-      // 直接找等价
-      replace(inst, lookupOrAdd(v));
+      replace(inst, lookupOrAdd(simpInst));
     } else if (inst.tag == TAG_.Load) {
-      replace(inst, lookupOrAdd(inst));
+      // 没有全局 const []
+      replace(inst, lookupOrAdd(simpInst));
     } else if (inst.tag == TAG_.Phi) {
       // 所有 incomingVals 相同
-      Phi phiInst = (Phi) inst;
+      Phi phiInst = (Phi) simpInst;
       boolean sameIncoming = true;
       Value val = lookupOrAdd(phiInst.getIncomingVals().get(0));
       for (int i = 1; i < phiInst.getIncomingVals().size() && sameIncoming; i++) {
@@ -305,6 +308,7 @@ public class GVNGCM implements IRPass {
         }
       }
 
+      // Load 的 useStore
       if (inst.tag == TAG_.Load) {
         LoadInst loadInst = (LoadInst) inst;
         Value value = loadInst.useStore.getValue();

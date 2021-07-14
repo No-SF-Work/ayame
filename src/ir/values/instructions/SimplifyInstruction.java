@@ -67,7 +67,7 @@ public class SimplifyInstruction {
       ConstantInt clhs = (ConstantInt) lhs;
       if (rhs instanceof ConstantInt) {
         ConstantInt crhs = (ConstantInt) rhs;
-        if (opTag.ordinal() >= TAG_.Add.ordinal() && opTag.ordinal() <= TAG_.Mod.ordinal()) {
+        if (opTag.ordinal() >= TAG_.Add.ordinal() && opTag.ordinal() <= TAG_.Div.ordinal()) {
           return ConstantInt.newOne(factory.getI32Ty(), BinaryInst.evalBinary(opTag, clhs, crhs));
         } else if (opTag.ordinal() >= TAG_.Lt.ordinal() && opTag.ordinal() <= TAG_.Or.ordinal()) {
           return ConstantInt.newOne(factory.getI1Ty(), BinaryInst.evalBinary(opTag, clhs, crhs));
@@ -101,13 +101,34 @@ public class SimplifyInstruction {
       return lhs;
     }
 
-    // TODO lhs + rhs == 0
+    // lhs + rhs == 0
+    // 1. lhs = sub(0, rhs) or rhs = sub(0, lhs)
+    // 2. lhs = sub(a, b) and rhs = sub(b, a)
+    if (lhs.isInstruction() && rhs.isInstruction()) {
+      Instruction ilhs = (Instruction) lhs;
+      Instruction irhs = (Instruction) rhs;
+      if (ilhs.tag == TAG_.Sub && irhs.tag == TAG_.Sub) {
+        Value lhsOfIlhs = ilhs.getOperands().get(0);
+        Value rhsOfIlhs = ilhs.getOperands().get(1);
+        Value lhsOfIrhs = irhs.getOperands().get(0);
+        Value rhsOfIrhs = irhs.getOperands().get(1);
+        if ((lhsOfIlhs instanceof ConstantInt) && ((ConstantInt) lhsOfIlhs).getVal() == 0) {
+          if (rhsOfIlhs == rhs) {
+            return ConstantInt.newOne(factory.getI32Ty(), 0);
+          }
+        } else if ((lhsOfIrhs instanceof ConstantInt) && ((ConstantInt) lhsOfIrhs).getVal() == 0) {
+          if (rhsOfIrhs == lhs) {
+            return ConstantInt.newOne(factory.getI32Ty(), 0);
+          }
+        }
+      }
+    }
 
     // TODO X + (Y - X) -> Y or (Y - X) + X -> Y
 
     // TODO SimplifyAssociativeBinOp
 
-    return null;
+    return inst;
   }
 
   public static Value simplifySubInst(Instruction inst) {
@@ -140,7 +161,7 @@ public class SimplifyInstruction {
     // TODO X - (Y + Z) -> (X - Y) - Z or (X - Z) - Y if everything simplifies.
     // TODO Z - (X - Y) -> (Z - X) + Y if everything simplifies.
 
-    return null;
+    return inst;
   }
 
   public static Value simplifyMulInst(Instruction inst) {
@@ -176,38 +197,38 @@ public class SimplifyInstruction {
     // TODO SimplifyAssociativeBinOp
     // TODO expandCommutativeBinOp
 
-    return null;
+    return inst;
   }
 
   public static Value simplifyDivInst(Instruction inst) {
-    return null;
+    return inst;
   }
 
   public static Value simplifyAndInst(Instruction inst) {
-    return null;
+    return inst;
   }
 
   public static Value simplifyOrInst(Instruction inst) {
-    return null;
+    return inst;
   }
 
   public static Value simplifyGEPInst(Instruction inst) {
-    return null;
+    return inst;
   }
 
   public static Value simplifyPhiInst(Instruction inst) {
-    return null;
+    return inst;
   }
 
   public static Value simplifyAllcoaInst(Instruction inst) {
-    return null;
+    return inst;
   }
 
   public static Value simplifyLoadInst(Instruction inst) {
-    return null;
+    return inst;
   }
 
   public static Value simplifyCallInst(Instruction inst) {
-    return null;
+    return inst;
   }
 }
