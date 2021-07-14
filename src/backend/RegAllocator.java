@@ -156,7 +156,7 @@ public class RegAllocator {
         }
     }
 
-    public void MachineOperandAlloc(CodeGenManager manager) {
+    public void RegisterAllocation(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
             var allocatable = IntStream.range(0, 14).filter(i -> i != 13)
                     .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
