@@ -1,14 +1,6 @@
 package backend;
 
-import backend.machinecodes.ArmAddition;
-import backend.machinecodes.MCBranch;
-import backend.machinecodes.MCCall;
-import backend.machinecodes.MCComment;
-import backend.machinecodes.MCJump;
-import backend.machinecodes.MCLoad;
-import backend.machinecodes.MCStore;
-import backend.machinecodes.MachineBlock;
-import backend.machinecodes.MachineCode;
+import backend.machinecodes.*;
 import backend.reg.PhyReg;
 
 import java.util.ArrayList;
@@ -241,7 +233,7 @@ public class ListScheduling {
                 loadNodes.add(curNode);
             }
 
-            if (instr instanceof MCBranch || instr instanceof MCJump /* fixme: instr instanceof MCReturn */) {
+            if (instr instanceof MCBranch || instr instanceof MCJump || instr instanceof MCReturn) {
                 nodes.stream().filter(node -> node != curNode).forEach(node -> node.addEdge(curNode));
             }
         }

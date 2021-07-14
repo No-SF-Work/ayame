@@ -28,4 +28,7 @@ public class MCBranch extends MachineCode{
         super(TAG.Branch,mb);
     }
 
+    public MachineBlock getTarget() {
+        return target;
+    }
 }
