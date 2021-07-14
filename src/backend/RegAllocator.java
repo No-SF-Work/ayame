@@ -1,24 +1,7 @@
 package backend;
 
-import backend.machinecodes.ArmAddition;
-import backend.machinecodes.MCBinary;
-import backend.machinecodes.MCBranch;
-import backend.machinecodes.MCCall;
-import backend.machinecodes.MCComment;
-import backend.machinecodes.MCCompare;
-import backend.machinecodes.MCFma;
-import backend.machinecodes.MCGlobal;
-import backend.machinecodes.MCJump;
-import backend.machinecodes.MCLoad;
-import backend.machinecodes.MCLongMul;
-import backend.machinecodes.MCMove;
-import backend.machinecodes.MCStore;
-import backend.machinecodes.MachineBlock;
-import backend.machinecodes.MachineCode;
-import backend.machinecodes.MachineFunction;
-import backend.reg.MachineOperand;
-import backend.reg.PhyReg;
-import backend.reg.VirtualReg;
+import backend.machinecodes.*;
+import backend.reg.*;
 import util.Pair;
 
 import java.util.ArrayList;
@@ -39,7 +22,7 @@ public class RegAllocator {
     private final int INF = 0x3f3f3f3f;
     private final int K = 14;
 
-    private class BlockLiveInfo {
+    private static class BlockLiveInfo {
         private final MachineBlock block;
         private HashSet<MachineOperand> liveUse = new HashSet<>();
         private HashSet<MachineOperand> liveDef = new HashSet<>();
@@ -115,7 +98,7 @@ public class RegAllocator {
             } else if (binaryInstr.getRhs().equals(origin)) {
                 binaryInstr.setRhs(target);
             }
-        } else if (instr instanceof MCBranch branchInstr) {
+        } else if (instr instanceof MCBranch ) {
             return;
         } else if (instr instanceof MCCall callInstr) {
             return;
@@ -175,10 +158,10 @@ public class RegAllocator {
 
     public void MachineOperandAlloc(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
-            HashSet<PhyReg> allocatable = IntStream.range(0, 14).filter(i -> i != 13)
+            var allocatable = IntStream.range(0, 14).filter(i -> i != 13)
                     .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
 
-            boolean done = false;
+            var done = false;
 
             while (!done) {
                 var liveInfoMap = livenessAnalysis(func);
@@ -194,13 +177,13 @@ public class RegAllocator {
                 var coalescedNodes = new HashSet<MachineOperand>();
                 var coloredNodes = new ArrayList<MachineOperand>();
                 var selectStack = new Stack<MachineOperand>();
-                var coalescedMoves = new HashSet<MCMove>();
-                var constrainedMoves = new HashSet<MCMove>();
-                var frozenMoves = new HashSet<MCMove>();
                 var worklistMoves = new HashSet<MCMove>();
                 var activeMoves = new HashSet<MCMove>();
                 // maybe removed
                 var allocated = new HashSet<MachineOperand>();
+                var coalescedMoves = new HashSet<MCMove>();
+                var constrainedMoves = new HashSet<MCMove>();
+                var frozenMoves = new HashSet<MCMove>();
 
                 Function<MachineOperand, Boolean> needsColor = n -> n.getState() != MachineOperand.state.imm && !allocated.contains(n);
 
@@ -509,7 +492,25 @@ public class RegAllocator {
                             var offsetOperand = new MachineOperand(offset);
 
                             Consumer<MachineCode> fixOffset = inst -> {
-                                // fixme
+                                if (offset < (1 << 12)) {
+                                    if (inst instanceof MCLoad loadInstr) {
+                                        loadInstr.setOffset(offsetOperand);
+                                    } else if (inst instanceof MCStore storeInstr) {
+                                        storeInstr.setOffset(offsetOperand);
+                                    }
+                                } else {
+                                    var moveInstr = new MCMove();
+                                    moveInstr.setRhs(offsetOperand);
+
+                                    var newVReg = new VirtualReg();
+                                    moveInstr.setDst(newVReg);
+
+                                    if (inst instanceof MCLoad loadInstr) {
+                                        loadInstr.setOffset(newVReg);
+                                    } else if (inst instanceof MCStore storeInstr) {
+                                        storeInstr.setOffset(newVReg);
+                                    }
+                                }
                             };
 
                             var ref = new Object() {
@@ -521,11 +522,24 @@ public class RegAllocator {
                             Runnable checkPoint = () -> {
                                 if (ref.firstUse != null) {
                                     var loadInstr = new MCLoad(block);
+                                    loadInstr.insertBeforeNode(ref.firstUse);
+
                                     loadInstr.setAddr(func.getPhyReg("sp"));
                                     loadInstr.setDst(ref.vreg);
                                     loadInstr.setShift(ArmAddition.ShiftType.None, 0);
-//                                    fixOffset(loadInstr);
+                                    fixOffset.accept(loadInstr);
+                                    ref.firstUse = null;
+                                }
 
+                                if (ref.lastDef != null) {
+                                    var storeInstr = new MCStore(block);
+                                    storeInstr.insertBeforeNode(ref.lastDef);
+
+                                    storeInstr.setAddr(func.getPhyReg("sp"));
+                                    storeInstr.setShift(ArmAddition.ShiftType.None, 0);
+                                    fixOffset.accept(storeInstr);
+                                    storeInstr.setData(ref.vreg);
+                                    ref.lastDef = null;
                                 }
                             };
 
@@ -536,6 +550,7 @@ public class RegAllocator {
                                 instr.getDef().stream().filter(def -> def.equals(n)).forEach(def -> {
                                     if (ref.vreg == null) {
                                         ref.vreg = new VirtualReg();
+                                        func.addVirtualReg(ref.vreg);
                                     }
 
                                     replaceReg(instr, def, ref.vreg);
@@ -545,6 +560,7 @@ public class RegAllocator {
                                 instr.getUse().stream().filter(use -> use.equals(n)).forEach(use -> {
                                     if (ref.vreg == null) {
                                         ref.vreg = new VirtualReg();
+                                        func.addVirtualReg(ref.vreg);
                                     }
 
                                     replaceReg(instr, use, ref.vreg);
