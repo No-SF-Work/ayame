@@ -1065,17 +1065,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
     } else {
       visit(ctx.unaryExp(0));
       var lhs = tmp_;
-      if (lhs.getType().isI1()) {
-        lhs = f.buildZext(lhs, i32Type_, curBB_);
-      }
       for (var i = 1; i < ctx.unaryExp().size(); i++) {
         visit(ctx.unaryExp(i));
         var rhs = tmp_;
         //cast i1 value 2 i32
         //llvm is a strong typed language
-        if (rhs.getType().isI1()) {
-          rhs = f.buildZext(rhs, i32Type_, curBB_);
-        }
+
         if (ctx.mulOp(i - 1).MUL() != null) {
           lhs = f.buildBinary(TAG_.Mul, lhs, rhs, curBB_);
         }
@@ -1118,16 +1113,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
     } else {
       visit(ctx.mulExp(0));
       var lhs = tmp_;
-      if (lhs.getType().isI1()) {
-        lhs = f.buildZext(lhs, i32Type_, curBB_);
-      }
+
       for (int i = 1; i < ctx.mulExp().size(); i++) {
         visit(ctx.mulExp(i));
         var rhs = tmp_;
 
-        if (rhs.getType().isI1()) {
-          rhs = f.buildZext(rhs, i32Type_, curBB_);
-        }
         if (ctx.addOp(i - 1).PLUS() != null) {
           lhs = f.buildBinary(TAG_.Add, lhs, rhs, curBB_);
         }
