@@ -54,8 +54,6 @@ public class BinaryInst extends Instruction {
         return lhsVal * rhsVal;
       case Div:
         return lhsVal / rhsVal;
-      case Mod:
-        return lhsVal % rhsVal;
       case Lt:
         return (lhsVal < rhsVal) ? 1 : 0;
       case Le:
@@ -96,9 +94,6 @@ public class BinaryInst extends Instruction {
     return this.tag == TAG_.Div;
   }
 
-  public boolean isMod() {
-    return this.tag == TAG_.Mod;
-  }
 
   public boolean isCommutative() {
     return this.tag == TAG_.Add || this.tag == TAG_.Mul || this.tag == TAG_.Eq
@@ -156,9 +151,10 @@ public class BinaryInst extends Instruction {
 
   public Value selfAlgebraOpt() {
     switch (this.tag) {
-      case TAG_.Add: {
+      case Add: {
 
       }
     }
+    return null;
   }
 }
