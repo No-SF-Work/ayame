@@ -12,16 +12,16 @@ import java.util.HashMap;
 public class MachineFunction {
 
     public void insertBlock(MachineBlock mb){
-        INode<MachineBlock, MachineFunction> mbNode = new INode<>(mb);
-        if(mbList.getNumNode()==0) {
-            mbNode.insertAtEntry(mbList);
-        } else {
-            mbNode.insertAfter(mbList.getLast());
-        }
+        mb.getNode().insertAtEnd(mbList);
+//        if(mbList.getNumNode()==0) {
+//            mbNode.insertAtEntry(mbList);
+//        } else {
+//            mbNode.insertAfter(mbList.getLast());
+//        }
     }
 
     //使基本块线性化，存储在mbList中
-    public void serializeBlocks(){}
+//    public void serializeBlocks(){}
 
     //get prev and next
     private INode<MachineFunction, CodeGenManager> node;

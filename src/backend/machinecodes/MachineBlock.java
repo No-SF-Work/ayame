@@ -10,6 +10,10 @@ import java.util.HashSet;
 
 public class MachineBlock {
 
+    public INode<MachineBlock, MachineFunction> getNode() {
+        return node;
+    }
+
     //basic struct
     private INode<MachineBlock, MachineFunction> node;
 
@@ -49,7 +53,8 @@ public class MachineBlock {
     public MachineFunction getMF(){return mf;}
 
     public MachineBlock(MachineFunction mf) {
-        mf.insertBlock(this);
+//        mf.insertBlock(this);
+        node.setParent(mf.getmbList());
     }
 
     public MachineCode getControlTransferInst() {
@@ -61,6 +66,10 @@ public class MachineBlock {
     }
 
     private MachineCode controlTransferInst;
+
+    public void removePred(MachineBlock mb){
+        this.pred.remove(mb);
+    }
 
 
     public void setFalseSucc(MachineBlock mb) {

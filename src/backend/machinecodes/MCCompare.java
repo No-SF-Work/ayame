@@ -38,7 +38,7 @@ public class MCCompare extends MachineCode{
 
     private MachineOperand rhs;
 
-    MCCompare(MachineBlock mb){
+    public MCCompare(MachineBlock mb){
         super(TAG.Compare,mb);
     }
 }

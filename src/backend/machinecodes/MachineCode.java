@@ -7,6 +7,7 @@ import backend.machinecodes.ArmAddition.Shift;
 import util.IList;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class MachineCode {
 
@@ -208,11 +209,13 @@ public class MachineCode {
     public void insertBeforeNode(MachineCode mc){
         node.setParent(mc.node.getParent());
         this.node.insertBefore(mc.node);
+        this.mb=mc.getMb();
     }
 
     public void insertAfterNode(MachineCode mc){
         node.setParent(mc.node.getParent());
         this.node.insertAfter(mc.node);
+        this.mb=mc.getMb();
     }
 
     public MachineCode(TAG tag, MachineBlock mb,int num) {
@@ -223,12 +226,18 @@ public class MachineCode {
         mb.addAtEntryMC(node);
     }
 
+
+
 //    public MachineCode(TAG tag, MachineFunction mf) {
 //        this.tag = tag;
 //        this.mf = mf;
 //        node=new IList.INode(this);
 //        node.setParent(mb.getmclist());
 //    }
+
+    public IList.INode getNode() {
+        return node;
+    }
 
     public void setMb(MachineBlock mb) {
         this.mb = mb;
