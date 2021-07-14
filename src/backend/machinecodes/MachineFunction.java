@@ -2,12 +2,14 @@ package backend.machinecodes;
 
 import backend.CodeGenManager;
 import backend.reg.PhyReg;
+import backend.reg.Reg;
 import backend.reg.VirtualReg;
 import util.IList;
 import util.IList.INode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class MachineFunction {
 
@@ -98,4 +100,18 @@ public class MachineFunction {
         }
     }
 
+    public HashSet<Reg> getUsedRegs() {
+        var ret = new HashSet<Reg>();
+        for (var blockEntry : getmbList()) {
+            var block = blockEntry.getVal();
+
+            for (var instrEntry : block.getmclist()) {
+                var instr = instrEntry.getVal();
+
+                ret.addAll(instr.getDef());
+                ret.addAll(instr.getUse());
+            }
+        }
+        return ret;
+    }
 }
