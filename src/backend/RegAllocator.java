@@ -500,6 +500,7 @@ public class RegAllocator {
                                     }
                                 } else {
                                     var moveInstr = new MCMove();
+                                    moveInstr.insertBeforeNode(inst);
                                     moveInstr.setRhs(offsetOperand);
 
                                     var newVReg = new VirtualReg();
@@ -521,7 +522,7 @@ public class RegAllocator {
 
                             Runnable checkPoint = () -> {
                                 if (ref.firstUse != null) {
-                                    var loadInstr = new MCLoad(block);
+                                    var loadInstr = new MCLoad();
                                     loadInstr.insertBeforeNode(ref.firstUse);
 
                                     loadInstr.setAddr(func.getPhyReg("sp"));
@@ -532,8 +533,8 @@ public class RegAllocator {
                                 }
 
                                 if (ref.lastDef != null) {
-                                    var storeInstr = new MCStore(block);
-                                    storeInstr.insertBeforeNode(ref.lastDef);
+                                    var storeInstr = new MCStore();
+                                    storeInstr.insertAfterNode(ref.lastDef);
 
                                     storeInstr.setAddr(func.getPhyReg("sp"));
                                     storeInstr.setShift(ArmAddition.ShiftType.None, 0);

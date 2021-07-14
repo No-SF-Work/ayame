@@ -43,4 +43,8 @@ public class MCStore extends MachineCode{
         super(TAG.Store ,mb);
     }
 
+    public MCStore(){
+        super(TAG.Store);
+    }
+
 }

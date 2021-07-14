@@ -44,6 +44,10 @@ public class MCLoad extends MachineCode{
         super(TAG.Load,mb);
     }
 
+    public MCLoad(){
+        super(TAG.Load);
+    }
+
     public MCLoad(MachineBlock mb,int num){
         super(TAG.Load,mb,num);
     }
