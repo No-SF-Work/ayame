@@ -11,39 +11,71 @@ public class PeepholeOptimization {
                 for (var instrEntry : block.getmclist()) {
                     var instr = instrEntry.getVal();
 
-                    // add(sub) dst dst 0
                     if (instr instanceof MCBinary binInstr) {
+                        // add(sub) dst dst 0 (to be remove)
                         boolean isAddSub = binInstr.getTag() == MachineCode.TAG.Add ||
                                 binInstr.getTag() == MachineCode.TAG.Sub;
                         boolean isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
                         boolean hasNoShift = binInstr.getShift().isNone();
+
                         if (isAddSub && isSameDstLhs && hasNoShift) {
-                            // remove
+                            instr.getNode().removeSelf();
                         }
                     }
 
-                    // B1:
-                    // jump target
-                    // target:
                     if (instr instanceof MCJump jumpInstr) {
+                        // B1:
+                        // jump target (to be remove)
+                        // target:
                         boolean isSameTargetNxtBB = jumpInstr.getTarget().equals(block.getTrueSucc());
+
                         if (isSameTargetNxtBB) {
-                            // remove
+                            instr.getNode().removeSelf();
                         }
                     }
 
-                    // str a, [b, x]
-                    // ldr c, [b, x]
-                    // =>
-                    // mov c, a
-                    if (instr instanceof MCLoad loadInstr) {
+                    if (instr instanceof MCStore storeInstr) {
+                        // str a, [b, x]
+                        // ldr c, [b, x]
+                        // =>
+                        // mov c, a
                         var nxtInstrEntry = instrEntry.getNext();
 
-                        if (nxtInstrEntry != null && nxtInstrEntry.getVal() instanceof MCStore storeInstr) {
-                            if (storeInstr)
-                        }
+                        if (nxtInstrEntry != null && nxtInstrEntry.getVal() instanceof MCLoad loadInstr) {
+                            boolean isSameAddr = loadInstr.getAddr().equals(storeInstr.getAddr());
+                            boolean isSameOffset = loadInstr.getOffset().equals(storeInstr.getOffset());
+                            boolean isSameShift = loadInstr.getShift().equals(storeInstr.getShift());
+                            // fixme: Postfix/Prefix/etc: boolean isSameMode;
 
-//                        && instrEntry.getNext() != null && instrEntry.getNext().getVal()
+                            if (isSameAddr && isSameOffset && isSameShift) {
+                                var moveInstr = new MCMove();
+                                moveInstr.setDst(loadInstr.getDst());
+                                moveInstr.setRhs(storeInstr.getData());
+
+                                moveInstr.insertAfterNode(instr);
+                                nxtInstrEntry.removeSelf();
+                            }
+                        }
+                    }
+
+                    if (instr instanceof MCMove moveInstr) {
+                        var nxtInstrEntry = instrEntry.getNext();
+
+                        if (moveInstr.getDst().equals(moveInstr.getRhs())) {
+                            // move a a (to be remove)
+                            instrEntry.removeSelf();
+                        } else if (nxtInstrEntry.getVal() instanceof MCMove nxtMove) {
+                            // move a b (to be remove)
+                            // move a c
+                            // Warning: the following situation should not be optimized
+                            // move a b
+                            // move a a
+                            boolean isSameDst = nxtMove.getDst().equals(moveInstr.getDst());
+                            boolean nxtInstrNotIdentity = nxtMove.getRhs().equals(nxtMove.getDst());
+                            if (isSameDst && nxtInstrNotIdentity) {
+                                instrEntry.removeSelf();
+                            }
+                        }
                     }
                 }
             }
