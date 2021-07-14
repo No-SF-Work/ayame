@@ -11,7 +11,7 @@ public class MCStore extends MachineCode{
     }
 
     public void setAddr(MachineOperand addr) {
-        super.insteadReg(this.addr);
+        super.dealReg(this.addr,addr,true);
         this.addr = addr;
     }
 
@@ -20,7 +20,7 @@ public class MCStore extends MachineCode{
     }
 
     public void setOffset(MachineOperand offset) {
-        super.insteadReg(this.offset);
+        super.dealReg(this.offset,offset,true);
         this.offset = offset;
     }
 
@@ -29,7 +29,7 @@ public class MCStore extends MachineCode{
     }
 
     public void setData(MachineOperand data) {
-        super.insteadReg(this.data);
+        super.dealReg(this.data,data,true);
         this.data = data;
     }
 

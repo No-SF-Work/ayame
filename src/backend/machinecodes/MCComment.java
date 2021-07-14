@@ -8,8 +8,10 @@ public class MCComment extends MachineCode{
 
     private MachineOperand dst;
 
+    private String str;
 
-    MCComment(String str, MachineBlock mb){
+    public MCComment(String str, MachineBlock mb){
         super(TAG.Comment,mb);
+        this.str=str;
     }
 }

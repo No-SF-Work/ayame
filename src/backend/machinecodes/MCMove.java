@@ -12,9 +12,8 @@ public class MCMove extends MachineCode{
     }
 
     public void setDst(MachineOperand dst) {
-
+        dealReg(this.dst,dst,false);
         this.dst = dst;
-        addDef(dst);
     }
 
     public MachineOperand getRhs() {
@@ -22,13 +21,22 @@ public class MCMove extends MachineCode{
     }
 
     public void setRhs(MachineOperand rhs) {
+        dealReg(this.rhs,rhs,true);
         this.rhs = rhs;
-        addUse(rhs);
     }
 
     private MachineOperand dst;
 
     private MachineOperand rhs;
+
+    @Override
+    public ArmAddition.CondType getCond() {
+        return cond;
+    }
+
+    public void setCond(ArmAddition.CondType cond) {
+        this.cond = cond;
+    }
 
     private ArmAddition.CondType cond;
 

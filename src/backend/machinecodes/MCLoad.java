@@ -6,17 +6,17 @@ import backend.reg.VirtualReg;
 public class MCLoad extends MachineCode{
 
     public void setAddr(MachineOperand addr) {
+        super.dealReg(this.addr,addr,true);
         this.addr = addr;
-        addUse(addr);
     }
 
     public void setOffset(MachineOperand offset) {
+        super.dealReg(this.offset,offset,true);
         this.offset = offset;
-        addUse(offset);
     }
 
     public void setDst(MachineOperand dst) {
-        this.dst = dst;
+        dealReg(this.dst,dst,false);
         addDef(dst);
     }
 

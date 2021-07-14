@@ -73,14 +73,22 @@ public class MachineCode {
     //所有的MC都有一个shift对象，初始值为无偏移。可以通过setShift设置Shift
     private ArmAddition.Shift shift = ArmAddition.getAddition().getNewShiftInstance();
 
-    public void insteadReg(MachineOperand mo){
-        if(mo == null){
-            return ;
+    //处理旧reg，添加新reg 布尔值用来代表是使用还是定义
+    public void dealReg(MachineOperand oldmo,MachineOperand newmo,boolean isUse){
+        if(oldmo == null){
         }
-        if(mo.getState()==MachineOperand.state.imm){
-            return;
-        }else if(mo instanceof Reg){
-            removeReg((Reg)mo);
+        if(oldmo.getState()==MachineOperand.state.imm){
+        }else if(oldmo instanceof Reg){
+            if(isUse){
+                regUse.remove(oldmo);
+            }else{
+                regDef.remove(newmo);
+            }
+        }
+        if(isUse){
+            addUse(newmo);
+        }else{
+            addDef(newmo);
         }
     }
 
@@ -152,14 +160,14 @@ public class MachineCode {
 //        }
 //    }
 
-    public void removeReg(Reg r){
-        if(regUse.contains(r)){
-            regUse.remove(r);
-        }
-        if(regDef.contains(r)){
-            regDef.remove(r);
-        }
-    }
+//    public void removeReg(Reg r){
+//        if(regUse.contains(r)){
+//            regUse.remove(r);
+//        }
+//        if(regDef.contains(r)){
+//            regDef.remove(r);
+//        }
+//    }
 
 
 //    public void removeReg(PhyReg pr){
@@ -225,6 +233,7 @@ public class MachineCode {
     public void setMb(MachineBlock mb) {
         this.mb = mb;
         node.setParent(mb.getmclist());
+        mb.addAtEndMC(node);
     }
 
     public MachineBlock getMb(){

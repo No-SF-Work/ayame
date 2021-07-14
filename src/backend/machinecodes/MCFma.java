@@ -16,6 +16,26 @@ public class MCFma extends MachineCode{
 
     private MachineOperand acc;
 
+    public boolean isAdd() {
+        return add;
+    }
+
+    public void setAdd(boolean add) {
+        this.add = add;
+    }
+
+    public boolean isSign() {
+        return sign;
+    }
+
+    public void setSign(boolean sign) {
+        this.sign = sign;
+    }
+
+    boolean add;
+
+    boolean sign;
+
     private ArmAddition.CondType cond;
 
     @Override
@@ -44,18 +64,22 @@ public class MCFma extends MachineCode{
     }
 
     public void setDst(MachineOperand dst) {
+        dealReg(this.dst,dst,false);
         this.dst = dst;
     }
 
     public void setLhs(MachineOperand lhs) {
+        dealReg(this.lhs,lhs,true);
         this.lhs = lhs;
     }
 
     public void setRhs(MachineOperand rhs) {
+        dealReg(this.rhs,rhs,true);
         this.rhs = rhs;
     }
 
     public void setAcc(MachineOperand acc) {
+        dealReg(this.acc,acc,true);
         this.acc = acc;
     }
 }

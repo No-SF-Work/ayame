@@ -15,7 +15,7 @@ public class MCBinary extends MachineCode{
     }
 
     public void setDst(MachineOperand dst) {
-        super.insteadReg(this.dst);
+        super.dealReg(this.dst,dst,false);
         this.dst = dst;
     }
 
@@ -24,7 +24,7 @@ public class MCBinary extends MachineCode{
     }
 
     public void setLhs(MachineOperand lhs) {
-        super.insteadReg(this.lhs);
+        super.dealReg(this.lhs,lhs,true);
         this.lhs = lhs;
     }
 
@@ -33,7 +33,7 @@ public class MCBinary extends MachineCode{
     }
 
     public void setRhs(MachineOperand rhs) {
-        super.insteadReg(this.rhs);
+        super.dealReg(this.rhs,rhs,true);
         this.rhs = rhs;
     }
 

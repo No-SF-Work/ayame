@@ -10,6 +10,8 @@ public class MachineOperand {
     //if MO is imm, the value is imme
     int imme;
 
+    public int getImm(){return imme;}
+
     state s;
     MachineOperand(state s){
         this.s=s;

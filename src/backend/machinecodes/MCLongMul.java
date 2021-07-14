@@ -31,14 +31,17 @@ public class MCLongMul extends MachineCode{
     }
 
     public void setDst(MachineOperand dst) {
+        dealReg(this.dst,dst,false);
         this.dst = dst;
     }
 
     public void setLhs(MachineOperand lhs) {
+        dealReg(this.lhs,lhs,true);
         this.lhs = lhs;
     }
 
     public void setRhs(MachineOperand rhs) {
+        dealReg(this.rhs,rhs,false);
         this.rhs = rhs;
     }
 }

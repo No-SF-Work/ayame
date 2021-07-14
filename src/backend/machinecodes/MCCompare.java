@@ -7,6 +7,35 @@ public class MCCompare extends MachineCode{
 
     private MachineOperand lhs;
 
+    @Override
+    public ArmAddition.CondType getCond() {
+        return cond;
+    }
+
+    public void setCond(ArmAddition.CondType cond) {
+        this.cond = cond;
+    }
+
+    private ArmAddition.CondType cond;
+
+    public MachineOperand getLhs() {
+        return lhs;
+    }
+
+    public void setLhs(MachineOperand lhs) {
+        dealReg(this.lhs,lhs,true);
+        this.lhs = lhs;
+    }
+
+    public MachineOperand getRhs() {
+        return rhs;
+    }
+
+    public void setRhs(MachineOperand rhs) {
+        dealReg(this.rhs,rhs,true);
+        this.rhs = rhs;
+    }
+
     private MachineOperand rhs;
 
     MCCompare(MachineBlock mb){
