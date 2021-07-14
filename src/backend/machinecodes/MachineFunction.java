@@ -93,8 +93,13 @@ public class MachineFunction {
         regNameMap.put("pc",15);
     }
 
-    public MachineFunction(CodeGenManager cgm){
+    private String name;
+
+    public String getName(){return name;}
+
+    public MachineFunction(CodeGenManager cgm,String name){
         this.cgm=cgm;
+        this.name=name;
         for(int i=0;i<=15;i++){
             phyRegs.add(new PhyReg(i));
         }

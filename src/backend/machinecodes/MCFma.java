@@ -38,6 +38,10 @@ public class MCFma extends MachineCode{
 
     private ArmAddition.CondType cond;
 
+    public void setCond(ArmAddition.CondType cond){
+        this.cond=cond;
+    }
+
     @Override
     public ArmAddition.CondType getCond() {
         return cond;

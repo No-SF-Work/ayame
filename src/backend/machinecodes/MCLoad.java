@@ -40,6 +40,16 @@ public class MCLoad extends MachineCode{
 
     private ArmAddition.CondType cond;
 
+    @Override
+    public ArmAddition.CondType getCond() {
+        return cond;
+    }
+
+    public void setCond(ArmAddition.CondType cond) {
+        this.cond = cond;
+    }
+
+
     public MCLoad(MachineBlock mb){
         super(TAG.Load,mb);
     }

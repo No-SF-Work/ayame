@@ -33,6 +33,17 @@ public class MCStore extends MachineCode{
         this.data = data;
     }
 
+    @Override
+    public ArmAddition.CondType getCond() {
+        return cond;
+    }
+
+    public void setCond(ArmAddition.CondType cond) {
+        this.cond = cond;
+    }
+
+    private ArmAddition.CondType cond;
+
     private MachineOperand addr;
 
     private MachineOperand offset;

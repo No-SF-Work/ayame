@@ -14,6 +14,10 @@ public class MachineBlock {
         return node;
     }
 
+    private static int index=0;
+
+    private String name;
+
     //basic struct
     private INode<MachineBlock, MachineFunction> node;
 
@@ -55,7 +59,10 @@ public class MachineBlock {
     public MachineBlock(MachineFunction mf) {
 //        mf.insertBlock(this);
         node.setParent(mf.getmbList());
+        this.name=".__BB__"+((Integer)index).toString();
     }
+
+    public String getName(){return name;}
 
     public MachineCode getControlTransferInst() {
         return controlTransferInst;

@@ -26,6 +26,7 @@ public class VirtualReg extends Reg {
         return isSSA;
     }
 
+    @Override
     public String getName() {
         return name;
     }
