@@ -46,7 +46,9 @@ public class ArrayType extends Type {
 
   @Override
   public String toString() {
-    return null;//todo
+    var sb = new StringBuilder();
+    sb.append("[" + num_elements + " * " + contained.toString() + "]");
+    return sb.toString();
   }
 
   public static String buildConstInitStr(ArrayType arrTy, ConstantArray inits) {
