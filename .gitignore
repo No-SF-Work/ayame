@@ -1,2 +1,10 @@
 ../idea/
 ../code_0.iml
+ayame.iml
+*.log*
+*.sy
+tests/
+.idea/
+.vscode/
+out/
+util/.antlr/

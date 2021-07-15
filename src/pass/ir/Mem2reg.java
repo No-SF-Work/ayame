@@ -80,7 +80,7 @@ public class Mem2reg implements IRPass {
 //            defs.put(allocaInst, new ArrayList<>());
             allocas.add(allocaInst);
             allocaLookup.put(allocaInst, allocas.size() - 1);
-            defBlocks.set(allocas.size() - 1, new ArrayList<>());
+            defBlocks.add(new ArrayList<>());
           }
         }
       }
@@ -136,7 +136,7 @@ public class Mem2reg implements IRPass {
     log.info("mem2reg: variable renaming");
     ArrayList<Value> values = new ArrayList<>();
     for (int i = 0; i < allocas.size(); i++) {
-      values.set(i, new UndefValue());
+      values.add(new UndefValue());
     }
     for (INode<BasicBlock, Function> bbNode : func.getList_()) {
       bbNode.getVal().setDirty(false);
