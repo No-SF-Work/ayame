@@ -1,4 +1,4 @@
-package pass;
+package pass.ir;
 
 import ir.Analysis.DomInfo;
 import ir.MyFactoryBuilder;

@@ -4,6 +4,7 @@ import ir.MyModule;
 import java.util.ArrayList;
 import pass.Pass.IRPass;
 import pass.Pass.MAPass;
+import pass.ir.DeadCodeEmit;
 
 public class PassManager {
 

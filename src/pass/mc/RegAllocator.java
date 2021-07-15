@@ -1,4 +1,4 @@
-package pass;
+package pass.mc;
 
 import backend.CodeGenManager;
 import backend.machinecodes.*;
