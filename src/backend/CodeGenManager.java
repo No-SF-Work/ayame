@@ -35,11 +35,6 @@ public class CodeGenManager {
     // all functions
     private ArrayList<MachineFunction> machineFunctions=new ArrayList<>();
 
-    //global virtualregs
-    private ArrayList<VirtualReg> globalVirtualRegs = new ArrayList<>();
-
-    //map value in ir to vr in mc
-    private HashMap<Value, VirtualReg> vMap = new HashMap<>();
 
     //key为phi指令目标vr，value为phi指令的参数vr和目标vr组成的集合
     private HashMap<VirtualReg, HashSet<VirtualReg>> phiSets;
@@ -330,8 +325,9 @@ public class CodeGenManager {
                 arm += "\n\n.data\n";
                 arm += ".align 4\n";
                 for (GlobalVariable gv : gVs) {
-                    arm += ".global\t" + vMap.get(gv).getName() + "\n";
-                    arm += vMap.get(gv).getName() + ":\n";
+                    assert irMap.containsKey(gv);
+                    arm += ".global\t" + irMap.get(gv).getName() + "\n";
+                    arm += irMap.get(gv).getName() + ":\n";
                     if (gv.getType() instanceof IntegerType) {
                         arm += "\t.word\t";
                         assert (gv.init != null);
@@ -379,14 +375,15 @@ public class CodeGenManager {
         return arm;
     }
 
+    HashMap<Value, VirtualReg> irMap = new HashMap<>();
+
     public void MachineCodeGeneration() {
         ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
         Iterator<GlobalVariable> itgVs = gVs.iterator();
         while (itgVs.hasNext()) {
             GlobalVariable gV = itgVs.next();
             VirtualReg gVr = new VirtualReg(gV.getName(), true);
-            vMap.put(gV, gVr);
-            globalVirtualRegs.add(gVr);
+            irMap.put(gV, gVr);
         }
         IList<Function, MyModule> fList = myModule.__functions;
         Iterator<INode<Function, MyModule>> fIt = fList.iterator();
@@ -405,7 +402,6 @@ public class CodeGenManager {
                 continue;
             }
             machineFunctions.add(mf);
-            HashMap<Instruction, VirtualReg> irMap = new HashMap<>();
             HashMap<BasicBlock, MachineBlock> bMap = new HashMap<>();
             IList<BasicBlock, Function> bList = f.getList_();
             Iterator<INode<BasicBlock, Function>> bIt = bList.iterator();
@@ -431,10 +427,13 @@ public class CodeGenManager {
             }
 
             AnalyzeValue aV = (Value v) -> {
+                String name;
+
                 if (v instanceof Function.Arg && f.getArgList().contains(v)) {
                     VirtualReg vr;
-                    if (mf.getVRegMap().get(v.getName()) == null) {
+                    if (irMap.get(v) == null) {
                         vr = new VirtualReg(v.getName());
+                        irMap.put((Instruction) v,vr);
                         mf.addVirtualReg(vr);
                         for (int i = 0; i < f.getNumArgs(); i++) {
                             if (i < 4) {
@@ -457,27 +456,18 @@ public class CodeGenManager {
                         }
                         return vr;
                     } else {
-                        return mf.getVRegMap().get(v.getName());
-                    }
-                } else if (myModule.__globalVariables.contains(v)) {
-                    assert (vMap.containsKey(v));
-                    return vMap.get(v);
-                } else if (v instanceof Constants.ConstantInt) {
-                    return new MachineOperand(((Constants.ConstantInt) v).getVal());
-                } else if (v instanceof BinaryInst && (((BinaryInst) v).isCond())) {
-                    //br指令会检查此cond指令是否已经执行过，执行过irMap就会有记录
-                    if (irMap.get(v) == null) {
-                        VirtualReg vr = new VirtualReg(v.getName());
-                        irMap.put(((BinaryInst) v), vr);
-                        return vr;
-                    } else {
                         return irMap.get(v);
                     }
+                } else if (myModule.__globalVariables.contains(v)) {
+                    assert (irMap.containsKey(v));
+                    return irMap.get(v);
+                } else if (v instanceof Constants.ConstantInt) {
+                    return new MachineOperand(((Constants.ConstantInt) v).getVal());
                 } else {
-                    if (irMap.get(v) == null) {
+                    if (!irMap.containsKey(v)) {
                         VirtualReg vr = new VirtualReg(v.getName());
                         mf.addVirtualReg(vr);
-                        irMap.put((Instruction) v, vr);
+                        irMap.put( v, vr);
                         return vr;
                     } else {
                         return irMap.get(v);
@@ -763,8 +753,11 @@ public class CodeGenManager {
                                 tag = MachineCode.TAG.Add;
                             }
                             MCBinary binary = new MCBinary(tag, mb);
+                            MachineOperand dst = aV.analyzeValue(ir);
                             binary.setLhs(lhs);
                             binary.setRhs(rhs);
+                            binary.setDst(dst);
+
                         }
 
                     } else if (ir.tag == Instruction.TAG_.Br) {
