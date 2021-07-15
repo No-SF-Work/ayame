@@ -58,4 +58,20 @@ public class MCStore extends MachineCode{
         super(TAG.Store);
     }
 
+    @Override
+    public String toString(){
+        String res="\tstr"+contString(cond)+"\t"+data.getName()+",\t["+addr.getName();
+        res+=",\t"+offset.getName()+getShift().toString()+"]\n";
+//        if(offset.getState()== MachineOperand.state.imm){
+//            if(offset.getImm()==0){
+//                res+="]\n";
+//            }else{
+//                res+=",\t#"+offset.getImm()+"]\n";
+//            }
+//        }else{
+//            res+=",\t"+offset.getName()+getShift().toString()+"]\n";
+//        }
+        return res;
+    }
+
 }

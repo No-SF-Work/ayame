@@ -12,6 +12,11 @@ public class MCCall extends MachineCode{
 
     private MachineFunction func;
 
+    @Override
+    public String toString(){
+        String res="\tbl\t"+func.getName()+"\n";
+        return res;
+    }
 
     public MCCall(MachineBlock mb){
         super(TAG.Call,mb);

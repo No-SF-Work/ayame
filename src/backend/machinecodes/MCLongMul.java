@@ -18,6 +18,11 @@ public class MCLongMul extends MachineCode{
         super(TAG.LongMul,mb);
     }
 
+    public String toString(){
+        String res="\tsmmul\t"+dst.getName()+",\t"+lhs.getName()+",\t"+rhs.getName()+"\n";
+        return res;
+    }
+
     public MachineOperand getDst() {
         return dst;
     }

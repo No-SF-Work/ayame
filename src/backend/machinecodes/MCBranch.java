@@ -20,6 +20,12 @@ public class MCBranch extends MachineCode{
     }
 
     @Override
+    public String toString(){
+        String res="\tb"+contString(cond)+"\t"+target.getName()+"\n";
+        return res;
+    }
+
+    @Override
     public ArmAddition.CondType getCond() {
         return cond;
     }

@@ -12,6 +12,8 @@ public class MachineOperand {
 
     public int getImm(){return imme;}
 
+    public String getName(){return "#"+((Integer)imme).toString();}
+
     state s;
     MachineOperand(state s){
         this.s=s;

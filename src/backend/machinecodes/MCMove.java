@@ -1,6 +1,6 @@
 package backend.machinecodes;
 
-import backend.reg.VirtualReg;
+import backend.CodeGenManager;
 import backend.reg.MachineOperand;
 
 
@@ -32,6 +32,23 @@ public class MCMove extends MachineCode{
     @Override
     public ArmAddition.CondType getCond() {
         return cond;
+    }
+
+    @Override
+    public String toString(){
+        String res="\t";
+        if(rhs.getState()== MachineOperand.state.imm&&CodeGenManager.canEncodeImm(rhs.getImm())){
+            int imm=rhs.getImm();
+            int immH=imm>>>16;
+            int immL=(imm<<16)>>>16;
+            res+="movw"+contString(cond)+"\t"+dst.getName()+",\t#"+immL+"\n";
+            if(immH!=0) {
+                res+="\tmovt"+contString(cond)+"\t"+dst.getName()+",\t#"+immH+"\n";
+            }
+        }else{
+            res+="mov"+contString(cond)+"\t"+dst.getName()+",\t"+rhs.getName()+getShift().toString()+"\n";
+        }
+        return res;
     }
 
     public void setCond(ArmAddition.CondType cond) {

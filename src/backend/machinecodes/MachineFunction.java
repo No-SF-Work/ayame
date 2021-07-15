@@ -52,13 +52,35 @@ public class MachineFunction {
 
     public HashMap<String,VirtualReg> getVRegMap(){return regMap;}
 
+    public ArrayList<MCMove> getArgMoves() {
+        return argMoves;
+    }
+
+    private ArrayList<MCMove> argMoves=new ArrayList<>();
+
     //PhyReg nums
     private int regNums=0;
+
+    public boolean isUsedLr() {
+        return usedLr;
+    }
+
+    public void setUsedLr(boolean usedLr) {
+        this.usedLr = usedLr;
+    }
+
+    private boolean usedLr=false;
 
     //size of stack allocated for virtual register
     private int stackSize = 0;
 
     private CodeGenManager cgm;
+
+    public HashSet<PhyReg> getUsedSavedRegs() {
+        return usedSavedRegs;
+    }
+
+    private HashSet<PhyReg> usedSavedRegs=new HashSet<>();
 
     public PhyReg getPhyReg(String name){
         return phyRegs.get(regNameMap.get(name));

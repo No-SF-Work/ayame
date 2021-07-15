@@ -38,6 +38,12 @@ public class MCCompare extends MachineCode{
 
     private MachineOperand rhs;
 
+    @Override
+    public String toString(){
+        String res="\tcmp\t"+lhs.getName()+",\t"+rhs.getName()+"\n";
+        return res;
+    }
+
     public MCCompare(MachineBlock mb){
         super(TAG.Compare,mb);
     }

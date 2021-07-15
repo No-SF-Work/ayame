@@ -15,6 +15,12 @@ public class MCJump extends MachineCode{
 
     private MachineBlock target;
 
+    @Override
+    public String toString(){
+        String res="\tb\t"+target.getName()+"\n";
+        return res;
+    }
+
     public MCJump( MachineBlock mb){
         super(TAG.Jump,mb);
     }

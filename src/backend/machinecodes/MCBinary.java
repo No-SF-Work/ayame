@@ -28,6 +28,26 @@ public class MCBinary extends MachineCode{
         this.lhs = lhs;
     }
 
+    @Override
+    public String toString(){
+        String op="";
+        if(getTag()==TAG.Add){
+            op="add";
+        }else if(getTag()==TAG.Sub){
+            op="sub";
+        }else if(getTag()==TAG.Rsb){
+            op="rsb";
+        }else if(getTag()==TAG.Div){
+            op="sdiv";
+        }else if(getTag()==TAG.Mul){
+            op="mul";
+        }else{
+            assert(false);
+        }
+        String res="\t"+op+"\t"+dst.getName()+",\t"+lhs.getName()+",\t"+rhs.getName()+getShift().toString()+"\n";
+        return res;
+    }
+
     public MachineOperand getRhs() {
         return rhs;
     }

@@ -3,6 +3,7 @@ package backend;
 import backend.LiveInterval;
 import backend.machinecodes.*;
 import backend.reg.MachineOperand;
+import backend.reg.PhyReg;
 import backend.reg.Reg;
 import backend.reg.VirtualReg;
 import ir.MyModule;
@@ -56,7 +57,7 @@ public class CodeGenManager {
 
     private static CodeGenManager codeGenManager;
 
-    private boolean canEncodeImm(int imm) {
+    public static boolean canEncodeImm(int imm) {
         int n = imm;
         for (int ror = 0; ror < 32; ror += 2) {
             if ((n & ~0xFF) == 0) {
@@ -109,7 +110,7 @@ public class CodeGenManager {
         void dfsSerialize();
     }
 
-    public void dfsSerial(MachineBlock mb, MachineFunction mf,HashMap<MachineBlock,Boolean> isVisit){
+    public void dfsSerial(MachineBlock mb, MachineFunction mf, HashMap<MachineBlock, Boolean> isVisit) {
         isVisit.put(mb, true);
         mf.insertBlock(mb);
         if (mb.getTrueSucc() == null && mb.getFalseSucc() == null) {
@@ -134,16 +135,16 @@ public class CodeGenManager {
             if (isVisit.containsKey(mb.getTrueSucc())) {
                 mb.addAtEndMC(mcl.getNode());
             } else {
-                dfsSerial(mb.getTrueSucc(),mf,isVisit);
+                dfsSerial(mb.getTrueSucc(), mf, isVisit);
             }
         } else {
             //如果false后继已经在mblist中而true后继不在，那交换位置，尽量让false块在序列化的下一个
             if (isVisit.containsKey(mb.getFalseSucc()) && !isVisit.containsKey(mb.getTrueSucc())) {
-                MachineBlock temp=mb.getFalseSucc();
+                MachineBlock temp = mb.getFalseSucc();
                 mb.setFalseSucc(mb.getTrueSucc());
                 mb.setTrueSucc(temp);
-                assert(mb.getmclist().getLast().getVal() instanceof MCBranch);
-                CondType cond=mb.getmclist().getLast().getVal().getCond();
+                assert (mb.getmclist().getLast().getVal() instanceof MCBranch);
+                CondType cond = mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
             }
             //有两个后继的情况下优先让false后继放到自己后面，处理False后继和只有一种后继的情况相同
@@ -167,7 +168,7 @@ public class CodeGenManager {
                     }
                 }
                 //如果两个后继块都已经在mbList中，本基本块的最后一条指令跳转到True块，还缺一条跳转到False块的指令，加到最后
-                MCJump jump=new MCJump(mb);
+                MCJump jump = new MCJump(mb);
                 jump.setTarget(mb.getFalseSucc());
             } else {
                 MachineCode mcl = mb.getmclist().getLast().getVal();
@@ -183,18 +184,18 @@ public class CodeGenManager {
                         }
                     }
                 }
-                dfsSerial(mb.getFalseSucc(),mf,isVisit);
+                dfsSerial(mb.getFalseSucc(), mf, isVisit);
             }
             //处理True后继
             if (waiting.containsKey(mb)) {
                 if (waiting.get(mb).containsKey(mb.getTrueSucc())) {
-                    if(mb.getTrueSucc().getPred().size()==1){
+                    if (mb.getTrueSucc().getPred().size() == 1) {
                         Iterator<MachineCode> mcIte = waiting.get(mb).get(mb.getTrueSucc()).iterator();
                         while (mcIte.hasNext()) {
                             MachineCode mci = mcIte.next();
                             mci.insertBeforeNode(mb.getTrueSucc().getmclist().getEntry().getVal());
                         }
-                    }else{
+                    } else {
                         MachineBlock newMB = new MachineBlock(mf);
                         Iterator<MachineCode> mcIte = waiting.get(mb).get(mb.getTrueSucc()).iterator();
                         while (mcIte.hasNext()) {
@@ -213,36 +214,160 @@ public class CodeGenManager {
 
                 }
             }
-            if(!isVisit.containsKey(mb.getTrueSucc())){
-                dfsSerial(mb.getTrueSucc(),mf,isVisit);
+            if (!isVisit.containsKey(mb.getTrueSucc())) {
+                dfsSerial(mb.getTrueSucc(), mf, isVisit);
             }
         }
     }
 
-    private void fixStack(MachineFunction mf){
-        INode<MachineBlock,MachineFunction> mbNode=mf.getmbList().getEntry();
-        for(;mbNode.getNext()!=null;mbNode=mbNode.getNext()){
-            MachineBlock mb=mbNode.getVal();
-            INode<MachineCode,MachineBlock> mcNode=mb.getmclist().getEntry();
-            for(;mcNode.getNext()!=null;mcNode=mcNode.getNext()){
-                HashSet useRegs=mf.getUsedRegs();
-                Iterator<Reg>ite=useRegs.iterator();
-
+    private void fixStack(MachineFunction mf) {
+        INode<MachineBlock, MachineFunction> mbNode = mf.getmbList().getEntry();
+        for (; mbNode.getNext() != null; mbNode = mbNode.getNext()) {
+            MachineBlock mb = mbNode.getVal();
+            INode<MachineCode, MachineBlock> mcNode = mb.getmclist().getEntry();
+            for (; mcNode.getNext() != null; mcNode = mcNode.getNext()) {
+                HashSet useRegs = mf.getUsedRegs();
+                Iterator<Reg> ite = useRegs.iterator();
+                while (ite.hasNext()) {
+                    Reg r = ite.next();
+                    for (int i = 4; i <= 11; i++) {
+                        if (r == mf.getPhyReg(i)) {
+                            mf.getUsedSavedRegs().add((PhyReg) r);
+                        }
+                    }
+                    if (r == mf.getPhyReg("lr")) {
+                        mf.setUsedLr(true);
+                    }
+                }
             }
         }
+        int regs = mf.getUsedSavedRegs().size() + (mf.isUsedLr() ? 1 : 0);
+        mf.getArgMoves().forEach(mv -> {
+            assert (mv instanceof MCMove);
+            assert (mv.getRhs().getState() == MachineOperand.state.imm);
+            mv.setRhs(new MachineOperand(mv.getRhs().getImm() + mf.getStackSize() + 4 * regs));
+        });
+
     }
 
-    public String genARM(){
-        String arm="";
-        arm+=".arch arvm7ve\n";
-        arm+=".arch .text\n";
-        Iterator<MachineFunction> mfIte=machineFunctions.iterator();
-        while(mfIte.hasNext()){
-            MachineFunction mf=mfIte.next();
-            arm+="\n.global\t";
-            arm+=mf.getName()+"\n";
-            arm+=mf.getName()+":\n";
-            
+
+    public String genARM() {
+        String arm = "";
+        arm += ".arch arvm7ve\n";
+        arm += ".arch .text\n";
+        Iterator<MachineFunction> mfIte = machineFunctions.iterator();
+        while (mfIte.hasNext()) {
+            MachineFunction mf = mfIte.next();
+            fixStack(mf);
+            arm += "\n.global\t";
+            arm += mf.getName() + "\n";
+            arm += mf.getName() + ":\n";
+            StringBuilder sb = new StringBuilder();
+            mf.getUsedSavedRegs().forEach(phyReg -> {
+                sb.append(phyReg.getName());
+                sb.append(", ");
+            });
+            if (mf.isUsedLr()) {
+                arm += "\tpush\t{";
+                if (!mf.getUsedSavedRegs().isEmpty()) {
+                    arm += sb.toString();
+                }
+                arm += "pc}\n";
+            } else {
+                if (!mf.getUsedSavedRegs().isEmpty()) {
+                    //删去多余','
+                    sb.deleteCharAt(sb.length() - 1);
+                    arm += "\tpush\t{";
+                    arm += sb.toString();
+                    arm += "}\n";
+                }
+            }
+            if (mf.getStackSize() != 0) {
+                String op = canEncodeImm(-mf.getStackSize()) ? "add" : "sub";
+                MachineOperand v1 = canEncodeImm(-mf.getStackSize()) ? new MachineOperand(mf.getStackSize()) : new MachineOperand(-mf.getStackSize());
+                if (canEncodeImm(mf.getStackSize()) || canEncodeImm(-mf.getStackSize())) {
+                    arm += op;
+                    arm += "\tsp, sp, " + v1 + "\n";
+                } else {
+                    MCMove mv = new MCMove();
+                    mv.setRhs(v1);
+                    mv.setDst(mf.getPhyReg("r5"));
+                    arm += mv.toString();
+                    arm += op + "\tsp,\tsp,\t" + mf.getPhyReg(5).getName() + "\n";
+                }
+            }
+            Iterator<INode<MachineBlock, MachineFunction>> mbIte = mf.getmbList().iterator();
+            while (mbIte.hasNext()) {
+                INode<MachineBlock, MachineFunction> mbNode = mbIte.next();
+                MachineBlock mb = mbNode.getVal();
+                arm += mb.getName() + ":\n";
+                arm += "@predBB:";
+                StringBuilder sb1 = new StringBuilder();
+                mb.getPred().forEach(p -> {
+                    sb1.append(p.getName());
+                    sb1.append(" ");
+                });
+                arm += sb1.toString() + "\n";
+                if (mb.getTrueSucc() != null) {
+                    arm += "@trueSucc: " + mb.getTrueSucc().getName() + "\n";
+                }
+                if (mb.getFalseSucc() != null) {
+                    arm += "@falseSucc: " + mb.getFalseSucc().getName() + "\n";
+                }
+                Iterator<INode<MachineCode, MachineBlock>> mcIte = mb.getmclist().iterator();
+                while (mcIte.hasNext()) {
+                    INode<MachineCode, MachineBlock> mcNode = mcIte.next();
+                    MachineCode mc = mcNode.getVal();
+                    arm += mc.toString();
+                }
+                ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
+                arm += "\n\n.data\n";
+                arm += ".align 4\n";
+                for (GlobalVariable gv : gVs) {
+                    arm+=".global\t"+vMap.get(gv).getName()+"\n";
+                    arm+=vMap.get(gv).getName()+":\n";
+                    if (gv.getType() instanceof IntegerType) {
+                        arm+="\t.word\t";
+                        assert(gv.init!=null);
+                        arm+=((Constants.ConstantInt)gv.init).getVal();
+                        arm+="\n";
+                    } else {
+                        assert (gv.getType() instanceof ArrayType);
+                        if (gv.init == null) {
+                            int n=1;
+                            ArrayList<Integer> dims=((ArrayType) gv.getType()).getDims();
+                            for(Integer d:dims){
+                                n*=d;
+                            }
+                            arm+="\t.fill\t"+n+",\t4,\t0\n";
+                        } else {
+                            ArrayList<Constant> initValues=((Constants.ConstantArray)gv.init).getConst_arr_();
+                            int lastv=((Constants.ConstantInt)initValues.get(0)).getVal();
+                            int count=0;
+                            for(Constant c:initValues){
+                                int v=((Constants.ConstantInt)c).getVal();
+                                if(v==lastv){
+                                    count++;
+                                }else{
+                                    if(count==1){
+                                        arm+="\t.word\t"+lastv+"\n";
+                                    }else{
+                                        arm+="\t.fill"+count+",\t4,\t"+lastv+"\n";
+                                    }
+                                    lastv=v;
+                                    count=1;
+                                }
+                            }
+                            if(count==1){
+                                arm+="\t.word\t"+lastv+"\n";
+                            }else{
+                                arm+="\t.fill"+count+",\t4,\t"+lastv+"\n";
+                            }
+                        }
+
+                    }
+                }
+            }
         }
 
         return arm;
@@ -261,8 +386,8 @@ public class CodeGenManager {
         Iterator<INode<Function, MyModule>> fIt = fList.iterator();
         HashMap<Function, MachineFunction> fMap = new HashMap<>();
         while (fIt.hasNext()) {
-            Function f=fIt.next().getVal();
-            MachineFunction mf = new MachineFunction(this,f.getName());
+            Function f = fIt.next().getVal();
+            MachineFunction mf = new MachineFunction(this, f.getName());
             fMap.put(f, mf);
         }
         fIt = fList.iterator();
@@ -308,10 +433,16 @@ public class CodeGenManager {
                                 ((MCMove) mc).setDst(vr);
                                 ((MCMove) mc).setRhs(mf.getPhyReg(i));
                             } else {
+                                MCMove mv = new MCMove(bMap.get(f.getList_().getEntry()), 0);
+                                mv.setRhs(new MachineOperand((i - 4) * 4));
+                                VirtualReg vR = new VirtualReg();
+                                mf.addVirtualReg(vR);
+                                mv.setDst(vR);
                                 MachineCode mcLD = new MCLoad(bMap.get(f.getList_().getEntry()), 0);
                                 ((MCLoad) mcLD).setAddr(mf.getPhyReg("sp"));
-                                ((MCLoad) mcLD).setOffset(genImm((i - 4) * 4, bMap.get(f.getList_().getEntry())));
+                                ((MCLoad) mcLD).setOffset(vR);
                                 ((MCLoad) mcLD).setDst(vr);
+                                mf.getArgMoves().add(mv);
                             }
                             break;
                         }
@@ -636,16 +767,14 @@ public class CodeGenManager {
                     } else if (ir.tag == Instruction.TAG_.Br) {
                         if (ir.getNumOP() == 3) {
                             CondType cond = getCond((BinaryInst) ir.getOperands().get(0));
-                            if (!irMap.containsKey(ir.getOperands().get(0))) {
-                                aV.analyzeValue(ir.getOperands().get(0));
-                                assert (ir.getOperands().get(0) instanceof BinaryInst);
-                                assert (((BinaryInst) ir.getOperands().get(0)).isCond());
-                                Instruction condi = (BinaryInst) (ir.getOperands().get(0));
-                                MCCompare compare = new MCCompare(mb);
-                                compare.setRhs(aV.analyzeValue(condi.getOperands().get(0)));
-                                compare.setLhs(aV.analyzeValue(condi.getOperands().get(1)));
-                                compare.setCond(cond);
-                            }
+                            aV.analyzeValue(ir.getOperands().get(0));
+                            assert (ir.getOperands().get(0) instanceof BinaryInst);
+                            assert (((BinaryInst) ir.getOperands().get(0)).isCond());
+                            Instruction condi = (BinaryInst) (ir.getOperands().get(0));
+                            MCCompare compare = new MCCompare(mb);
+                            compare.setRhs(aV.analyzeValue(condi.getOperands().get(0)));
+                            compare.setLhs(aV.analyzeValue(condi.getOperands().get(1)));
+                            compare.setCond(cond);
                             MachineCode br = new MCBranch(mb);
                             ((MCBranch) br).setCond(cond);
                             //set trueblock to branch target
@@ -669,7 +798,6 @@ public class CodeGenManager {
                                 mb.setFalseSucc(bMap.get(bb.getPredecessor_().get(0)));
                             }
                         }
-
 
 
                     } else if (ir.tag == Instruction.TAG_.Call) {
@@ -817,7 +945,7 @@ public class CodeGenManager {
 
             DFSSerialize s = () -> {
                 HashMap<MachineBlock, Boolean> isVisit = new HashMap<>();
-                dfsSerial(bMap.get(f.getList_().getEntry()),mf,isVisit);
+                dfsSerial(bMap.get(f.getList_().getEntry()), mf, isVisit);
             };
 
             s.dfsSerialize();
