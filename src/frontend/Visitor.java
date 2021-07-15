@@ -525,18 +525,20 @@ public class Visitor extends SysYBaseVisitor<Void> {
         var argList = curFunc_.getArgList();
         for (int i = 0; i < ctx.funcFParam().size(); i++) {
           var p = ctx.funcFParam(i);
-          if (!p.isEmpty()) { //which means this param is  arr
-            var paramList = new ArrayList<Value>();
+          if (!p.L_BRACKT().isEmpty()) { //which means this param is  arr
+            var dimList = new ArrayList<Value>();
             var arrAlloc = f.buildAlloca(curBB_, ptri32Type_);
-            f.buildStore(argList.get(i), arrAlloc, curBB_);
-            paramList.add(CONST0);//第一个置空
+            f.buildStore(argList.get(i), arrAlloc, curBB_);//todo
+            dimList.add(CONST0);//第一个置空
             p.exp().forEach(exp -> {
+              usingInt_ = true;
               visit(exp);
-              paramList.add(tmp_);
+              usingInt_ = false;
+              dimList.add(tmp_);
             });
             scope_.put(p.IDENT().getText(), arrAlloc);
-            scope_.params_.put(ctx.funcFParam(i).IDENT().getText(), paramList);
-            argList.get(i).setBounds(paramList);
+            scope_.params_.put(ctx.funcFParam(i).IDENT().getText(), dimList);
+            argList.get(i).setBounds(dimList);
           } else {
             var alloc = f.getAlloca(i32Type_);
             f.buildStore(argList.get(i), alloc, curBB_);
@@ -823,8 +825,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
 
     if (PTR) {
-      if (!ctx.exp().isEmpty()) {
-        tmpPtr_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
+      if (ctx.exp().isEmpty()) {
+        tmp_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         return null;
       } else {
         var arrayParams = scope_.params_.get(ctx.IDENT().getText());

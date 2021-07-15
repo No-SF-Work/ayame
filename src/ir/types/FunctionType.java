@@ -35,4 +35,11 @@ public class FunctionType extends Type {
    * 函数声明中参数的Type
    */
   ArrayList<Type> params;
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    //todo;
+    return null;
+  }
 }
