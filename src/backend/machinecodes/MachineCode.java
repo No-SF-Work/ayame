@@ -79,6 +79,7 @@ public class MachineCode {
     //处理旧reg，添加新reg 布尔值用来代表是使用还是定义
     public void dealReg(MachineOperand oldmo, MachineOperand newmo, boolean isUse) {
         if (oldmo == null) {
+            return;
         }
         if (oldmo.getState() == MachineOperand.state.imm) {
         } else if (oldmo instanceof Reg) {

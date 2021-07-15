@@ -33,7 +33,7 @@ import java.util.*;
 public class CodeGenManager {
 
     // all functions
-    private ArrayList<MachineFunction> machineFunctions;
+    private ArrayList<MachineFunction> machineFunctions=new ArrayList<>();
 
     //global virtualregs
     private ArrayList<VirtualReg> globalVirtualRegs = new ArrayList<>();
@@ -307,10 +307,12 @@ public class CodeGenManager {
                 arm += mb.getName() + ":\n";
                 arm += "@predBB:";
                 StringBuilder sb1 = new StringBuilder();
-                mb.getPred().forEach(p -> {
-                    sb1.append(p.getName());
-                    sb1.append(" ");
-                });
+                if(mb.getPred()!=null){
+                    mb.getPred().forEach(p -> {
+                        sb1.append(p.getName());
+                        sb1.append(" ");
+                    });
+                }
                 arm += sb1.toString() + "\n";
                 if (mb.getTrueSucc() != null) {
                     arm += "@trueSucc: " + mb.getTrueSucc().getName() + "\n";
@@ -399,6 +401,9 @@ public class CodeGenManager {
             INode<Function, MyModule> fNode = fIt.next();
             Function f = fNode.getVal();
             MachineFunction mf = fMap.get(f);
+            if(f.isBuiltin_()){
+                continue;
+            }
             machineFunctions.add(mf);
             HashMap<Instruction, VirtualReg> irMap = new HashMap<>();
             HashMap<BasicBlock, MachineBlock> bMap = new HashMap<>();
@@ -497,13 +502,14 @@ public class CodeGenManager {
                 for (INode<BasicBlock, Function> bbNode : bList) {
                     BasicBlock bb = bbNode.getVal();
                     MachineBlock mbb = bMap.get(bb);
-                    for (MachineBlock predM : mbb.getPred()) {
-                        //prd,succ
-                        HashMap<MachineBlock, ArrayList<MachineCode>> map = new HashMap<>();
-                        map.put(mbb, new ArrayList<>());
-                        //create waiting
-                        waiting.put(predM, map);
-
+                    if(mbb.getPred()!=null){
+                        for (MachineBlock predM : mbb.getPred()) {
+                            //prd,succ
+                            HashMap<MachineBlock, ArrayList<MachineCode>> map = new HashMap<>();
+                            map.put(mbb, new ArrayList<>());
+                            //create waiting
+                            waiting.put(predM, map);
+                        }
                     }
                     IList<Instruction, BasicBlock> irList = bb.getList();
                     //构造phiTarget到phiSet的映射
@@ -942,7 +948,7 @@ public class CodeGenManager {
 
             DFSSerialize s = () -> {
                 HashMap<MachineBlock, Boolean> isVisit = new HashMap<>();
-                dfsSerial(bMap.get(f.getList_().getEntry()), mf, isVisit);
+                dfsSerial(bMap.get(f.getList_().getEntry().getVal()), mf, isVisit);
             };
 
             s.dfsSerialize();

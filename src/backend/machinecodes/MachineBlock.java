@@ -58,6 +58,8 @@ public class MachineBlock {
 
     public MachineBlock(MachineFunction mf) {
 //        mf.insertBlock(this);
+        this.mf=mf;
+        node=new INode<>(this);
         node.setParent(mf.getmbList());
         this.name=".__BB__"+((Integer)index).toString();
     }
