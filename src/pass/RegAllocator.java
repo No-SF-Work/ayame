@@ -1,5 +1,6 @@
-package backend;
+package pass;
 
+import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.*;
 import util.Pair;

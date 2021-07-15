@@ -1,7 +1,10 @@
-package backend;
+package pass;
 
+import backend.CodeGenManager;
 import backend.machinecodes.*;
+import util.IList;
 
+import java.util.Iterator;
 import java.util.function.Function;
 
 import static backend.machinecodes.ArmAddition.CondType.*;
@@ -80,7 +83,8 @@ public class PeepholeOptimization {
             for (var blockEntry : func.getmbList()) {
                 var block = blockEntry.getVal();
 
-                for (var instrEntry : block.getmclist()) {
+                for (var instrEntryIter = block.getmclist().iterator(); instrEntryIter.hasNext(); ) {
+                    var instrEntry = instrEntryIter.next();
                     var instr = instrEntry.getVal();
 
                     if (instr instanceof MCBinary binInstr) {
@@ -91,7 +95,7 @@ public class PeepholeOptimization {
                         boolean hasNoShift = binInstr.getShift().isNone();
 
                         if (isAddSub && isSameDstLhs && hasNoShift) {
-                            instr.getNode().removeSelf();
+                            instrEntryIter.remove();
                         }
                     }
 
@@ -102,7 +106,7 @@ public class PeepholeOptimization {
                         boolean isSameTargetNxtBB = jumpInstr.getTarget().equals(block.getTrueSucc());
 
                         if (isSameTargetNxtBB) {
-                            instr.getNode().removeSelf();
+                            instrEntryIter.remove();
                         }
                     }
 
@@ -125,37 +129,38 @@ public class PeepholeOptimization {
                                 moveInstr.setRhs(storeInstr.getData());
 
                                 moveInstr.insertAfterNode(instr);
-                                nxtInstrEntry.removeSelf();
+                                instrEntryIter.remove();
                             }
                         }
                     }
 
                     if (instr instanceof MCMove moveInstr) {
-                        var nxtInstrEntry = instrEntry.getNext();
+                        var preInstrEntry = instrEntry.getPrev();
 
+                        // fixme
                         if (moveInstr.getDst().equals(moveInstr.getRhs())) {
                             // move a a (to be remove)
-                            instrEntry.removeSelf();
-                        } else if (nxtInstrEntry.getVal() instanceof MCMove nxtMove) {
+                            instrEntryIter.remove();
+                        } else if (preInstrEntry.getVal() instanceof MCMove preMove) {
                             // move a b (to be remove)
                             // move a c
                             // Warning: the following situation should not be optimized
                             // move a b
                             // move a a
-                            boolean isSameDst = nxtMove.getDst().equals(moveInstr.getDst());
-                            boolean nxtInstrNotIdentity = nxtMove.getRhs().equals(nxtMove.getDst());
-                            if (isSameDst && nxtInstrNotIdentity) {
-                                instrEntry.removeSelf();
+                            boolean isSameDst = preMove.getDst().equals(moveInstr.getDst());
+                            boolean preInstrNotIdentity = preMove.getRhs().equals(preMove.getDst());
+                            if (isSameDst && preInstrNotIdentity) {
+                                instrEntryIter.remove();
                             }
 
                             // move a b
                             // move b a
                             // =>
                             // move a b
-                            boolean isSameA = moveInstr.getDst().equals(nxtMove.getRhs());
-                            boolean isSameB = moveInstr.getRhs().equals(nxtMove.getDst());
+                            boolean isSameA = moveInstr.getDst().equals(preMove.getRhs());
+                            boolean isSameB = moveInstr.getRhs().equals(preMove.getDst());
                             if (isSameA && isSameB) {
-                                nxtInstrEntry.removeSelf();
+                                preInstrEntry.removeSelf();
                             }
                         }
                     }
