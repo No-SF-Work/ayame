@@ -39,7 +39,7 @@ public abstract class Instruction extends User {
     GEP,
     Phi,
     MemPhi,
-    Zext,
+
   }
 
   public Instruction(TAG_ tag, Type type, int numOP) {

@@ -22,7 +22,6 @@ import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.StoreInst;
-import ir.values.instructions.MemInst.ZextInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
@@ -302,13 +301,4 @@ public class MyFactoryBuilder {
     return new GEPInst(ptr, indices, next);
   }
 
-  /***/
-
-  /*
-   *@param value:原value
-   *@param dest:想要转为的类型
-   */
-  public ZextInst buildZext(Value value, Type dest, BasicBlock parent) {
-    return new ZextInst(value, dest, parent);
-  }
 }
