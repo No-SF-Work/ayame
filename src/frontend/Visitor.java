@@ -379,7 +379,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       } else {//local arr init
         var alloc = f.buildAlloca(curBB_, arrTy);
         scope_.put(ctx.IDENT().getText(), alloc);
-        if (!ctx.initVal().isEmpty()) {
+        if (!(ctx.initVal().isEmpty()) && (ctx.initVal().exp() != null)) {
           alloc.setInit();
           ctx.initVal().dimInfo_ = dims;
           visit(ctx.initVal());
