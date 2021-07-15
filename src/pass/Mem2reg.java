@@ -2,7 +2,7 @@ package pass;
 
 import ir.Analysis.DomInfo;
 import ir.MyFactoryBuilder;
-import ir.MyModule
+import ir.MyModule;
 import ir.values.BasicBlock;
 import ir.values.Function;
 import ir.values.UndefValue;

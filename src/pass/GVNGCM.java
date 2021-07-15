@@ -18,19 +18,15 @@ import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.SimplifyInstruction;
 import ir.values.instructions.TerminatorInst.CallInst;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Stack;
 import java.util.logging.Logger;
-import javax.management.ValueExp;
 import pass.Pass.IRPass;
 import util.IList;
 import util.IList.INode;
 import util.Mylogger;
 import util.Pair;
 
-// TODO: LoadInst and CallInst
 public class GVNGCM implements IRPass {
 
   private Logger log = Mylogger.getLogger(IRPass.class);
@@ -83,7 +79,7 @@ public class GVNGCM implements IRPass {
     for (var i = 0; i < sz; i++) {
       var key = valueTable.get(i).getFirst();
       var valueNumber = valueTable.get(i).getSecond();
-      if (key.isInstruction() && ((Instruction) key).tag == TAG_.GEP && gepInst.equals(key)) {
+      if (key instanceof GEPInst && gepInst.equals(key)) {
         GEPInst keyInst = (GEPInst) key;
         boolean allSame = gepInst.getNumOP() == keyInst.getNumOP();
         if (allSame) {
@@ -108,7 +104,7 @@ public class GVNGCM implements IRPass {
     for (var i = 0; i < sz; i++) {
       var key = valueTable.get(i).getFirst();
       var valueNumber = valueTable.get(i).getSecond();
-      if (key.isInstruction() && ((Instruction) key).tag == TAG_.Load && loadInst.equals(key)) {
+      if (key instanceof LoadInst && loadInst.equals(key)) {
         LoadInst keyInst = (LoadInst) key;
         var allSame =
             lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(0));
@@ -116,7 +112,7 @@ public class GVNGCM implements IRPass {
         if (allSame) {
           return valueNumber;
         }
-      } else if (key.isInstruction() && ((Instruction) key).tag == TAG_.Store) {
+      } else if (key instanceof StoreInst) {
         StoreInst keyInst = (StoreInst) key;
         var allSame =
             lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(1));
@@ -130,7 +126,31 @@ public class GVNGCM implements IRPass {
   }
 
   public Value findValueNumber(CallInst callInst) {
-    return null;
+    if (!callInst.isPureCall()) {
+      return callInst;
+    }
+    var sz = valueTable.size();
+    for (var i = 0; i < sz; i++) {
+      var key = valueTable.get(i).getFirst();
+      var valueNumber = valueTable.get(i).getSecond();
+      if (key instanceof CallInst) {
+        CallInst keyInst = (CallInst) key;
+        if (callInst.getOperands().get(0) != keyInst.getOperands().get(0)) {
+          continue;
+        }
+        var argSize = callInst.getNumOP();
+        var allSame = true;
+        for (var argIndex = 1; argIndex < argSize; argIndex++) {
+          allSame = allSame &&
+              (lookupOrAdd(callInst.getOperands().get(i)) == lookupOrAdd(
+                  keyInst.getOperands().get(i)));
+        }
+        if (allSame) {
+          return valueNumber;
+        }
+      }
+    }
+    return callInst;
   }
 
   public Value findValueNumber(Instruction inst) {
@@ -185,7 +205,6 @@ public class GVNGCM implements IRPass {
   }
 
   // TODO: use better algebraic simplification and unreachable code elimination
-  // TODO GVN 还没有考虑 CallInst
   public void runGVN(Function func) {
     BasicBlock entry = func.getList_().getEntry().getVal();
     Stack<BasicBlock> postOrderStack = new Stack<>();
@@ -256,10 +275,11 @@ public class GVNGCM implements IRPass {
       // TODO LLVM NewGVN 的额外优化：可以识别 phi(a + b, c + d) = phi(a, c) + phi(b, d)
     } else if (inst.tag == TAG_.Store) {
       valueTable.add(new Pair<>(inst, inst));
+    } else if (inst.tag == TAG_.Call && ((CallInst) inst).isPureCall()) {
+      replace(inst, lookupOrAdd(simpInst));
     }
   }
 
-  // TODO: GCM 还没有考虑 CallInst 的情况
   public void runGCM(Function func) {
     func.getLoopInfo().computeLoopInfo(func);
     ArrayList<Instruction> instructions = new ArrayList<>();
@@ -319,8 +339,18 @@ public class GVNGCM implements IRPass {
         }
       }
 
-      if (inst.tag == TAG_.Call) {
-        // TODO
+      if (inst.tag == TAG_.Call && ((CallInst) inst).isPureCall()) {
+        for (var i = 1; i < inst.getNumOP(); i++) {
+          Value value = inst.getOperands().get(i);
+          if (value instanceof Instruction) {
+            Instruction valueInst = (Instruction) value;
+            scheduleEarly(valueInst, func);
+            if (valueInst.getBB().getDomLevel() > inst.getBB().getDomLevel()) {
+              inst.node.removeSelf();
+              inst.node.insertAtEnd(valueInst.getBB().getList());
+            }
+          }
+        }
       }
     }
   }
@@ -383,8 +413,8 @@ public class GVNGCM implements IRPass {
   }
 
   public boolean canSchedule(Instruction inst) {
-    return inst.isBinary() || inst.tag == TAG_.Load || inst.tag == TAG_.GEP;
-    // TODO: add CallInst which is pure and has no GEP in args
+    return inst.isBinary() || inst.tag == TAG_.Load || inst.tag == TAG_.GEP || (
+        inst.tag == TAG_.Call && ((CallInst) inst).isPureCall());
   }
 
   public BasicBlock lca(BasicBlock a, BasicBlock b) {

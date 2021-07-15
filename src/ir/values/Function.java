@@ -103,6 +103,23 @@ public class Function extends Value {
   private INode<Function, MyModule> node;
   private ArrayList<Arg> argList_;//有序参数列表
   private LoopInfo loopInfo; // 函数内的循环信息
+
+  public boolean isHasSideEffect() {
+    return hasSideEffect;
+  }
+
+  public void setHasSideEffect(boolean hasSideEffect) {
+    this.hasSideEffect = hasSideEffect;
+  }
+
+  public boolean isUsedGlobalVariable() {
+    return usedGlobalVariable;
+  }
+
+  public void setUsedGlobalVariable(boolean usedGlobalVariable) {
+    this.usedGlobalVariable = usedGlobalVariable;
+  }
+
   private boolean hasSideEffect = false;
   private boolean usedGlobalVariable = false;
 }
