@@ -546,7 +546,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             scope_.put(p.IDENT().getText(), arrAlloc);
             argList.get(i).setBounds(dimList);
           } else {
-            var alloc = f.getAlloca(i32Type_);
+            var alloc = f.buildAlloca(curBB_, i32Type_);
             f.buildStore(argList.get(i), alloc, curBB_);
             scope_.put(ctx.funcFParam().get(i).IDENT().getText(), alloc);
           }
@@ -762,7 +762,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitBreakStmt(BreakStmtContext ctx) {
-    f.buildBr(f.getBasicBlock(BreakInstructionMark), curBB_);
+    f.buildBr(f.buildBasicBlock(BreakInstructionMark, curFunc_), curBB_);
     return null;
   }
 
@@ -771,7 +771,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitContinueStmt(ContinueStmtContext ctx) {
-    f.buildBr(f.getBasicBlock(ContinueInstructionMark), curBB_);
+    f.buildBr(f.buildBasicBlock(ContinueInstructionMark, curFunc_), curBB_);
     return null;
   }
 

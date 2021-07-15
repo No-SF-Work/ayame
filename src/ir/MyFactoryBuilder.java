@@ -227,8 +227,8 @@ public class MyFactoryBuilder {
   public AllocaInst buildAlloca(BasicBlock bb, Type type) {
     var t = new AllocaInst(type);
     //
-    bb.getParent().getList_().getEntry()
-        .getVal().getList().getEntry().insertBefore(t.node);
+    t.node.insertAtEntry(bb.getParent().getList_().getEntry().getVal().getList());
+
     return t;
   }
 
