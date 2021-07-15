@@ -37,13 +37,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
     Scope() {
       tables_ = new ArrayList<>();
-      params_ = new HashMap<>();
       tables_.add(new HashMap<>());
     }
 
     //因为涉及了往上层查找参数，所以这里不用stack用arraylist
     private ArrayList<HashMap<String, Value>> tables_;
-    private HashMap<String, ArrayList<Value>> params_;
 
     private HashMap<String, Value> top() {
       return tables_.get(tables_.size() - 1);
@@ -67,8 +65,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
       }
     }
 
+    public boolean preEnter = false;
+
     public void addLayer() {
+      if (preEnter) {
+        preEnter = false;
+        return;
+      }
       tables_.add(new HashMap<>());
+
     }
 
     public void popLayer() {
@@ -106,7 +111,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   // pass values between `visit` functions
   private ArrayList<Value> tmpArr_;//只允许赋值以及被赋值，不能直接操作
   private Value tmp_;
-  private Value tmpPtr_;
   private int tmpInt_;
   private Type tmpTy_;
   private ArrayList<Type> tmpTyArr;
@@ -119,7 +123,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   //status word
   private boolean usingInt_ = false;//常量初始化要对表达式求值，并且用的Ident也要是常量
   private boolean globalInit_ = false;
-  private boolean requireAddr = false;
+  private boolean buildCall = false;
 
   /**
    * program : compUnit ;
@@ -503,6 +507,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
     scope_.put(functionName, curFunc_);
     //在entryBlock加入函数的形参
     var bb = f.buildBasicBlock(curFunc_.getName() + "_ENTRY", curFunc_);
+    scope_.addLayer();
+    scope_.preEnter = true;
     // visit block and create basic blocks
     //将函数的形参放到block中，将对Function的arg的初始化delay到visit(ctx.block)
     changeBB(bb);
@@ -511,7 +517,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
       visit(ctx.funcFParams());
     }
     visit(ctx.block());
-    scope_.params_.clear();
     log.info("funcDef end@" + functionName);
     return null;
   }
@@ -527,17 +532,18 @@ public class Visitor extends SysYBaseVisitor<Void> {
           var p = ctx.funcFParam(i);
           if (!p.L_BRACKT().isEmpty()) { //which means this param is  arr
             var dimList = new ArrayList<Value>();
-            var arrAlloc = f.buildAlloca(curBB_, ptri32Type_);
-            f.buildStore(argList.get(i), arrAlloc, curBB_);//todo
+            var type = i32Type_;
             dimList.add(CONST0);//第一个置空
-            p.exp().forEach(exp -> {
+            for (int j = 0; j < p.exp().size(); j++) {
               usingInt_ = true;
-              visit(exp);
+              visit(p.exp(i));
               usingInt_ = false;
               dimList.add(tmp_);
-            });
+              type = f.getArrayTy(type, tmpInt_);
+            }
+            var arrAlloc = f.buildAlloca(curBB_, new PointerType(type));//todo
+            f.buildStore(argList.get(i), arrAlloc, curBB_);//todo
             scope_.put(p.IDENT().getText(), arrAlloc);
-            scope_.params_.put(ctx.funcFParam(i).IDENT().getText(), dimList);
             argList.get(i).setBounds(dimList);
           } else {
             var alloc = f.getAlloca(i32Type_);
@@ -564,9 +570,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitFuncFParam(FuncFParamContext ctx) {
     if (!ctx.L_BRACKT().isEmpty()) {
-      //只要是个数组，就全部拿i32ptr代替
-      //因为只有常量数组，所以偏移可以直接在函数里拿Arg算
-      tmpTy_ = ptri32Type_;
+      var ty = i32Type_;
+      for (var i = 0; i < ctx.exp().size(); i++) {
+        usingInt_ = true;
+        visit(ctx.exp(i));
+        usingInt_ = false;
+        ty = f.getArrayTy(ty, tmpInt_);
+      }
+      tmpTy_ = f.getPointTy(ty);
     } else {
       tmpTy_ = i32Type_;
     }
@@ -802,8 +813,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
     boolean INT = false, PTR = false, ARR = false;
     if (t.getType().isPointerTy()) {
       INT = ((PointerType) t.getType()).getContained().isIntegerTy();
+      //指向一个函数传参进来的数组
       PTR = ((PointerType) t.getType()).getContained().isPointerTy();
-      //指向一个数组
+      //指向别的数组
       ARR = ((PointerType) t.getType()).getContained().isArrayTy();
     }
     //function call
@@ -829,7 +841,23 @@ public class Visitor extends SysYBaseVisitor<Void> {
         tmp_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         return null;
       } else {
-        var arrayParams = scope_.params_.get(ctx.IDENT().getText());
+        PointerType allocatedType = (PointerType) t.getType();
+        var containedType = (PointerType) allocatedType.getContained();
+        var load = f.buildLoad(containedType, t, curBB_);
+        visit(ctx.exp(0));
+        var gep = f.buildGEP(load, new ArrayList<>() {{
+          add(tmp_);
+        }}, curBB_);
+        for (var i = 1; i < ctx.exp().size(); i++) {
+          visit(ctx.exp(i));
+          var val = tmp_;
+          gep = f.buildGEP(gep, new ArrayList<>() {{
+            add(CONST0);
+            add(val);
+          }}, curBB_);
+        }
+        tmp_ = gep;
+        /*  var arrayParams = scope_.params_.get(ctx.IDENT().getText());
         tmpPtr_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         for (int i = 0; i < ctx.exp().size(); i++) {
           visit(ctx.exp().get(i));
@@ -841,7 +869,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           tmpPtr_ = f.buildGEP(tmpPtr_, new ArrayList<>() {{
             add(finalVal);
           }}, curBB_);
-        }
+        }*/
         return null;
       }
     }
@@ -855,9 +883,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
       } else {
         for (ExpContext expContext : ctx.exp()) {
           visit(expContext);
-          var fromExp = tmp_;
+          var val = tmp_;
           t = f.buildGEP(t, new ArrayList<>() {{
-            add(fromExp);
+            add(val);
           }}, curBB_);
         }
         tmp_ = t;
@@ -892,14 +920,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
         return null;
       }
       if (ctx.lVal() != null) {
-        if (requireAddr) {
-          requireAddr = false;
+        if (buildCall) {
+          buildCall = false;
           visit(ctx.lVal());
-          while (!((PointerType) (tmp_.getType())).getContained().isIntegerTy()) {
-            tmp_ = f.buildGEP(tmp_, new ArrayList<>() {{
-              add(CONST0);
-            }}, curBB_);
-          }
+          return null;//tmp may be GEP
         } else {
           visit(ctx.lVal());
           if (tmp_.getType().isIntegerTy()) {
@@ -1017,17 +1041,18 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var func = scope_.find(ctx.IDENT().getText());
     var args = new ArrayList<Value>();
     var paramsCtx = ctx.funcRParams().param();
+    assert func != null;
     var paramTys = ((Function) func).getType().getParams();
     for (int i = 0; i < paramsCtx.size(); i++) {
       var param = paramsCtx.get(i);
       var paramTy = paramTys.get(i);
       if (paramTy.isIntegerTy()) {
-        requireAddr = false;
+        buildCall = true;
       } else {
-        requireAddr = true;
+        buildCall = false;
       }
       visit(param.exp());// 没有String
-      requireAddr = false;
+      buildCall = false;
       args.add(tmp_);
     }
     tmp_ = f.buildFuncCall((Function) func, args, curBB_);
@@ -1039,7 +1064,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitParam(ParamContext ctx) {
-    return super.visitParam(ctx);
+    visit(ctx.exp());
+    return null;
   }
 
   /**
