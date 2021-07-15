@@ -1,6 +1,5 @@
 package ir.values.instructions;
 
-import ir.Use;
 import ir.types.ArrayType;
 import ir.types.PointerType;
 import ir.types.Type;
@@ -9,7 +8,6 @@ import ir.values.BasicBlock;
 import ir.values.GlobalVariable;
 import ir.values.Value;
 import java.util.ArrayList;
-import java.util.Set;
 
 public abstract class MemInst extends Instruction {
 
@@ -64,13 +62,14 @@ public abstract class MemInst extends Instruction {
       return isInit;
     }
 
-    private Type allocatedType_;
+    private final Type allocatedType_;
     private boolean isInit = false;
   }
 
   public static class LoadInst extends MemInst {
+
     //todo typecheck
-    public LoadInst(Type type, Value v/**指针*/) {
+    public LoadInst(Type type, Value v) {/**指针*/
       super(TAG_.Load, type, 1);
       CoSetOperand(0, v);
     }
@@ -242,7 +241,7 @@ public abstract class MemInst extends Instruction {
     }
 
     private Value aimTo;
-    private Type elementType_;
+    private final Type elementType_;
   }
 
   public static class Phi extends MemInst {
