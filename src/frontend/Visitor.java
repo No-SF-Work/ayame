@@ -361,7 +361,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         arrTy = f.getArrayTy(arrTy, dims.get(i));
       }
       if (scope_.isGlobal()) {
-        if (!ctx.initVal().isEmpty()) {
+        if (!(ctx.initVal() == null)) {
 
           ctx.initVal().dimInfo_ = dims;
           globalInit_ = true;
