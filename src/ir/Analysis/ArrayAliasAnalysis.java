@@ -3,10 +3,12 @@ package ir.Analysis;
 import ir.MyFactoryBuilder;
 import ir.values.BasicBlock;
 import ir.values.Function;
+import ir.values.GlobalVariable;
 import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
+import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.MemPhi;
 import ir.values.instructions.MemInst.StoreInst;
@@ -46,16 +48,29 @@ public class ArrayAliasAnalysis {
     while (((Instruction) pointer).tag == TAG_.GEP) {
       pointer = ((Instruction) pointer).getOperands().get(0);
     }
-    // pointer should be an AllocaInst
-    if (((Instruction) pointer).tag == TAG_.Alloca) {
+    // pointer should be an AllocaInst or GlobalVariable
+    if (pointer instanceof AllocaInst || pointer instanceof GlobalVariable) {
       return pointer;
     } else {
       return null;
     }
   }
 
+  public static boolean isGlobal(Value array) {
+    return array instanceof GlobalVariable;
+  }
+
+  public static boolean isParam(Value array) {
+    // allocaType 为 i32ptr，表示是一个参数数组
+    return false;
+  }
+
   public static boolean alias(Value arr1, Value arr2) {
-    // TODO 需要了解 visitor 的设计
+    // 都是param: 名字相等
+    // param - glob: dim_alias
+    // global - global: AllocaInst 相同
+    // local - local: AllocaInst 相同
+
 
     return false;
   }
@@ -172,7 +187,7 @@ public class ArrayAliasAnalysis {
           // set useStore as corresponding value
           LoadInst loadInst = (LoadInst) inst;
           int index = arraysLookup.get(loadInst.getOperands().get(0));
-          loadInst.useStore.setValue(currValues.get(index));
+          loadInst.setUseStore(currValues.get(index));
         } else if (inst.tag == TAG_.Store || inst.tag == TAG_.Call) {
           Integer index = null;
           for (ArrayDefUses arrayDefUse : arrays) {
@@ -205,7 +220,7 @@ public class ArrayAliasAnalysis {
           }
         } else if (inst instanceof LoadInst) {
           LoadInst loadInst = (LoadInst) inst;
-          loadInst.useStore.setValue(null); // setValue 好像有点问题？
+          loadInst.removeUseStore();
         }
       }
     }

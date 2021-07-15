@@ -93,9 +93,6 @@ public abstract class MemInst extends Instruction {
   }
 
   public static class LoadInst extends MemInst {
-
-    public Use useStore;
-
     //todo typecheck
     public LoadInst(Type type, Value v/**指针*/) {
       super(TAG_.Load, type, 1);
@@ -115,6 +112,20 @@ public abstract class MemInst extends Instruction {
     public LoadInst(Instruction next, Value v, Type type) {
       super(next, TAG_.Load, type, 1);
       CoSetOperand(0, v);
+    }
+
+    public void setUseStore(Value store) {
+      this.numOP++;
+      CoSetOperand(1, store);
+    }
+
+    public Value getUseStore() {
+      return this.getOperands().get(1);
+    }
+
+    public void removeUseStore() {
+      this.numOP--;
+      CoSetOperand(1, null);
     }
   }
 

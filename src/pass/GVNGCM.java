@@ -112,7 +112,7 @@ public class GVNGCM implements IRPass {
         LoadInst keyInst = (LoadInst) key;
         var allSame =
             lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(0));
-        allSame = allSame && loadInst.useStore == keyInst.useStore;
+        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
         if (allSame) {
           return valueNumber;
         }
@@ -120,7 +120,7 @@ public class GVNGCM implements IRPass {
         StoreInst keyInst = (StoreInst) key;
         var allSame =
             lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(1));
-        allSame = allSame && (loadInst.useStore.getValue() == keyInst);
+        allSame = allSame && (loadInst.getUseStore() == keyInst);
         if (allSame) {
           return keyInst.getOperands().get(0);
         }
@@ -137,16 +137,13 @@ public class GVNGCM implements IRPass {
     if (inst.isBinary()) {
       return findValueNumber((BinaryInst) inst);
     }
-    switch (inst.tag) {
-      case GEP:
-        return findValueNumber((GEPInst) inst);
-      case Load:
-        return findValueNumber((LoadInst) inst);
-      case Call:
-        return findValueNumber((CallInst) inst);
-    }
+    return switch (inst.tag) {
+      case GEP -> findValueNumber((GEPInst) inst);
+      case Load -> findValueNumber((LoadInst) inst);
+      case Call -> findValueNumber((CallInst) inst);
+      default -> null;
+    };
 
-    return null;
   }
 
   public Value lookupOrAdd(Value val) {
@@ -180,9 +177,9 @@ public class GVNGCM implements IRPass {
 
     runGVN(func);
 
+    // clear MemorySSA, dead code elimination, compute MemorySSA
     ArrayAliasAnalysis.clear(func);
     ArrayAliasAnalysis.run(func);
-    // clear MemorySSA, dead code elimination, compute MemorySSA
 
     runGCM(func);
   }
@@ -311,7 +308,7 @@ public class GVNGCM implements IRPass {
       // Load 的 useStore
       if (inst.tag == TAG_.Load) {
         LoadInst loadInst = (LoadInst) inst;
-        Value value = loadInst.useStore.getValue();
+        Value value = loadInst.getUseStore();
         if (value instanceof Instruction) {
           Instruction valueInst = (Instruction) value;
           scheduleEarly(valueInst, func);
