@@ -38,6 +38,12 @@ public class MCFma extends MachineCode{
 
     private ArmAddition.CondType cond;
 
+    public String toString(){
+        String res=add?"\tsmmla":"\tsmmls";
+        res+=contString(cond)+"\t"+dst.getName()+",\t"+lhs.getName()+",\t"+rhs.getName()+",\t"+acc.getName()+"\n";
+        return res;
+    }
+
     public void setCond(ArmAddition.CondType cond){
         this.cond=cond;
     }

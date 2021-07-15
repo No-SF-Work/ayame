@@ -14,4 +14,10 @@ public class MCComment extends MachineCode{
         super(TAG.Comment,mb);
         this.str=str;
     }
+
+    @Override
+    public String toString(){
+        String res="@"+str;
+        return res;
+    }
 }

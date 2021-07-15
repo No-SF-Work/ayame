@@ -14,7 +14,7 @@ public class MachineCode {
     private static int ID = 0;
 
     int slotIndex;
-    
+
     int id;
 
     public enum TAG {
@@ -42,7 +42,7 @@ public class MachineCode {
     }
 
     //target virtualreg
-    private VirtualReg virtualReg ;
+    private VirtualReg virtualReg;
 
     //allocated phyreg
     private PhyReg phyReg = null;
@@ -69,79 +69,87 @@ public class MachineCode {
     //定义的phyreg
     private ArrayList<PhyReg> phyDef = new ArrayList<>();
 
-    public TAG getTag(){return tag;}
+    public TAG getTag() {
+        return tag;
+    }
 
     //所有的MC都有一个shift对象，初始值为无偏移。可以通过setShift设置Shift
     private ArmAddition.Shift shift = ArmAddition.getAddition().getNewShiftInstance();
 
     //处理旧reg，添加新reg 布尔值用来代表是使用还是定义
-    public void dealReg(MachineOperand oldmo,MachineOperand newmo,boolean isUse){
-        if(oldmo == null){
+    public void dealReg(MachineOperand oldmo, MachineOperand newmo, boolean isUse) {
+        if (oldmo == null) {
         }
-        if(oldmo.getState()==MachineOperand.state.imm){
-        }else if(oldmo instanceof Reg){
-            if(isUse){
+        if (oldmo.getState() == MachineOperand.state.imm) {
+        } else if (oldmo instanceof Reg) {
+            if (isUse) {
                 regUse.remove(oldmo);
-            }else{
+            } else {
                 regDef.remove(newmo);
             }
         }
-        if(isUse){
+        if (isUse) {
             addUse(newmo);
-        }else{
+        } else {
             addDef(newmo);
         }
     }
 
-    public Shift getShift(){return shift;}
+    public Shift getShift() {
+        return shift;
+    }
 
-    public void setShift(ArmAddition.ShiftType t,int i) { this.shift.setType(t,i); }
+    public void setShift(ArmAddition.ShiftType t, int i) {
+        this.shift.setType(t, i);
+    }
 
-    public ArmAddition.CondType getCond(){return ArmAddition.CondType.Any;}
+    public ArmAddition.CondType getCond() {
+        return ArmAddition.CondType.Any;
+    }
 
     //返回本MC定义的virtualreg
-    public ArrayList<VirtualReg> getVirtualDef(){
+    public ArrayList<VirtualReg> getVirtualDef() {
         return virtualDef;
     }
 
     //返回本MC使用的virtualreg
-    public ArrayList<VirtualReg> getVirtualUses(){
+    public ArrayList<VirtualReg> getVirtualUses() {
         return virtualUses;
     }
 
-    public ArrayList<PhyReg> getPhyUses(){
+    public ArrayList<PhyReg> getPhyUses() {
         return phyUses;
     }
 
-    public ArrayList<PhyReg> getPhyDef(){
+    public ArrayList<PhyReg> getPhyDef() {
         return phyDef;
     }
 
-    public void addUse(MachineOperand r){
-        if(r.getState()== MachineOperand.state.virtual)
+    public void addUse(MachineOperand r) {
+        if (r.getState() == MachineOperand.state.virtual)
             virtualUses.add((VirtualReg) r);
-        if(r.getState()== MachineOperand.state.phy)
+        if (r.getState() == MachineOperand.state.phy)
             phyUses.add((PhyReg) r);
-        if(r instanceof VirtualReg||r instanceof PhyReg){
+        if (r instanceof VirtualReg || r instanceof PhyReg) {
             regUse.add((Reg) r);
         }
     }
 
-    public void addDef(MachineOperand r){
-        if(r.getState()== MachineOperand.state.virtual)
-            virtualDef.add((VirtualReg)r);
-        if(r.getState()== MachineOperand.state.phy)
+    public void addDef(MachineOperand r) {
+        if (r.getState() == MachineOperand.state.virtual)
+            virtualDef.add((VirtualReg) r);
+        if (r.getState() == MachineOperand.state.phy)
             phyDef.add((PhyReg) r);
-        if(r instanceof VirtualReg||r instanceof PhyReg){
+        if (r instanceof VirtualReg || r instanceof PhyReg) {
             regDef.add((Reg) r);
         }
     }
 
-    public ArrayList<Reg> getUse(){
+    public ArrayList<Reg> getUse() {
         return regUse;
     }
 
-    public ArrayList<Reg> getDef(){
+    public ArrayList<Reg> getDef() {
         return regDef;
     }
 
@@ -187,7 +195,7 @@ public class MachineCode {
 //    }
 
 
-    public boolean isAllocated(){
+    public boolean isAllocated() {
         return phyReg != null;
     }
 
@@ -195,37 +203,54 @@ public class MachineCode {
 
     public MachineCode(TAG tag) {
         this.tag = tag;
-        node=new IList.INode(this);
+        node = new IList.INode(this);
     }
 
     public MachineCode(TAG tag, MachineBlock mb) {
         this.tag = tag;
         this.mb = mb;
-        node=new IList.INode(this);
+        node = new IList.INode(this);
         node.setParent(mb.getmclist());
         mb.addAtEndMC(node);
     }
 
-    public void insertBeforeNode(MachineCode mc){
+    public String contString(ArmAddition.CondType t) {
+        if (t == ArmAddition.CondType.Gt) {
+            return "gt";
+        } else if (t == ArmAddition.CondType.Ge) {
+            return "ge";
+        } else if (t == ArmAddition.CondType.Eq) {
+            return "eq";
+        } else if (t == ArmAddition.CondType.Ne) {
+            return "ne";
+        } else if (t == ArmAddition.CondType.Le) {
+            return "le";
+        } else if (t == ArmAddition.CondType.Lt) {
+            return "lt";
+        } else {
+            return "";
+        }
+    }
+
+    public void insertBeforeNode(MachineCode mc) {
         node.setParent(mc.node.getParent());
         this.node.insertBefore(mc.node);
-        this.mb=mc.getMb();
+        this.mb = mc.getMb();
     }
 
-    public void insertAfterNode(MachineCode mc){
+    public void insertAfterNode(MachineCode mc) {
         node.setParent(mc.node.getParent());
         this.node.insertAfter(mc.node);
-        this.mb=mc.getMb();
+        this.mb = mc.getMb();
     }
 
-    public MachineCode(TAG tag, MachineBlock mb,int num) {
+    public MachineCode(TAG tag, MachineBlock mb, int num) {
         this.tag = tag;
         this.mb = mb;
-        node=new IList.INode(this);
+        node = new IList.INode(this);
         node.setParent(mb.getmclist());
         mb.addAtEntryMC(node);
     }
-
 
 
 //    public MachineCode(TAG tag, MachineFunction mf) {
@@ -245,7 +270,7 @@ public class MachineCode {
         mb.addAtEndMC(node);
     }
 
-    public MachineBlock getMb(){
+    public MachineBlock getMb() {
         return this.mb;
     }
 

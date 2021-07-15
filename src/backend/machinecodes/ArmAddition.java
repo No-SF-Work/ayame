@@ -67,6 +67,26 @@ public class ArmAddition{
             this.t=t;
         }
 
+        @Override
+        public String toString(){
+            if(t==ShiftType.None||imm==0){
+                return "";
+            }
+            String op=", ";
+            if(t==ShiftType.Asr){
+                op+="asr";
+            }else if(t==ShiftType.Lsl){
+                op+="lsl";
+            }else if(t==ShiftType.Lsr){
+                op+="lsr";
+            }else{
+                op+="";
+                assert(false);
+            }
+            op+=" #"+((Integer)imm).toString();
+            return op;
+        }
+
         public Shift(){ this.t=ShiftType.None;}
 
         public Shift(ShiftType t, int imm){

@@ -49,6 +49,21 @@ public class MCLoad extends MachineCode{
         this.cond = cond;
     }
 
+    @Override
+    public String toString(){
+        String res="\tstr"+contString(cond)+"\t"+dst.getName()+",\t["+addr.getName();
+        res+=",\t"+offset.getName()+getShift().toString()+"]\n";
+//        if(offset.getState()== MachineOperand.state.imm){
+//            if(offset.getImm()==0){
+//                res+="]\n";
+//            }else{
+//                res+=",\t#"+offset.getImm()+"]\n";
+//            }
+//        }else{
+//            res+=",\t"+offset.getName()+getShift().toString()+"]\n";
+//        }
+        return res;
+    }
 
     public MCLoad(MachineBlock mb){
         super(TAG.Load,mb);
