@@ -29,30 +29,6 @@ public abstract class MemInst extends Instruction {
     super(next, tag, type, numOP);
   }
 
-  public static class ZextInst extends MemInst {
-
-    private Type destTy;
-
-    public ZextInst(Value val, Type dest) {
-      super(TAG_.Zext, dest, 1);
-      destTy = dest;
-      this.CoSetOperand(0, val);
-    }
-
-    public Type getDest() {
-      return this.destTy;
-    }
-
-    public ZextInst(Value val, Type dest, BasicBlock parent) {
-      super(TAG_.Zext, dest, 1, parent);
-      destTy = dest;
-      this.CoSetOperand(0, val);
-    }
-
-
-  }
-
-
   public static class AllocaInst extends MemInst {
 
     //todo typecheck
@@ -93,9 +69,6 @@ public abstract class MemInst extends Instruction {
   }
 
   public static class LoadInst extends MemInst {
-
-    public Use directContent;
-
     //todo typecheck
     public LoadInst(Type type, Value v/**指针*/) {
       super(TAG_.Load, type, 1);
@@ -115,6 +88,20 @@ public abstract class MemInst extends Instruction {
     public LoadInst(Instruction next, Value v, Type type) {
       super(next, TAG_.Load, type, 1);
       CoSetOperand(0, v);
+    }
+
+    public void setUseStore(Value store) {
+      this.numOP++;
+      CoSetOperand(1, store);
+    }
+
+    public Value getUseStore() {
+      return this.getOperands().get(1);
+    }
+
+    public void removeUseStore() {
+      this.numOP--;
+      CoSetOperand(1, null);
     }
   }
 
@@ -297,9 +284,9 @@ public abstract class MemInst extends Instruction {
     // MemPhi 指令需要放在基本块最前面
     public MemPhi(TAG_ tag, Type type, int numOP, Value array, BasicBlock parent) {
       super(tag, type, numOP);
+      this.numOP = parent.getPredecessor_().size() + 1;
       CoSetOperand(0, array); // operands[0]: array
       this.node.insertAtEntry(parent.getList());
-      this.numOP = parent.getPredecessor_().size();
     }
 
     public void setIncomingVals(int index, Value val) {

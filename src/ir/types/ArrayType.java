@@ -1,5 +1,7 @@
 package ir.types;
 
+import ir.values.Constant;
+import ir.values.Constants.ConstantArray;
 import java.util.ArrayList;
 
 /**
@@ -20,6 +22,7 @@ public class ArrayType extends Type {
     this.contained = contained;
     this.num_elements = num_elements;
   }
+
   /**
    * 返回一个包含了各个维的长度的list
    */
@@ -39,6 +42,16 @@ public class ArrayType extends Type {
 
   public int getNumEle() {
     return num_elements;
+  }
+
+  @Override
+  public String toString() {
+    return null;//todo
+  }
+
+  public static String buildConstInitStr(ArrayType arrTy, ConstantArray inits) {
+
+    return null;
   }
 
   private Type contained;

@@ -82,17 +82,22 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
         public void remove() {
             var prev = tmp.prev;
             var next = tmp.next;
+            var parent = tmp.getParent();
             if (prev != null) {
                 prev.next = next;
             } else {
-                tmp.getParent().setEntry(next);
+                parent.setEntry(next);
             }
 
             if (next != null) {
                 next.prev = prev;
             } else {
-                tmp.getParent().setLast(prev);
+                parent.setLast(prev);
             }
+            --parent.numNode;
+
+            tmp.next = tmp.prev = null;
+            tmp.val = null;
         }
     }
 

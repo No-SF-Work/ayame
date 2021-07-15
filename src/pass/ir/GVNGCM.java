@@ -4,36 +4,39 @@ import ir.Analysis.ArrayAliasAnalysis;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.Use;
-import ir.types.IntegerType;
 import ir.values.BasicBlock;
-import ir.values.Constant;
-import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.User;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
-import ir.values.instructions.MemInst;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.Phi;
+import ir.values.instructions.MemInst.StoreInst;
+import ir.values.instructions.SimplifyInstruction;
+import ir.values.instructions.TerminatorInst.CallInst;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Stack;
 import java.util.logging.Logger;
+import javax.management.ValueExp;
 import pass.Pass.IRPass;
 import util.IList;
 import util.IList.INode;
 import util.Mylogger;
+import util.Pair;
 
+// TODO: LoadInst and CallInst
 public class GVNGCM implements IRPass {
 
   private Logger log = Mylogger.getLogger(IRPass.class);
   private static MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
 
-  private HashMap<Value, Value> valueTable = new HashMap<>();
+  private ArrayList<Pair<Value, Value>> valueTable = new ArrayList<>();
   private HashSet<Instruction> instructionsVis = new HashSet<>();
 
   @Override
@@ -44,82 +47,145 @@ public class GVNGCM implements IRPass {
   public void run(MyModule m) {
     log.info("Running pass : GVNGCM");
 
-    // I don't know if there is a better way than using Tsinghua's
-    // bbopt->gvngcm->bbopt steps:
-    // while (code_changed) {
-    // bb_opt();
-    // gvngcm();
-    // }
     // TODO: usage of gvngcm
     for (INode<Function, MyModule> funcNode : m.__functions) {
       runGVNGCM(funcNode.getVal());
     }
   }
 
-  public Value createExpr(Instruction inst) {
-    if (inst.isBinary()) {
-      BinaryInst binaryInst = (BinaryInst) inst;
-      Value lhs = lookupOrAdd(binaryInst.getOperands().get(0));
-      Value rhs = lookupOrAdd(binaryInst.getOperands().get(1));
-      // for ()
-    } else {
-      switch (inst.tag) {
-        case GEP: {
-
+  public Value findValueNumber(BinaryInst binaryInst) {
+    Value lhs = lookupOrAdd(binaryInst.getOperands().get(0));
+    Value rhs = lookupOrAdd(binaryInst.getOperands().get(1));
+    var sz = valueTable.size();
+    for (var i = 0; i < sz; i++) {
+      Value key = valueTable.get(i).getFirst();
+      Value valueNumber = valueTable.get(i).getSecond();
+      if (key.isInstruction() && ((Instruction) key).isBinary() && !binaryInst.equals(key)) {
+        BinaryInst keyInst = (BinaryInst) key;
+        Value lhs2 = lookupOrAdd(keyInst.getOperands().get(0));
+        Value rhs2 = lookupOrAdd(keyInst.getOperands().get(1));
+        boolean sameOp = binaryInst.tag == keyInst.tag;
+        boolean sameOperand =
+            (lhs.equals(lhs2) && rhs.equals(rhs2)) || (lhs.equals(rhs2) && rhs.equals(lhs2)
+                && binaryInst.isCommutative());
+        boolean sameRev =
+            lhs.equals(rhs2) && rhs.equals(lhs2) && BinaryInst.isRev(binaryInst.tag, keyInst.tag);
+        if ((sameOp && sameOperand) || sameRev) {
+          return valueNumber;
         }
-
-        case Load:
-          break;
-        case Call:
-          break;
       }
     }
+    return binaryInst;
+  }
+
+  public Value findValueNumber(GEPInst gepInst) {
+    var sz = valueTable.size();
+    for (var i = 0; i < sz; i++) {
+      var key = valueTable.get(i).getFirst();
+      var valueNumber = valueTable.get(i).getSecond();
+      if (key.isInstruction() && ((Instruction) key).tag == TAG_.GEP && gepInst.equals(key)) {
+        GEPInst keyInst = (GEPInst) key;
+        boolean allSame = gepInst.getNumOP() == keyInst.getNumOP();
+        if (allSame) {
+          for (var j = 0; j < gepInst.getNumOP(); j++) {
+            if (lookupOrAdd(gepInst.getOperands().get(j)) != lookupOrAdd(
+                keyInst.getOperands().get(j))) {
+              allSame = false;
+              break;
+            }
+          }
+        }
+        if (allSame) {
+          return valueNumber;
+        }
+      }
+    }
+    return gepInst;
+  }
+
+  public Value findValueNumber(LoadInst loadInst) {
+    var sz = valueTable.size();
+    for (var i = 0; i < sz; i++) {
+      var key = valueTable.get(i).getFirst();
+      var valueNumber = valueTable.get(i).getSecond();
+      if (key.isInstruction() && ((Instruction) key).tag == TAG_.Load && loadInst.equals(key)) {
+        LoadInst keyInst = (LoadInst) key;
+        var allSame =
+            lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(0));
+        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
+        if (allSame) {
+          return valueNumber;
+        }
+      } else if (key.isInstruction() && ((Instruction) key).tag == TAG_.Store) {
+        StoreInst keyInst = (StoreInst) key;
+        var allSame =
+            lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(1));
+        allSame = allSame && (loadInst.getUseStore() == keyInst);
+        if (allSame) {
+          return keyInst.getOperands().get(0);
+        }
+      }
+    }
+    return loadInst;
+  }
+
+  public Value findValueNumber(CallInst callInst) {
     return null;
   }
 
-  public Value lookupOrAdd(Value val) {
-    if (valueTable.containsKey(val)) {
-      return valueTable.get(val);
+  public Value findValueNumber(Instruction inst) {
+    if (inst.isBinary()) {
+      return findValueNumber((BinaryInst) inst);
     }
-    valueTable.put(val, val);
+    return switch (inst.tag) {
+      case GEP -> findValueNumber((GEPInst) inst);
+      case Load -> findValueNumber((LoadInst) inst);
+      case Call -> findValueNumber((CallInst) inst);
+      default -> null;
+    };
+
+  }
+
+  public Value lookupOrAdd(Value val) {
+    for (var pair : valueTable) {
+      if (pair.getFirst() == val) {
+        return pair.getSecond();
+      }
+    }
+    valueTable.add(new Pair<>(val, val));
     if (val.isInstruction()) {
       Instruction inst = (Instruction) val;
       if (inst.isBinary() || inst.tag == TAG_.GEP || inst.tag == TAG_.Load
           || inst.tag == TAG_.Call) {
-        valueTable.put(val, createExpr(inst));
+        valueTable.get(valueTable.size() - 1).setSecond(findValueNumber(inst));
       }
     }
-    return valueTable.get(val);
+    return valueTable.get(valueTable.size() - 1).getSecond();
   }
 
-  public void elimRedunWith(Instruction inst, Value val) {
-    valueTable.remove(inst);
+  public void replace(Instruction inst, Value val) {
+    valueTable.removeIf(pair -> pair.getFirst() == inst);
     inst.COReplaceAllUseWith(val);
     inst.node.removeSelf();
-  }
-
-  // return an Integer if val is a constant int
-  public static Integer getConstValue(Value val) {
-    if (val.getType() == factory.getI32Ty()) {
-      // if val is a constant int
-      return ((ConstantInt) val).getVal();
-    }
-    return null;
   }
 
   // Algorithm: Global Code Motion Global Value Numbering, Cliff Click
   // TODO: 研究更好的算法 "A Sparse Algorithm for Predicated Global Value Numbering" describes a better algorithm
   public void runGVNGCM(Function func) {
+    // ArrayAliasAnalysis 几乎不可用
     ArrayAliasAnalysis.run(func);
 
     runGVN(func);
 
     // clear MemorySSA, dead code elimination, compute MemorySSA
+    ArrayAliasAnalysis.clear(func);
+    ArrayAliasAnalysis.run(func);
 
     runGCM(func);
   }
 
   // TODO: use better algebraic simplification and unreachable code elimination
+  // TODO GVN 还没有考虑 CallInst
   public void runGVN(Function func) {
     BasicBlock entry = func.getList_().getEntry().getVal();
     Stack<BasicBlock> postOrderStack = new Stack<>();
@@ -159,42 +225,41 @@ public class GVNGCM implements IRPass {
   }
 
   public void runGVNOnInstruction(Instruction inst) {
-    if (inst.isBinary()) {
-      // TODO: llvm/lib/Analysis/InstructionSimplify.cpp
-      BinaryInst binaryInst = (BinaryInst) inst;
-      Value lhs = binaryInst.getOperands().get(0);
-      Value rhs = binaryInst.getOperands().get(1);
-      Integer lhsVal = getConstValue(lhs);
-      Integer rhsVal = getConstValue(rhs);
-      if (lhsVal != null && rhsVal != null) {
-        // constant folding
-        if (binaryInst.isArithmeticBinary()) {
-          elimRedunWith(binaryInst,
-              ConstantInt.newOne(factory.getI32Ty(), binaryInst.evalSelf()));
-        } else if (binaryInst.isLogicalBinary()) {
-          elimRedunWith(binaryInst,
-              ConstantInt.newOne(factory.getI1Ty(), binaryInst.evalSelf()));
-        } else {
-          log.info(
-              "[Error: GVNGCM] lhsVal and rhsVal is constant but binaryInst is not arithmetic or logical");
-        }
-        continue;
-      } else if (lhsVal != null) {
-        // TODO: swap lhs and rhs
-      }
-      // TODO: fold lhs
+    Value v = SimplifyInstruction.simplifyInstruction(inst);
+    if (!(v instanceof Instruction)) {
+      replace(inst, v);
+      return;
+    }
 
+    Instruction simpInst = (Instruction) v;
+
+    if (inst.isBinary()) {
+      replace(inst, lookupOrAdd(simpInst));
     } else if (inst.tag == TAG_.GEP) {
-      // 直接找等价
+      replace(inst, lookupOrAdd(simpInst));
     } else if (inst.tag == TAG_.Load) {
-      // const int a[const][const]: 直接取值替换
-      // 普通 Load: 找到等价的 Load，或者对应地址 Store 的值
+      // 没有全局 const []
+      replace(inst, lookupOrAdd(simpInst));
     } else if (inst.tag == TAG_.Phi) {
-      // 两种情况：1. 所有 incomingVals 相同  2. 两条 phi 指令的所有 incomingVals 对应相同
-      // LLVM NewGVN 的额外优化：可以识别 phi(a + b, c + d) = phi(a, c) + phi(b, d)
+      // 所有 incomingVals 相同
+      Phi phiInst = (Phi) simpInst;
+      boolean sameIncoming = true;
+      Value val = lookupOrAdd(phiInst.getIncomingVals().get(0));
+      for (int i = 1; i < phiInst.getIncomingVals().size() && sameIncoming; i++) {
+        if (!val.equals(lookupOrAdd(phiInst.getIncomingVals().get(i)))) {
+          sameIncoming = false;
+        }
+      }
+      if (sameIncoming) {
+        replace(phiInst, val);
+      }
+      // TODO LLVM NewGVN 的额外优化：可以识别 phi(a + b, c + d) = phi(a, c) + phi(b, d)
+    } else if (inst.tag == TAG_.Store) {
+      valueTable.add(new Pair<>(inst, inst));
     }
   }
 
+  // TODO: GCM 还没有考虑 CallInst 的情况
   public void runGCM(Function func) {
     func.getLoopInfo().computeLoopInfo(func);
     ArrayList<Instruction> instructions = new ArrayList<>();
@@ -215,7 +280,6 @@ public class GVNGCM implements IRPass {
     }
   }
 
-  // TODO: complete CallInst
   public void scheduleEarly(Instruction inst, Function func) {
     IList<Instruction, BasicBlock> entryList = func.getList_().getEntry().getVal().getList();
     if (!instructionsVis.contains(inst)) {
@@ -241,9 +305,10 @@ public class GVNGCM implements IRPass {
         }
       }
 
+      // Load 的 useStore
       if (inst.tag == TAG_.Load) {
         LoadInst loadInst = (LoadInst) inst;
-        Value value = loadInst.directContent.getValue();
+        Value value = loadInst.getUseStore();
         if (value instanceof Instruction) {
           Instruction valueInst = (Instruction) value;
           scheduleEarly(valueInst, func);
@@ -255,8 +320,8 @@ public class GVNGCM implements IRPass {
       }
 
       if (inst.tag == TAG_.Call) {
+        // TODO
       }
-      // TODO: CallInst and args
     }
   }
 
@@ -270,7 +335,7 @@ public class GVNGCM implements IRPass {
         if (user instanceof Instruction) {
           Instruction userInst = (Instruction) user;
           scheduleLate(inst, func);
-          BasicBlock userbb = new BasicBlock();
+          BasicBlock userbb = null;
           if (userInst.tag == TAG_.Phi) {
             int idx = 0;
             for (Value value : ((Phi) userInst).getIncomingVals()) {
@@ -316,7 +381,6 @@ public class GVNGCM implements IRPass {
       }
     }
   }
-
 
   public boolean canSchedule(Instruction inst) {
     return inst.isBinary() || inst.tag == TAG_.Load || inst.tag == TAG_.GEP;

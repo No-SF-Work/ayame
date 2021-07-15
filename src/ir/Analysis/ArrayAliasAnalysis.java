@@ -3,11 +3,15 @@ package ir.Analysis;
 import ir.MyFactoryBuilder;
 import ir.values.BasicBlock;
 import ir.values.Function;
+import ir.values.GlobalVariable;
 import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.MemInst;
+import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.MemPhi;
+import ir.values.instructions.MemInst.StoreInst;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -44,18 +48,40 @@ public class ArrayAliasAnalysis {
     while (((Instruction) pointer).tag == TAG_.GEP) {
       pointer = ((Instruction) pointer).getOperands().get(0);
     }
-    // pointer should be an AllocaInst
-    return pointer;
+    // pointer should be an AllocaInst or GlobalVariable
+    if (pointer instanceof AllocaInst || pointer instanceof GlobalVariable) {
+      return pointer;
+    } else {
+      return null;
+    }
   }
 
-  // TODO: 设计 alias 策略，设计 load 指令的 mem-token 策略，判断是否需要构造 store 依赖 load 的情况
+  public static boolean isGlobal(Value array) {
+    return array instanceof GlobalVariable;
+  }
+
+  public static boolean isParam(Value array) {
+    // allocaType 为 i32ptr，表示是一个参数数组
+    return false;
+  }
+
+  public static boolean alias(Value arr1, Value arr2) {
+    // 都是param: 名字相等
+    // param - glob: dim_alias
+    // global - global: AllocaInst 相同
+    // local - local: AllocaInst 相同
+
+
+    return false;
+  }
+
   public static void run(Function function) {
     DomInfo.computeDominanceInfo(function);
     DomInfo.computeDominanceFrontier(function);
 
     ArrayList<ArrayDefUses> arrays = new ArrayList<>();
     HashMap<Value, Integer> arraysLookup = new HashMap<>();
-    ArrayList<ArrayList<BasicBlock>> defBlocks = new ArrayList();
+    ArrayList<ArrayList<BasicBlock>> defBlocks = new ArrayList<>();
 
     // initialize
     for (INode<BasicBlock, Function> bbNode : function.getList_()) {
@@ -64,7 +90,7 @@ public class ArrayAliasAnalysis {
         Instruction inst = instNode.getVal();
         if (inst.tag == TAG_.Load) {
           LoadInst loadInst = (LoadInst) inst;
-          Value array = getArrayValue(loadInst);
+          Value array = getArrayValue(loadInst.getOperands().get(0));
           if (arraysLookup.get(array) == null) {
             ArrayDefUses newArray = new ArrayDefUses();
             arrays.add(newArray);
@@ -83,9 +109,12 @@ public class ArrayAliasAnalysis {
           Instruction inst = instNode.getVal();
           // 这里对 Load/Store/Call 进行分组，粒度决定了后面分析的精度和速度
           if (inst.tag == TAG_.Store) {
-            // TODO: alias analysis and add the bb to defBlocks
+            StoreInst storeInst = (StoreInst) inst;
+            if (alias(array, getArrayValue(storeInst.getOperands().get(1)))) {
+              arrayDefUse.defs.add(inst);
+            }
           } else if (inst.tag == TAG_.Call) {
-            // TODO: alias analysis
+            // TODO: know more about Call
           }
         }
       }
@@ -150,15 +179,25 @@ public class ArrayAliasAnalysis {
       data.bb.setDirty(true);
       for (INode<Instruction, BasicBlock> instNode : data.bb.getList()) {
         Instruction inst = instNode.getVal();
-        if (inst.tag == TAG_.Load) {
-          // TODO: set mem-token as corresponding value
+        if (inst.tag == TAG_.MemPhi) {
+          MemPhi memPhiInst = (MemPhi) inst;
+          int index = phiToArrayMap.get(memPhiInst);
+          currValues.set(index, memPhiInst);
+        } else if (inst.tag == TAG_.Load) {
+          // set useStore as corresponding value
+          LoadInst loadInst = (LoadInst) inst;
+          int index = arraysLookup.get(loadInst.getOperands().get(0));
+          loadInst.setUseStore(currValues.get(index));
         } else if (inst.tag == TAG_.Store || inst.tag == TAG_.Call) {
+          Integer index = null;
           for (ArrayDefUses arrayDefUse : arrays) {
             if (arrayDefUse.defs.contains(inst)) {
-              // TODO: update values
+              index = arraysLookup.get(arrayDefUse.array);
             }
           }
-          // TODO: update values
+          if (index != null) {
+            currValues.set(index, inst);
+          }
         }
       }
 
@@ -168,5 +207,33 @@ public class ArrayAliasAnalysis {
     }
 
     // THU also builds `load` to `store` dependency, but I don't know if it is useful.
+  }
+
+  public static void clear(Function function) {
+    for (INode<BasicBlock, Function> bbNode : function.getList_()) {
+      BasicBlock bb = bbNode.getVal();
+      for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
+        Instruction inst = instNode.getVal();
+        if (inst instanceof MemPhi) {
+          for (var i = 0; i < inst.getNumOP(); i++) {
+            inst.CoSetOperand(i, null);
+          }
+        } else if (inst instanceof LoadInst) {
+          LoadInst loadInst = (LoadInst) inst;
+          loadInst.removeUseStore();
+        }
+      }
+    }
+
+    for (INode<BasicBlock, Function> bbNode : function.getList_()) {
+      BasicBlock bb = bbNode.getVal();
+      for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
+        Instruction inst = instNode.getVal();
+        if (!(inst instanceof MemPhi)) {
+          break;
+        }
+        instNode.removeSelf();
+      }
+    }
   }
 }
