@@ -140,11 +140,11 @@ public class CodeGenManager {
         } else {
             //如果false后继已经在mblist中而true后继不在，那交换位置，尽量让false块在序列化的下一个
             if (isVisit.containsKey(mb.getFalseSucc()) && !isVisit.containsKey(mb.getTrueSucc())) {
-                MachineBlock temp = mb.getFalseSucc();
+                MachineBlock temp=mb.getFalseSucc();
                 mb.setFalseSucc(mb.getTrueSucc());
                 mb.setTrueSucc(temp);
-                assert (mb.getmclist().getLast().getVal() instanceof MCBranch);
-                CondType cond = mb.getmclist().getLast().getVal().getCond();
+                assert(mb.getmclist().getLast().getVal() instanceof MCBranch);
+                CondType cond=mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
             }
             //有两个后继的情况下优先让false后继放到自己后面，处理False后继和只有一种后继的情况相同
@@ -168,7 +168,7 @@ public class CodeGenManager {
                     }
                 }
                 //如果两个后继块都已经在mbList中，本基本块的最后一条指令跳转到True块，还缺一条跳转到False块的指令，加到最后
-                MCJump jump = new MCJump(mb);
+                MCJump jump=new MCJump(mb);
                 jump.setTarget(mb.getFalseSucc());
             } else {
                 MachineCode mcl = mb.getmclist().getLast().getVal();
@@ -373,7 +373,7 @@ public class CodeGenManager {
         return arm;
     }
 
-    public void MachineCodeGeneration() {
+    private void MachineCodeGeneration() {
         ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
         Iterator<GlobalVariable> itgVs = gVs.iterator();
         while (itgVs.hasNext()) {
@@ -386,8 +386,8 @@ public class CodeGenManager {
         Iterator<INode<Function, MyModule>> fIt = fList.iterator();
         HashMap<Function, MachineFunction> fMap = new HashMap<>();
         while (fIt.hasNext()) {
-            Function f = fIt.next().getVal();
-            MachineFunction mf = new MachineFunction(this, f.getName());
+            Function f=fIt.next().getVal();
+            MachineFunction mf = new MachineFunction(this,f.getName());
             fMap.put(f, mf);
         }
         fIt = fList.iterator();
