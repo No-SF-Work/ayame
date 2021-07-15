@@ -47,7 +47,7 @@ public class CompilerDriver {
     argParser.addArgument("-f", "--ir").action(Arguments.storeTrue())
         .help("write llvm ir to debug_{$source file name}.ll");
     argParser.addArgument("-d", "--debug").action(Arguments.storeTrue())
-        .help("use debug mode , which will record actions in current path");
+        .help("use debug mode,which will record actions in current path");
     //新的可选指令加在上面
     argParser.addArgument("source");
     argParser.addArgument("target");
