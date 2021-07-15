@@ -4,6 +4,9 @@ import frontend.SysYLexer;
 import frontend.SysYParser;
 import frontend.Visitor;
 import ir.MyModule;
+
+import java.io.File;
+import java.io.FileWriter;
 import java.util.logging.Logger;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.annotation.Arg;
@@ -15,6 +18,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ParseTree;
 import pass.PassManager;
+import backend.CodeGenManager;
 
 import java.io.IOException;
 import util.Mylogger;
@@ -86,9 +90,15 @@ public class CompilerDriver {
       if (config.isIRMode) {//做到可以同时使用 -o -f 指令，-o的文件进行底层的优化，-f的文件只进行中高层的优化
         //   pm.addpass(/* llvm ir generate */);
       }
-      pm.runMAPasses(/*MAModule mm*/);
+      CodeGenManager cgm=CodeGenManager.getInstance();
+      cgm.load(MyModule.getInstance());
+      pm.runMCPasses(CodeGenManager.getInstance());
       //todo output
-
+      cgm.MachineCodeGeneration();
+      File f =new File(target);
+      FileWriter  fw =new FileWriter(f);
+      fw.append(cgm.genARM());
+      fw.close();
     } catch (HelpScreenException e) {
       //当使用 -h指令时抛出该异常，catch后直接退出。
     } catch (ArgumentParserException e) {

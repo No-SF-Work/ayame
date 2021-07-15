@@ -51,8 +51,12 @@ public class CodeGenManager {
     //ir moudle
     private static MyModule myModule;
 
-    private CodeGenManager(MyModule myModule) {
+    private CodeGenManager() {
         this.myModule = myModule;
+    }
+
+    public void load(MyModule m) {
+        myModule = m;
     }
 
     private static CodeGenManager codeGenManager;
@@ -83,11 +87,11 @@ public class CodeGenManager {
     }
 
     //ir->machinecode
-    public CodeGenManager getInstance(MyModule myModule) {
-        if (this.codeGenManager == null) {
-            this.codeGenManager = new CodeGenManager(myModule);
+    public static CodeGenManager getInstance() {
+        if (codeGenManager == null) {
+            codeGenManager = new CodeGenManager();
         }
-        return this.codeGenManager;
+        return codeGenManager;
     }
 
     public ArrayList<MachineFunction> getMachineFunctions() {
@@ -140,11 +144,11 @@ public class CodeGenManager {
         } else {
             //如果false后继已经在mblist中而true后继不在，那交换位置，尽量让false块在序列化的下一个
             if (isVisit.containsKey(mb.getFalseSucc()) && !isVisit.containsKey(mb.getTrueSucc())) {
-                MachineBlock temp=mb.getFalseSucc();
+                MachineBlock temp = mb.getFalseSucc();
                 mb.setFalseSucc(mb.getTrueSucc());
                 mb.setTrueSucc(temp);
-                assert(mb.getmclist().getLast().getVal() instanceof MCBranch);
-                CondType cond=mb.getmclist().getLast().getVal().getCond();
+                assert (mb.getmclist().getLast().getVal() instanceof MCBranch);
+                CondType cond = mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
             }
             //有两个后继的情况下优先让false后继放到自己后面，处理False后继和只有一种后继的情况相同
@@ -168,7 +172,7 @@ public class CodeGenManager {
                     }
                 }
                 //如果两个后继块都已经在mbList中，本基本块的最后一条指令跳转到True块，还缺一条跳转到False块的指令，加到最后
-                MCJump jump=new MCJump(mb);
+                MCJump jump = new MCJump(mb);
                 jump.setTarget(mb.getFalseSucc());
             } else {
                 MachineCode mcl = mb.getmclist().getLast().getVal();
@@ -324,44 +328,44 @@ public class CodeGenManager {
                 arm += "\n\n.data\n";
                 arm += ".align 4\n";
                 for (GlobalVariable gv : gVs) {
-                    arm+=".global\t"+vMap.get(gv).getName()+"\n";
-                    arm+=vMap.get(gv).getName()+":\n";
+                    arm += ".global\t" + vMap.get(gv).getName() + "\n";
+                    arm += vMap.get(gv).getName() + ":\n";
                     if (gv.getType() instanceof IntegerType) {
-                        arm+="\t.word\t";
-                        assert(gv.init!=null);
-                        arm+=((Constants.ConstantInt)gv.init).getVal();
-                        arm+="\n";
+                        arm += "\t.word\t";
+                        assert (gv.init != null);
+                        arm += ((Constants.ConstantInt) gv.init).getVal();
+                        arm += "\n";
                     } else {
                         assert (gv.getType() instanceof ArrayType);
                         if (gv.init == null) {
-                            int n=1;
-                            ArrayList<Integer> dims=((ArrayType) gv.getType()).getDims();
-                            for(Integer d:dims){
-                                n*=d;
+                            int n = 1;
+                            ArrayList<Integer> dims = ((ArrayType) gv.getType()).getDims();
+                            for (Integer d : dims) {
+                                n *= d;
                             }
-                            arm+="\t.fill\t"+n+",\t4,\t0\n";
+                            arm += "\t.fill\t" + n + ",\t4,\t0\n";
                         } else {
-                            ArrayList<Constant> initValues=((Constants.ConstantArray)gv.init).getConst_arr_();
-                            int lastv=((Constants.ConstantInt)initValues.get(0)).getVal();
-                            int count=0;
-                            for(Constant c:initValues){
-                                int v=((Constants.ConstantInt)c).getVal();
-                                if(v==lastv){
+                            ArrayList<Constant> initValues = ((Constants.ConstantArray) gv.init).getConst_arr_();
+                            int lastv = ((Constants.ConstantInt) initValues.get(0)).getVal();
+                            int count = 0;
+                            for (Constant c : initValues) {
+                                int v = ((Constants.ConstantInt) c).getVal();
+                                if (v == lastv) {
                                     count++;
-                                }else{
-                                    if(count==1){
-                                        arm+="\t.word\t"+lastv+"\n";
-                                    }else{
-                                        arm+="\t.fill"+count+",\t4,\t"+lastv+"\n";
+                                } else {
+                                    if (count == 1) {
+                                        arm += "\t.word\t" + lastv + "\n";
+                                    } else {
+                                        arm += "\t.fill" + count + ",\t4,\t" + lastv + "\n";
                                     }
-                                    lastv=v;
-                                    count=1;
+                                    lastv = v;
+                                    count = 1;
                                 }
                             }
-                            if(count==1){
-                                arm+="\t.word\t"+lastv+"\n";
-                            }else{
-                                arm+="\t.fill"+count+",\t4,\t"+lastv+"\n";
+                            if (count == 1) {
+                                arm += "\t.word\t" + lastv + "\n";
+                            } else {
+                                arm += "\t.fill" + count + ",\t4,\t" + lastv + "\n";
                             }
                         }
 
@@ -373,7 +377,7 @@ public class CodeGenManager {
         return arm;
     }
 
-    private void MachineCodeGeneration() {
+    public void MachineCodeGeneration() {
         ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
         Iterator<GlobalVariable> itgVs = gVs.iterator();
         while (itgVs.hasNext()) {
@@ -386,8 +390,8 @@ public class CodeGenManager {
         Iterator<INode<Function, MyModule>> fIt = fList.iterator();
         HashMap<Function, MachineFunction> fMap = new HashMap<>();
         while (fIt.hasNext()) {
-            Function f=fIt.next().getVal();
-            MachineFunction mf = new MachineFunction(this,f.getName());
+            Function f = fIt.next().getVal();
+            MachineFunction mf = new MachineFunction(this, f.getName());
             fMap.put(f, mf);
         }
         fIt = fList.iterator();
@@ -490,10 +494,10 @@ public class CodeGenManager {
             };
 
             HandlePhi handlePhi = () -> {
-                for(INode<BasicBlock,Function> bbNode:bList) {
+                for (INode<BasicBlock, Function> bbNode : bList) {
                     BasicBlock bb = bbNode.getVal();
                     MachineBlock mbb = bMap.get(bb);
-                    for (MachineBlock predM:mbb.getPred()) {
+                    for (MachineBlock predM : mbb.getPred()) {
                         //prd,succ
                         HashMap<MachineBlock, ArrayList<MachineCode>> map = new HashMap<>();
                         map.put(mbb, new ArrayList<>());
@@ -503,14 +507,14 @@ public class CodeGenManager {
                     }
                     IList<Instruction, BasicBlock> irList = bb.getList();
                     //构造phiTarget到phiSet的映射
-                    for(INode<Instruction,BasicBlock> irNode:irList){
+                    for (INode<Instruction, BasicBlock> irNode : irList) {
                         Instruction ir = irNode.getVal();
                         if (ir.tag == Instruction.TAG_.Phi) {
                             MachineOperand phiTarget = aV.analyzeValue(ir);
                             assert (phiTarget instanceof VirtualReg);
                             HashSet<VirtualReg> phiSet = new HashSet<>();
                             phiSet.add((VirtualReg) phiTarget);
-                            for(Value vv:(((Phi) ir).getIncomingVals())){
+                            for (Value vv : (((Phi) ir).getIncomingVals())) {
                                 MachineOperand phiArg = aV.analyzeValue(vv);
                                 if (phiArg.getState() == MachineOperand.state.imm) {
                                     continue;
@@ -530,7 +534,7 @@ public class CodeGenManager {
                     for (int i = 0; i < predNum; i++) {
                         IList<Instruction, BasicBlock> irrList = bb.getList();
                         HashMap<VirtualReg, VirtualReg> edges = new HashMap<>();
-                        for(INode<Instruction, BasicBlock>irrNode:irrList){
+                        for (INode<Instruction, BasicBlock> irrNode : irrList) {
                             Instruction ir = irrNode.getVal();
                             if (ir.tag == Instruction.TAG_.Phi) {
 //                                MachineOperand phiTarget = aV.analyzeValue(ir,bMap.get(f.getList_().getEntry()));
@@ -882,7 +886,7 @@ public class CodeGenManager {
                         //基址为上一个gep
                         MachineOperand arr = aV.analyzeValue(ir.getOperands().get(0));
                         //获取偏移
-                        MachineOperand off = ani.analyzeNoImm(ir.getOperands().get(2),mb);
+                        MachineOperand off = ani.analyzeNoImm(ir.getOperands().get(2), mb);
                         boolean isOffConst = off.getState() == MachineOperand.state.imm;
                         //获取下一维度长度，即偏移的单位
                         int mult = 4;
