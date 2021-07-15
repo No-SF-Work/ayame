@@ -1195,7 +1195,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var lhs = tmp_;
     for (int i = 1; i < ctx.relExp().size(); i++) {
       visit(ctx.relExp(i));
-      lhs = f.buildBinary(TAG_.Eq, lhs, tmp_, curBB_);
+      if (ctx.eqOp(i - 1).EQ() != null) {
+        lhs = f.buildBinary(TAG_.Eq, lhs, tmp_, curBB_);
+      }
+      if (ctx.eqOp(i - 1).NEQ() != null) {
+        lhs = f.buildBinary(TAG_.Ne, lhs, tmp_, curBB_);
+      }
+
     }
     tmp_ = lhs;
     return null;
