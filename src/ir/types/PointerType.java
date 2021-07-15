@@ -18,4 +18,10 @@ public class PointerType extends Type {
   }
 
   private Type contained;
+
+  @Override
+  public String toString() {
+    return null;
+    //todo
+  }
 }

@@ -54,6 +54,7 @@ public class Function extends Value {
     super(name, type);
     list_ = new IList<>(this);
     node = new INode<>(this);
+    argList_ = new ArrayList<>();
     buildArgs();
   }
 
@@ -62,6 +63,7 @@ public class Function extends Value {
     list_ = new IList<>(this);
     node = new INode<>(this);
     this.node.insertAtEnd(module.__functions);
+    argList_ = new ArrayList<>();
     buildArgs();
   }
 
@@ -70,6 +72,8 @@ public class Function extends Value {
     list_ = new IList<>(this);
     node = new INode<>(this);
     this.node.insertAtEnd(module.__functions);
+    argList_ = new ArrayList<>();
+    buildArgs();
     this.isBuiltin_ = isBuiltin;
   }
 
@@ -99,4 +103,6 @@ public class Function extends Value {
   private INode<Function, MyModule> node;
   private ArrayList<Arg> argList_;//有序参数列表
   private LoopInfo loopInfo; // 函数内的循环信息
+  private boolean hasSideEffect = false;
+  private boolean usedGlobalVariable = false;
 }

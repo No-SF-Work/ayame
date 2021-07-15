@@ -27,4 +27,9 @@ public class IntegerType extends Type {
   }
 
   private int numBits;
+
+  @Override
+  public String toString() {
+    return "i32 ";
+  }
 }

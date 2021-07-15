@@ -525,18 +525,20 @@ public class Visitor extends SysYBaseVisitor<Void> {
         var argList = curFunc_.getArgList();
         for (int i = 0; i < ctx.funcFParam().size(); i++) {
           var p = ctx.funcFParam(i);
-          if (!p.isEmpty()) { //which means this param is  arr
-            var paramList = new ArrayList<Value>();
+          if (!p.L_BRACKT().isEmpty()) { //which means this param is  arr
+            var dimList = new ArrayList<Value>();
             var arrAlloc = f.buildAlloca(curBB_, ptri32Type_);
-            f.buildStore(argList.get(i), arrAlloc, curBB_);
-            paramList.add(CONST0);//第一个置空
+            f.buildStore(argList.get(i), arrAlloc, curBB_);//todo
+            dimList.add(CONST0);//第一个置空
             p.exp().forEach(exp -> {
+              usingInt_ = true;
               visit(exp);
-              paramList.add(tmp_);
+              usingInt_ = false;
+              dimList.add(tmp_);
             });
             scope_.put(p.IDENT().getText(), arrAlloc);
-            scope_.params_.put(ctx.funcFParam(i).IDENT().getText(), paramList);
-            argList.get(i).setBounds(paramList);
+            scope_.params_.put(ctx.funcFParam(i).IDENT().getText(), dimList);
+            argList.get(i).setBounds(dimList);
           } else {
             var alloc = f.getAlloca(i32Type_);
             f.buildStore(argList.get(i), alloc, curBB_);
@@ -823,8 +825,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
 
     if (PTR) {
-      if (!ctx.exp().isEmpty()) {
-        tmpPtr_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
+      if (ctx.exp().isEmpty()) {
+        tmp_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         return null;
       } else {
         var arrayParams = scope_.params_.get(ctx.IDENT().getText());
@@ -1065,17 +1067,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
     } else {
       visit(ctx.unaryExp(0));
       var lhs = tmp_;
-      if (lhs.getType().isI1()) {
-        lhs = f.buildZext(lhs, i32Type_, curBB_);
-      }
       for (var i = 1; i < ctx.unaryExp().size(); i++) {
         visit(ctx.unaryExp(i));
         var rhs = tmp_;
         //cast i1 value 2 i32
         //llvm is a strong typed language
-        if (rhs.getType().isI1()) {
-          rhs = f.buildZext(rhs, i32Type_, curBB_);
-        }
+
         if (ctx.mulOp(i - 1).MUL() != null) {
           lhs = f.buildBinary(TAG_.Mul, lhs, rhs, curBB_);
         }
@@ -1118,16 +1115,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
     } else {
       visit(ctx.mulExp(0));
       var lhs = tmp_;
-      if (lhs.getType().isI1()) {
-        lhs = f.buildZext(lhs, i32Type_, curBB_);
-      }
+
       for (int i = 1; i < ctx.mulExp().size(); i++) {
         visit(ctx.mulExp(i));
         var rhs = tmp_;
 
-        if (rhs.getType().isI1()) {
-          rhs = f.buildZext(rhs, i32Type_, curBB_);
-        }
         if (ctx.addOp(i - 1).PLUS() != null) {
           lhs = f.buildBinary(TAG_.Add, lhs, rhs, curBB_);
         }

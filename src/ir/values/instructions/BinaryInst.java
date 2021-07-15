@@ -6,7 +6,6 @@ import ir.values.Constants.ConstantInt;
 import ir.values.Value;
 
 public class BinaryInst extends Instruction {
-
   //不插
   public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs) {
     super(tag, type, 2);
