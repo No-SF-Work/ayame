@@ -1,4 +1,4 @@
-package pass;
+package pass.ir;
 
 import ir.MyModule;
 import pass.Pass.IRPass;
