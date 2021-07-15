@@ -93,7 +93,7 @@ public class ArrayAliasAnalysis {
     AllocaInst allocaInst = (AllocaInst) paramArray;
     PointerType ptrTy = (PointerType) allocaInst.getAllocatedType();
     if (ptrTy.getContained().isI32()) {
-      dimNum2 = 1;
+      return true;
     } else {
       ArrayType arrayType = (ArrayType) ptrTy.getContained();
       dims2.add(0);
