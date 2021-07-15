@@ -9,8 +9,7 @@ import static backend.machinecodes.ArmAddition.CondType.*;
 public class PeepholeOptimization {
     public enum optType {
         trivial,
-        ifToCond,
-        combineAccess
+        ifToCond
     }
 
     private void ifToCond(CodeGenManager manager) {
@@ -165,39 +164,11 @@ public class PeepholeOptimization {
         }
     }
 
-    private void combineAccess(CodeGenManager manager) {
-        // fixme: ldm, stm
-        for (var func : manager.getMachineFunctions()) {
-            for (var blockEntry : func.getmbList()) {
-                var block = blockEntry.getVal();
-
-                for (var instrEntry : block.getmclist()) {
-                    var instr = instrEntry.getVal();
-
-
-                }
-            }
-        }
-//                    if (instr instanceof MCLoad) {
-//                        var curInstrEntry = instrEntry;
-//                        while (curInstrEntry.getNext() != null &&
-//                                curInstrEntry.getNext().getVal() instanceof MCLoad loadInstr) {
-//
-//                        }
-//                    }
-//
-//                    if (instr instanceof MCStore) {
-//
-//                    }
-    }
-
     public void peepholeOpt(CodeGenManager manager, optType type) {
         if (type.equals(optType.trivial)) {
             trivialPeephole(manager);
         } else if (type.equals(optType.ifToCond)) {
             ifToCond(manager);
-        } else if (type.equals(optType.combineAccess)) {
-            combineAccess(manager);
         }
     }
 }
