@@ -21,7 +21,8 @@ public class PeepholeOptimization {
                 var block = blockEntry.getVal();
                 var lastInstr = block.getmclist().getLast().getVal();
 
-                if (lastInstr instanceof MCBranch brInstr) {
+                if (lastInstr instanceof MCBranch) {
+                    var brInstr = (MCBranch) lastInstr;
                     if (blockEntry.getNext() == null) {
                         continue;
                     }
@@ -63,11 +64,14 @@ public class PeepholeOptimization {
 
                             for (var instrEntry2 : nxtBlock.getmclist()) {
                                 var instr2 = instrEntry2.getVal();
-                                if (instr2 instanceof MCLoad loadInstr) {
+                                if (instr2 instanceof MCLoad) {
+                                    MCLoad loadInstr = (MCLoad) instr2;
                                     loadInstr.setCond(getOppoCond.apply(loadInstr.getCond()));
-                                } else if (instr2 instanceof MCStore storeInstr) {
+                                } else if (instr2 instanceof MCStore) {
+                                    MCStore storeInstr = (MCStore) instr2;
                                     storeInstr.setCond(getOppoCond.apply(storeInstr.getCond()));
-                                } else if (instr2 instanceof MCFma fmaInstr) {
+                                } else if (instr2 instanceof MCFma) {
+                                    MCFma fmaInstr = (MCFma) instr2;
                                     fmaInstr.setCond(getOppoCond.apply(fmaInstr.getCond()));
                                 }
                             }
@@ -87,8 +91,9 @@ public class PeepholeOptimization {
                     var instrEntry = instrEntryIter.next();
                     var instr = instrEntry.getVal();
 
-                    if (instr instanceof MCBinary binInstr) {
+                    if (instr instanceof MCBinary) {
                         // add(sub) dst dst 0 (to be remove)
+                        MCBinary binInstr = (MCBinary) instr;
                         boolean isAddSub = binInstr.getTag() == MachineCode.TAG.Add ||
                                 binInstr.getTag() == MachineCode.TAG.Sub;
                         boolean isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
@@ -99,10 +104,11 @@ public class PeepholeOptimization {
                         }
                     }
 
-                    if (instr instanceof MCJump jumpInstr) {
+                    if (instr instanceof MCJump) {
                         // B1:
                         // jump target (to be remove)
                         // target:
+                        MCJump jumpInstr = (MCJump) instr;
                         boolean isSameTargetNxtBB = jumpInstr.getTarget().equals(block.getTrueSucc());
 
                         if (isSameTargetNxtBB) {
@@ -110,14 +116,16 @@ public class PeepholeOptimization {
                         }
                     }
 
-                    if (instr instanceof MCStore storeInstr) {
+                    if (instr instanceof MCStore) {
                         // str a, [b, x]
                         // ldr c, [b, x]
                         // =>
                         // mov c, a
+                        var storeInstr = (MCStore) instr;
                         var nxtInstrEntry = instrEntry.getNext();
 
-                        if (nxtInstrEntry != null && nxtInstrEntry.getVal() instanceof MCLoad loadInstr) {
+                        if (nxtInstrEntry != null && nxtInstrEntry.getVal() instanceof MCLoad) {
+                            MCLoad loadInstr = (MCLoad) nxtInstrEntry.getVal();
                             boolean isSameAddr = loadInstr.getAddr().equals(storeInstr.getAddr());
                             boolean isSameOffset = loadInstr.getOffset().equals(storeInstr.getOffset());
                             boolean isSameShift = loadInstr.getShift().equals(storeInstr.getShift());
@@ -134,7 +142,8 @@ public class PeepholeOptimization {
                         }
                     }
 
-                    if (instr instanceof MCMove moveInstr) {
+                    if (instr instanceof MCMove) {
+                        MCMove moveInstr = (MCMove) instr;
                         var preInstrEntry = instrEntry.getPrev();
                         var nxtInstrEntry = instrEntry.getNext();
 
@@ -143,12 +152,13 @@ public class PeepholeOptimization {
                             // move a a (to be remove)
                             instrEntryIter.remove();
                         } else {
-                            if (nxtInstrEntry.getVal() instanceof MCMove nxtMove) {
+                            if (nxtInstrEntry.getVal() instanceof MCMove) {
                                 // move a b (to be remove)
                                 // move a c
                                 // Warning: the following situation should not be optimized
                                 // move a b
                                 // move a a
+                                var nxtMove = (MCMove) nxtInstrEntry.getVal();
                                 boolean isSameDst = nxtMove.getDst().equals(moveInstr.getDst());
                                 boolean nxtInstrNotIdentity = !nxtMove.getRhs().equals(nxtMove.getDst());
                                 if (isSameDst && nxtInstrNotIdentity) {
@@ -156,11 +166,12 @@ public class PeepholeOptimization {
                                 }
                             }
 
-                            if (preInstrEntry.getVal() instanceof MCMove preMove) {
+                            if (preInstrEntry.getVal() instanceof MCMove) {
                                 // move a b
                                 // move b a
                                 // =>
                                 // move a b
+                                MCMove preMove = (MCMove) preInstrEntry.getVal();
                                 boolean isSameA = preMove.getDst().equals(moveInstr.getRhs());
                                 boolean isSameB = preMove.getRhs().equals(moveInstr.getDst());
                                 if (isSameA && isSameB) {

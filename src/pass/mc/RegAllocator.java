@@ -91,7 +91,8 @@ public class RegAllocator {
     }
 
     private void replaceReg(MachineCode instr, MachineOperand origin, MachineOperand target) {
-        if (instr instanceof MCBinary binaryInstr) {
+        if (instr instanceof MCBinary) {
+            var binaryInstr = (MCBinary) instr;
             if (binaryInstr.getDst().equals(origin)) {
                 binaryInstr.setDst(target);
             } else if (binaryInstr.getLhs().equals(origin)) {
@@ -100,14 +101,11 @@ public class RegAllocator {
                 binaryInstr.setRhs(target);
             }
         } else if (instr instanceof MCBranch ) {
-            return;
-        } else if (instr instanceof MCCall callInstr) {
-            return;
-        } else if (instr instanceof MCComment commentInstr) {
-            return;
-        } else if (instr instanceof MCCompare compareInstr) {
-            return;
-        } else if (instr instanceof MCFma fmaInstr) {
+        } else if (instr instanceof MCCall) {
+        } else if (instr instanceof MCComment) {
+        } else if (instr instanceof MCCompare) {
+        } else if (instr instanceof MCFma) {
+            var fmaInstr = (MCFma) instr;
             if (fmaInstr.getDst().equals(origin)) {
                 fmaInstr.setDst(target);
             } else if (fmaInstr.getLhs().equals(origin)) {
@@ -117,13 +115,14 @@ public class RegAllocator {
             } else if (fmaInstr.getAcc().equals(origin)) {
                 fmaInstr.setAcc(target);
             }
-        } else if (instr instanceof MCGlobal globalInstr) {
+        } else if (instr instanceof MCGlobal) {
+            var globalInstr = (MCGlobal) instr;
             if (globalInstr.getDst().equals(origin)) {
                 globalInstr.setDst(target);
             }
-        } else if (instr instanceof MCJump jumpInstr) {
-            return;
-        } else if (instr instanceof MCLoad loadInstr) {
+        } else if (instr instanceof MCJump) {
+        } else if (instr instanceof MCLoad) {
+            var loadInstr = (MCLoad) instr;
             if (loadInstr.getAddr().equals(origin)) {
                 loadInstr.setAddr(target);
             } else if (loadInstr.getOffset().equals(origin)) {
@@ -131,7 +130,8 @@ public class RegAllocator {
             } else if (loadInstr.getDst().equals(origin)) {
                 loadInstr.setDst(target);
             }
-        } else if (instr instanceof MCLongMul longMulInstr) {
+        } else if (instr instanceof MCLongMul) {
+            var longMulInstr = (MCLongMul) instr;
             if (longMulInstr.getDst().equals(origin)) {
                 longMulInstr.setDst(target);
             } else if (longMulInstr.getLhs().equals(origin)) {
@@ -139,14 +139,16 @@ public class RegAllocator {
             } else if (longMulInstr.getRhs().equals(origin)) {
                 longMulInstr.setRhs(target);
             }
-        } else if (instr instanceof MCMove moveInstr) {
+        } else if (instr instanceof MCMove) {
+            var moveInstr = (MCMove) instr;
             if (moveInstr.getDst().equals(origin)) {
                 moveInstr.setDst(target);
             }
             if (moveInstr.getRhs().equals(origin)) {
                 moveInstr.setRhs(target);
             }
-        } else if (instr instanceof MCStore storeInstr) {
+        } else if (instr instanceof MCStore) {
+            var storeInstr = (MCStore) instr;
             if (storeInstr.getAddr().equals(origin)) {
                 storeInstr.setAddr(target);
             } else if (storeInstr.getOffset().equals(origin)) {
@@ -225,7 +227,8 @@ public class RegAllocator {
                             var defs = instr.getDef();
                             var uses = instr.getUse();
 
-                            if (instr instanceof MCMove mcInstr) {
+                            if (instr instanceof MCMove) {
+                                var mcInstr = (MCMove) instr;
                                 var dst = mcInstr.getDst();
                                 var rhs = mcInstr.getRhs();
                                 if (needsColor.apply(dst) && needsColor.apply(rhs) &&
@@ -494,9 +497,11 @@ public class RegAllocator {
 
                             Consumer<MachineCode> fixOffset = inst -> {
                                 if (offset < (1 << 12)) {
-                                    if (inst instanceof MCLoad loadInstr) {
+                                    if (inst instanceof MCLoad) {
+                                        var loadInstr = (MCLoad) inst;
                                         loadInstr.setOffset(offsetOperand);
-                                    } else if (inst instanceof MCStore storeInstr) {
+                                    } else if (inst instanceof MCStore) {
+                                        var storeInstr = (MCStore) inst;
                                         storeInstr.setOffset(offsetOperand);
                                     }
                                 } else {
@@ -507,9 +512,11 @@ public class RegAllocator {
                                     var newVReg = new VirtualReg();
                                     moveInstr.setDst(newVReg);
 
-                                    if (inst instanceof MCLoad loadInstr) {
+                                    if (inst instanceof MCLoad) {
+                                        var loadInstr = (MCLoad) inst;
                                         loadInstr.setOffset(newVReg);
-                                    } else if (inst instanceof MCStore storeInstr) {
+                                    } else if (inst instanceof MCStore) {
+                                        var storeInstr = (MCStore) inst;
                                         storeInstr.setOffset(newVReg);
                                     }
                                 }
