@@ -127,6 +127,11 @@ public class BinaryInst extends Instruction {
     return this.tag == TAG_.Or;
   }
 
+  public boolean isCond(){
+    return this.tag == TAG_.Lt||this.tag == TAG_.Le||this.tag == TAG_.Gt||
+            this.tag == TAG_.Ge||this.tag == TAG_.Eq||this.tag == TAG_.Ne;
+  }
+
   @Override
   public String toString() {
     switch (this.tag) {

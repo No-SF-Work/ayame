@@ -373,7 +373,7 @@ public class CodeGenManager {
         return arm;
     }
 
-    private void MachineCodeGeneration() {
+    public void MachineCodeGeneration() {
         ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
         Iterator<GlobalVariable> itgVs = gVs.iterator();
         while (itgVs.hasNext()) {
@@ -490,13 +490,10 @@ public class CodeGenManager {
             };
 
             HandlePhi handlePhi = () -> {
-                Iterator<INode<BasicBlock, Function>> bItt = bList.iterator();
-                while (bItt.hasNext()) {
-                    BasicBlock bb = bItt.next().getVal();
+                for(INode<BasicBlock,Function> bbNode:bList) {
+                    BasicBlock bb = bbNode.getVal();
                     MachineBlock mbb = bMap.get(bb);
-                    Iterator<MachineBlock> mbItt = mbb.getPred().iterator();
-                    while (mbItt.hasNext()) {
-                        MachineBlock predM = mbItt.next();
+                    for (MachineBlock predM:mbb.getPred()) {
                         //prd,succ
                         HashMap<MachineBlock, ArrayList<MachineCode>> map = new HashMap<>();
                         map.put(mbb, new ArrayList<>());
@@ -505,18 +502,16 @@ public class CodeGenManager {
 
                     }
                     IList<Instruction, BasicBlock> irList = bb.getList();
-                    Iterator<INode<Instruction, BasicBlock>> irIt = irList.iterator();
                     //构造phiTarget到phiSet的映射
-                    while (irIt.hasNext()) {
-                        Instruction ir = irIt.next().getVal();
+                    for(INode<Instruction,BasicBlock> irNode:irList){
+                        Instruction ir = irNode.getVal();
                         if (ir.tag == Instruction.TAG_.Phi) {
                             MachineOperand phiTarget = aV.analyzeValue(ir);
                             assert (phiTarget instanceof VirtualReg);
-                            Iterator<Value> vIt = ((Phi) ir).getIncomingVals().iterator();
                             HashSet<VirtualReg> phiSet = new HashSet<>();
                             phiSet.add((VirtualReg) phiTarget);
-                            while (vIt.hasNext()) {
-                                MachineOperand phiArg = aV.analyzeValue(vIt.next());
+                            for(Value vv:(((Phi) ir).getIncomingVals())){
+                                MachineOperand phiArg = aV.analyzeValue(vv);
                                 if (phiArg.getState() == MachineOperand.state.imm) {
                                     continue;
                                 }
@@ -534,10 +529,9 @@ public class CodeGenManager {
                     //遍历该块的所有pred块
                     for (int i = 0; i < predNum; i++) {
                         IList<Instruction, BasicBlock> irrList = bb.getList();
-                        Iterator<INode<Instruction, BasicBlock>> irrIt = irrList.iterator();
                         HashMap<VirtualReg, VirtualReg> edges = new HashMap<>();
-                        while (irrIt.hasNext()) {
-                            Instruction ir = irIt.next().getVal();
+                        for(INode<Instruction, BasicBlock>irrNode:irrList){
+                            Instruction ir = irrNode.getVal();
                             if (ir.tag == Instruction.TAG_.Phi) {
 //                                MachineOperand phiTarget = aV.analyzeValue(ir,bMap.get(f.getList_().getEntry()));
                                 MachineOperand phiTarget = aV.analyzeValue(ir);
@@ -596,7 +590,6 @@ public class CodeGenManager {
             };
             //处理phi指令
             handlePhi.handlephi();
-            HashMap<Instruction, Pair<MachineCode, ArmAddition.CondType>> condMap = new HashMap<>();
             for (bIt = bList.iterator(); bIt.hasNext(); ) {
                 BasicBlock bb = bIt.next().getVal();
                 MachineBlock mb = bMap.get(bb);
@@ -884,12 +877,12 @@ public class CodeGenManager {
 
                     } else if (ir.tag == Instruction.TAG_.GEP) {
                         //最后一个gep应该被优化合并到load/store里
-                        assert (!(ir.getType() instanceof IntegerType));
+//                        assert (!(ir.getType() instanceof IntegerType));
 
                         //基址为上一个gep
                         MachineOperand arr = aV.analyzeValue(ir.getOperands().get(0));
                         //获取偏移
-                        MachineOperand off = aV.analyzeValue(ir.getOperands().get(2));
+                        MachineOperand off = ani.analyzeNoImm(ir.getOperands().get(2),mb);
                         boolean isOffConst = off.getState() == MachineOperand.state.imm;
                         //获取下一维度长度，即偏移的单位
                         int mult = 4;
@@ -920,20 +913,20 @@ public class CodeGenManager {
                             add.setRhs(off);
                             add.setShift(ArmAddition.ShiftType.Lsl, calcCTZ(mult));
                         } else {
-                            MCFma fma = new MCFma(mb);
-                            fma.setAcc(arr);
                             MCMove mv = new MCMove(mb);
+                            MCMove mv1 = new MCMove(mb);
+                            MCFma fma = new MCFma(mb);
                             VirtualReg v = new VirtualReg();
                             mf.addVirtualReg(v);
                             mv.setDst(v);
                             mv.setRhs(new MachineOperand(mult));
-                            fma.setRhs(mv.getDst());
-                            fma.setLhs(off);
-                            MCMove mv1 = new MCMove(mb);
                             VirtualReg v1 = new VirtualReg();
                             mf.addVirtualReg(v1);
                             mv1.setDst(v1);
                             mv1.setRhs(arr);
+                            fma.setRhs(v);
+                            fma.setLhs(off);
+                            fma.setAcc(arr);
                             fma.setDst(v1);
                             fma.setAdd(true);
                             fma.setSign(false);
@@ -1058,9 +1051,5 @@ public class CodeGenManager {
 
     //pred->(succ->MCs)
     private HashMap<MachineBlock, HashMap<MachineBlock, ArrayList<MachineCode>>> waiting = new HashMap<>();
-//
-//    private MachineOperand analyzeValue(Value v, MachineFunction mf, Function f, HashMap<BasicBlock, MachineBlock> bMap) {
-//
-//    }
 
 }
