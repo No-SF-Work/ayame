@@ -23,6 +23,9 @@ public class BasicBlock extends Value {
     //所以这里直接new了2个container
     this.predecessor_ = new ArrayList<>();
     this.successor_ = new ArrayList<>();
+    this.idoms = new ArrayList<>();
+    this.domers = new ArrayList<>();
+    this.dominanceFrontier = new ArrayList<>();
     list_ = new IList<>(this);
     node_ = new INode<>(this);
   }
@@ -32,6 +35,9 @@ public class BasicBlock extends Value {
     super(name, LabelType.getType());
     this.predecessor_ = new ArrayList<>();
     this.successor_ = new ArrayList<>();
+    this.idoms = new ArrayList<>();
+    this.domers = new ArrayList<>();
+    this.dominanceFrontier = new ArrayList<>();
     this.parent = parent;
     list_ = new IList<>(this);
     node_ = new INode<>(this);

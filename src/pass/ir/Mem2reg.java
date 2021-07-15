@@ -50,7 +50,10 @@ public class Mem2reg implements IRPass {
     log.info("Running pass : mem2reg");
 
     for (INode<Function, MyModule> funcNode : m.__functions) {
-      runMem2reg(funcNode.getVal());
+      Function func = funcNode.getVal();
+      if (!func.isBuiltin_()) {
+        runMem2reg(func);
+      }
     }
   }
 
