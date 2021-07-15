@@ -136,31 +136,36 @@ public class PeepholeOptimization {
 
                     if (instr instanceof MCMove moveInstr) {
                         var preInstrEntry = instrEntry.getPrev();
+                        var nxtInstrEntry = instrEntry.getNext();
 
                         // fixme
                         if (moveInstr.getDst().equals(moveInstr.getRhs())) {
                             // move a a (to be remove)
                             instrEntryIter.remove();
-                        } else if (preInstrEntry.getVal() instanceof MCMove preMove) {
-                            // move a b (to be remove)
-                            // move a c
-                            // Warning: the following situation should not be optimized
-                            // move a b
-                            // move a a
-                            boolean isSameDst = preMove.getDst().equals(moveInstr.getDst());
-                            boolean preInstrNotIdentity = preMove.getRhs().equals(preMove.getDst());
-                            if (isSameDst && preInstrNotIdentity) {
-                                instrEntryIter.remove();
+                        } else {
+                            if (nxtInstrEntry.getVal() instanceof MCMove nxtMove) {
+                                // move a b (to be remove)
+                                // move a c
+                                // Warning: the following situation should not be optimized
+                                // move a b
+                                // move a a
+                                boolean isSameDst = nxtMove.getDst().equals(moveInstr.getDst());
+                                boolean nxtInstrNotIdentity = !nxtMove.getRhs().equals(nxtMove.getDst());
+                                if (isSameDst && nxtInstrNotIdentity) {
+                                    instrEntryIter.remove();
+                                }
                             }
 
-                            // move a b
-                            // move b a
-                            // =>
-                            // move a b
-                            boolean isSameA = moveInstr.getDst().equals(preMove.getRhs());
-                            boolean isSameB = moveInstr.getRhs().equals(preMove.getDst());
-                            if (isSameA && isSameB) {
-                                preInstrEntry.removeSelf();
+                            if (preInstrEntry.getVal() instanceof MCMove preMove) {
+                                // move a b
+                                // move b a
+                                // =>
+                                // move a b
+                                boolean isSameA = preMove.getDst().equals(moveInstr.getRhs());
+                                boolean isSameB = preMove.getRhs().equals(moveInstr.getDst());
+                                if (isSameA && isSameB) {
+                                    instrEntryIter.remove();
+                                }
                             }
                         }
                     }
