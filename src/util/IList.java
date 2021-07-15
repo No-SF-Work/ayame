@@ -77,6 +77,23 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
             tmp = tmp.next;
             return tmp;
         }
+
+        @Override
+        public void remove() {
+            var prev = tmp.prev;
+            var next = tmp.next;
+            if (prev != null) {
+                prev.next = next;
+            } else {
+                tmp.getParent().setEntry(next);
+            }
+
+            if (next != null) {
+                next.prev = prev;
+            } else {
+                tmp.getParent().setLast(prev);
+            }
+        }
     }
 
     public static class INode<T, P> {
