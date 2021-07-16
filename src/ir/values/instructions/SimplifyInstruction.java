@@ -12,55 +12,27 @@ public class SimplifyInstruction {
   public static MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
 
   public static Value simplifyInstruction(Instruction instruction) {
-    Value result = instruction;
-    switch (instruction.tag) {
-      case Add:
-        result = simplifyAddInst(instruction);
-        break;
-      case Sub:
-        result = simplifySubInst(instruction);
-        break;
-      case Mul:
-        result = simplifyMulInst(instruction);
-        break;
-      case Div:
-        result = simplifyDivInst(instruction);
-        break;
-      case And:
-        result = simplifyAndInst(instruction);
-        break;
-      case Or:
-        result = simplifyOrInst(instruction);
-        break;
-      case GEP:
-        result = simplifyGEPInst(instruction);
-        break;
-      case Phi:
-        result = simplifyPhiInst(instruction);
-        break;
-      case Alloca:
-        result = simplifyAllcoaInst(instruction);
-        break;
-      case Load:
-        result = simplifyLoadInst(instruction);
-        break;
-      case Call:
-        result = simplifyCallInst(instruction);
-        break;
-    }
-    return result;
+    return switch (instruction.tag) {
+      case Add -> simplifyAddInst(instruction);
+      case Sub -> simplifySubInst(instruction);
+      case Mul -> simplifyMulInst(instruction);
+      case Div -> simplifyDivInst(instruction);
+      case And -> simplifyAndInst(instruction);
+      case Or -> simplifyOrInst(instruction);
+      case GEP -> simplifyGEPInst(instruction);
+      case Phi -> simplifyPhiInst(instruction);
+      case Alloca -> simplifyAllcoaInst(instruction);
+      case Load -> simplifyLoadInst(instruction);
+      case Call -> simplifyCallInst(instruction);
+      default -> instruction;
+    };
   }
 
   public static Boolean isCommutativeOp(TAG_ opTag) {
-    switch (opTag) {
-      case Add:
-      case Mul:
-      case And:
-      case Or:
-        return true;
-      default:
-        return false;
-    }
+    return switch (opTag) {
+      case Add, Mul, And, Or -> true;
+      default -> false;
+    };
   }
 
   public static Value foldConstant(TAG_ opTag, Value lhs, Value rhs) {
@@ -131,9 +103,53 @@ public class SimplifyInstruction {
       }
     }
 
-    // TODO X + (Y - X) -> Y or (Y - X) + X -> Y
+    if (rhs instanceof BinaryInst && ((Instruction) rhs).tag == TAG_.Sub) {
+      BinaryInst subInst = (BinaryInst) rhs;
+      if (subInst.getOperands().get(1) == lhs) {
+        // X + (Y - X) -> Y
+        return subInst.getOperands().get(0);
+      } else {
+        // X + (Y - Z) -> (X + Y) - Z or (X - Z) + Y
+        var subLhs = subInst.getOperands().get(0);
+        var subRhs = subInst.getOperands().get(1);
+        BinaryInst tmpInst = new BinaryInst(TAG_.Add, factory.getI32Ty(), lhs, subLhs);
+        Value simpleAdd = simplifyAddInst(tmpInst);
+        if (simpleAdd != tmpInst) {
+          return simplifySubInst(new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subRhs));
+        }
 
-    // TODO SimplifyAssociativeBinOp
+        tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), lhs, subRhs);
+        Value simpleSub = simplifySubInst(tmpInst);
+        if (simpleSub != tmpInst) {
+          return simplifyAddInst(new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subLhs));
+        }
+      }
+    }
+
+    if (lhs instanceof BinaryInst && ((Instruction) lhs).tag == TAG_.Sub) {
+      BinaryInst subInst = (BinaryInst) lhs;
+      if (subInst.getOperands().get(1) == rhs) {
+        // (Y - X) + X -> Y
+        return subInst.getOperands().get(0);
+      } else {
+        // (X - Y) + Z -> (X + Z) - Y or (Z - Y) + X
+        var subLhs = subInst.getOperands().get(0);
+        var subRhs = subInst.getOperands().get(1);
+        BinaryInst tmpInst = new BinaryInst(TAG_.Add, factory.getI32Ty(), subLhs, rhs);
+        Value simpleAdd = simplifyAddInst(tmpInst);
+        if (simpleAdd != tmpInst) {
+          return simplifySubInst(new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subRhs));
+        }
+
+        tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), rhs, subRhs);
+        Value simpleSub = simplifySubInst(tmpInst);
+        if (simpleSub != tmpInst) {
+          return simplifyAddInst(new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleAdd, subLhs));
+        }
+      }
+    }
+
+    // TODO 加法结合律优化，共4种
 
     return inst;
   }
@@ -170,9 +186,75 @@ public class SimplifyInstruction {
 
     // 要做吗？ 0 - rhs -> rhs if rhs is 0 or the minimum signed value.
 
-    // TODO (X + Y) - Z -> X + (Y - Z) or Y + (X - Z) if everything simplifies.
-    // TODO X - (Y + Z) -> (X - Y) - Z or (X - Z) - Y if everything simplifies.
-    // TODO Z - (X - Y) -> (Z - X) + Y if everything simplifies.
+    if (lhs instanceof BinaryInst) {
+      switch (((Instruction) lhs).tag) {
+        // (X + Y) - Z -> X + (Y - Z) or Y + (X - Z)
+        case Add -> {
+          BinaryInst addInst = (BinaryInst) lhs;
+          for (var i = 0; i < 2; i++) {
+            var x = addInst.getOperands().get(i);
+            BinaryInst tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), x, rhs);
+            Value simpleSub = simplifySubInst(tmpInst);
+            if (simpleSub != tmpInst) {
+              return simplifyAddInst(
+                  new BinaryInst(TAG_.Add, factory.getI32Ty(), addInst.getOperands().get(1 - i),
+                      simpleSub));
+            }
+          }
+
+        }
+
+        // (X - Y) - Z -> (X - Z) - Y or X - (Y + Z)
+        case Sub -> {
+          BinaryInst subInst = (BinaryInst) lhs;
+          var subLhs = subInst.getOperands().get(0);
+          var subRhs = subInst.getOperands().get(1);
+          BinaryInst tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), subLhs, rhs);
+          Value simpleSub = simplifySubInst(tmpInst);
+          if (simpleSub != tmpInst) {
+            return simplifySubInst(new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleSub, subRhs));
+          }
+
+          tmpInst = new BinaryInst(TAG_.Add, factory.getI32Ty(), subRhs, rhs);
+          Value simpleAdd = simplifyAddInst(tmpInst);
+          if (simpleAdd != tmpInst) {
+            return simplifySubInst(new BinaryInst(TAG_.Sub, factory.getI32Ty(), subLhs, simpleAdd));
+          }
+        }
+      }
+    }
+
+    if (rhs instanceof BinaryInst) {
+      switch (((Instruction) rhs).tag) {
+        // X - (Y + Z) -> (X - Y) - Z or (X - Z) - Y if everything simplifies.
+        case Add -> {
+          var addInst = (BinaryInst) rhs;
+          for (var i = 0; i < 2; i++) {
+            var x = addInst.getOperands().get(i);
+            BinaryInst tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), lhs, x);
+            Value simpleSub = simplifySubInst(tmpInst);
+            if (simpleSub != tmpInst) {
+              return simplifySubInst(new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleSub,
+                  addInst.getOperands().get(1 - i)));
+            }
+          }
+        }
+
+        // Z - (X - Y) -> (Z - X) + Y if everything simplifies.
+        case Sub -> {
+          var subInst = (BinaryInst) rhs;
+          var subLhs = subInst.getOperands().get(0);
+          var subRhs = subInst.getOperands().get(1);
+          BinaryInst tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), lhs, subLhs);
+          Value simpleSub = simplifySubInst(tmpInst);
+          if (simpleSub != tmpInst) {
+            return simplifyAddInst(new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subRhs));
+          }
+        }
+      }
+    }
+
+    //
 
     return inst;
   }
@@ -213,8 +295,8 @@ public class SimplifyInstruction {
       }
     }
 
-    // TODO SimplifyAssociativeBinOp
-    // TODO expandCommutativeBinOp
+    // TODO 乘法结合律优化，共4种
+    // TODO 乘法分配律优化
 
     return inst;
   }

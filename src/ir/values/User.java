@@ -120,7 +120,7 @@ public abstract class User extends Value {
   /**
    * 将自己从所有Operand的Uselist中删除
    */
-  protected void removeUsesOfOPs() {
+  public void removeUsesOfOPs() {
     for (Value operand : operands) {
       operand.removeUseByUser(this);
     }
