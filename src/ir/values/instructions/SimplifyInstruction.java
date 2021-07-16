@@ -21,7 +21,7 @@ public class SimplifyInstruction {
       case Or -> simplifyOrInst(instruction);
       case GEP -> simplifyGEPInst(instruction);
       case Phi -> simplifyPhiInst(instruction);
-      case Alloca -> simplifyAllcoaInst(instruction);
+      case Alloca -> simplifyAllocaInst(instruction);
       case Load -> simplifyLoadInst(instruction);
       case Call -> simplifyCallInst(instruction);
       default -> instruction;
@@ -83,7 +83,7 @@ public class SimplifyInstruction {
     // lhs + rhs == 0
     // 1. lhs = sub(0, rhs) or rhs = sub(0, lhs)
     // 2. lhs = sub(a, b) and rhs = sub(b, a)
-    if (lhs.isInstruction() && rhs.isInstruction()) {
+    if (lhs instanceof Instruction && rhs instanceof Instruction) {
       Instruction ilhs = (Instruction) lhs;
       Instruction irhs = (Instruction) rhs;
       if (ilhs.tag == TAG_.Sub && irhs.tag == TAG_.Sub) {
@@ -334,7 +334,7 @@ public class SimplifyInstruction {
     return inst;
   }
 
-  public static Value simplifyAllcoaInst(Instruction inst) {
+  public static Value simplifyAllocaInst(Instruction inst) {
     return inst;
   }
 
