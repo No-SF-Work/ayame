@@ -251,11 +251,10 @@ public class RegAllocator implements MCPass {
 
                                     worklistMoves.add(mcInstr);
                                 }
-
-                                defs.stream().filter(needsColor::apply).forEach(live::add);
-                                defs.stream().filter(needsColor::apply).forEach(d -> live.forEach(l -> addEdge.accept(l, d)));
-                                // todo: [heuristic] add loop cnt
                             }
+                            defs.stream().filter(needsColor::apply).forEach(live::add);
+                            defs.stream().filter(needsColor::apply).forEach(d -> live.forEach(l -> addEdge.accept(l, d)));
+                            // todo: [heuristic] add loop cnt
                         }
                     }
                 };
@@ -271,7 +270,7 @@ public class RegAllocator implements MCPass {
                 Function<MachineOperand, Boolean> moveRelated = n -> !nodeMoves.apply(n).isEmpty();
 
                 Runnable makeWorklist = () -> func.getVRegMap().values().forEach(vreg -> {
-                    if (degree.get(vreg) >= K) {
+                    if (degree.getOrDefault(vreg, 0) >= K) {
                         spillWorklist.add(vreg);
                     } else if (moveRelated.apply(vreg)) {
                         freezeWorklist.add(vreg);
@@ -429,7 +428,7 @@ public class RegAllocator implements MCPass {
                         var n = selectStack.pop();
                         var okColors = new HashSet<>(allocatable);
 
-                        adjList.get(n).forEach(w -> {
+                        adjList.getOrDefault(n, new HashSet<>()).forEach(w -> {
                             var a = getAlias.apply(w);
                             if (allocated.contains(a) || a.isPrecolored()) {
                                 assert a instanceof PhyReg;
@@ -444,6 +443,7 @@ public class RegAllocator implements MCPass {
                         } else {
                             var color = okColors.iterator().next();
                             colored.put(n, color);
+                            allocated.add(color);
                         }
                     }
 

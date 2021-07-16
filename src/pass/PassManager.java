@@ -21,7 +21,7 @@ public class PassManager {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new Mem2reg());
 
-//    mcPasses.add(new RegAllocator());
+    mcPasses.add(new RegAllocator());
 
   }
 
