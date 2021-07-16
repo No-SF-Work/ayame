@@ -172,6 +172,7 @@ public class RegAllocator implements MCPass {
                     .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
 
             var done = false;
+            var allocated = new HashSet<MachineOperand>();
 
             while (!done) {
                 var liveInfoMap = livenessAnalysis(func);
@@ -190,7 +191,6 @@ public class RegAllocator implements MCPass {
                 var worklistMoves = new HashSet<MCMove>();
                 var activeMoves = new HashSet<MCMove>();
                 // maybe removed
-                var allocated = new HashSet<MachineOperand>();
                 var coalescedMoves = new HashSet<MCMove>();
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
@@ -431,10 +431,15 @@ public class RegAllocator implements MCPass {
                         adjList.getOrDefault(n, new HashSet<>()).forEach(w -> {
                             var a = getAlias.apply(w);
                             if (allocated.contains(a) || a.isPrecolored()) {
-                                assert a instanceof PhyReg;
-                                okColors.remove(a);
+                                var color = colored.get(a);
+                                assert color instanceof PhyReg;
+                                okColors.remove(color);
                             } else if (a instanceof VirtualReg) {
-                                colored.remove(a);
+                                if (colored.containsKey(a)) {
+                                    var color = colored.get(a);
+                                    assert color instanceof PhyReg;
+                                    okColors.remove(color);
+                                }
                             }
                         });
 
@@ -443,7 +448,7 @@ public class RegAllocator implements MCPass {
                         } else {
                             var color = okColors.iterator().next();
                             colored.put(n, color);
-                            allocated.add(color);
+                            allocated.add(n);
                         }
                     }
 
@@ -465,10 +470,13 @@ public class RegAllocator implements MCPass {
 
                         for (var instrEntry : block.getmclist()) {
                             var instr = instrEntry.getVal();
-                            instr.getDef().stream().filter(colored::containsKey)
-                                    .forEach(origin -> replaceReg(instr, origin, colored.get(origin)));
-                            instr.getUse().stream().filter(colored::containsKey)
-                                    .forEach(origin -> replaceReg(instr, origin, colored.get(origin)));
+                            var defs = new ArrayList<>(instr.getDef());
+                            var uses = new ArrayList<>(instr.getUse());
+
+                            defs.stream().filter(colored::containsKey)
+                                    .forEach(def -> replaceReg(instr, def, colored.get(def)));
+                            uses.stream().filter(colored::containsKey)
+                                    .forEach(use -> replaceReg(instr, use, colored.get(use)));
                         }
                     }
                 };
@@ -562,8 +570,9 @@ public class RegAllocator implements MCPass {
                             int cntInstr = 0;
                             for (var instrEntry : block.getmclist()) {
                                 var instr = instrEntry.getVal();
-
-                                instr.getDef().stream().filter(def -> def.equals(n)).forEach(def -> {
+                                var defs = new HashSet<>(instr.getDef());
+                                var uses = new HashSet<>(instr.getUse());
+                                defs.stream().filter(def -> def.equals(n)).forEach(def -> {
                                     if (ref.vreg == null) {
                                         ref.vreg = new VirtualReg();
                                         func.addVirtualReg(ref.vreg);
@@ -573,7 +582,7 @@ public class RegAllocator implements MCPass {
                                     ref.lastDef = instr;
                                 });
 
-                                instr.getUse().stream().filter(use -> use.equals(n)).forEach(use -> {
+                                uses.stream().filter(use -> use.equals(n)).forEach(use -> {
                                     if (ref.vreg == null) {
                                         ref.vreg = new VirtualReg();
                                         func.addVirtualReg(ref.vreg);
