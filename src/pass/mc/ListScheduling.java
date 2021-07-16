@@ -3,6 +3,7 @@ package pass.mc;
 import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.PhyReg;
+import pass.Pass;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +13,12 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
-public class ListScheduling {
+public class ListScheduling implements Pass.MCPass {
+    @Override
+    public String getName() {
+        return "ListScheduling";
+    }
+
     enum A72FUType {
         Branch, Integer, Multiple, Load, Store, FP
     }
@@ -242,7 +248,7 @@ public class ListScheduling {
         return nodes;
     }
 
-    public void list_scheduling(CodeGenManager manager) {
+    public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
             for (var blockEntry : func.getmbList()) {
                 var block = blockEntry.getVal();

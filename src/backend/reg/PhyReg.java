@@ -26,7 +26,7 @@ public class PhyReg extends Reg{
         nameMap.put(10,"r10");
         nameMap.put(11,"r11");
         nameMap.put(12,"r12");
-        nameMap.put(13,"r14");
+        nameMap.put(13,"r13");
         nameMap.put(14,"r14");
         nameMap.put(15,"r15");
     }
