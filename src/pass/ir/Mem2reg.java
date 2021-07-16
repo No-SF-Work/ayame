@@ -92,6 +92,9 @@ public class Mem2reg implements IRPass {
         Instruction inst = instNode.getVal();
         if (inst.tag == TAG_.Store) {
           StoreInst storeInst = (StoreInst) inst;
+          if (!(storeInst.getOperands().get(1) instanceof AllocaInst)) {
+            continue;
+          }
           Integer index = allocaLookup.get((AllocaInst) storeInst.getOperands().get(1));
           if (index != null) {
             defBlocks.get(index).add(bb);
