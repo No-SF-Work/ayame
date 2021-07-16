@@ -17,6 +17,7 @@ public class PassManager {
     add("typeCheck");
     add("Mem2reg");
     add("emitllvm");
+    add("RegAlloc");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>(){};
   private ArrayList<MCPass> mcPasses = new ArrayList<>();

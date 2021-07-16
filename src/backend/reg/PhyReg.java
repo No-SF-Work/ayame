@@ -1,6 +1,7 @@
 package backend.reg;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 public class PhyReg extends Reg{
 
@@ -44,5 +45,18 @@ public class PhyReg extends Reg{
 
     public int getIdx() {
         return idx;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PhyReg phyReg = (PhyReg) o;
+        return idx == phyReg.idx && isAllocated == phyReg.isAllocated;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(idx, isAllocated);
     }
 }
