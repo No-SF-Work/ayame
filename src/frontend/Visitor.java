@@ -780,8 +780,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitReturnStmt(ReturnStmtContext ctx) {
-    visit(ctx.exp());
-    f.buildRet(tmp_, curBB_);
+    if (ctx.exp() != null) {
+      visit(ctx.exp());
+      f.buildRet(tmp_, curBB_);
+    } else {
+      f.buildRet(curBB_);
+    }
     return null;
   }
 
