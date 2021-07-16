@@ -64,6 +64,17 @@ public abstract class MemInst extends Instruction {
 
     private final Type allocatedType_;
     private boolean isInit = false;
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(this.getName())
+          .append(" = ")
+          .append("alloca")
+          .append(" ")
+          .append(allocatedType_);
+      return sb.toString();
+    }
   }
 
   public static class LoadInst extends MemInst {
@@ -106,15 +117,29 @@ public abstract class MemInst extends Instruction {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      var lhs = operands.get(0);
-      var rhs = operands.get(1);
-      sb.append("store " + lhs.getType().toString() + " " + lhs.getName() + ", ");
-      sb.append(rhs.getType().toString() + " " + rhs.getName());
-      return null;
+      sb.append(this.getName())
+          .append(" = ")
+          .append(" load ")
+          .append(this.getType())
+          .append(",")
+          .append(operands.get(0).getType())
+          .append(" ")
+          .append(operands.get(0).getName());
+      return sb.toString();
     }
   }
 
   public static class StoreInst extends MemInst {
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      var lhs = operands.get(0);
+      var rhs = operands.get(1);
+      sb.append("store " + lhs.getType().toString() + " " + lhs.getName() + ", ");
+      sb.append(rhs.getType().toString() + " " + rhs.getName());
+      return sb.toString();
+    }
 
     //todo typecheck
     public StoreInst(Value val, Value pointer) {
@@ -151,7 +176,8 @@ public abstract class MemInst extends Instruction {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append(this.getName() + "= getelementptr " + this.getElementType_() + "," + operands.get(0)
+      sb.append(this.getName() + "= getelementptr " + ((PointerType) operands.get(0).getType())
+          .getContained() + "," + operands.get(0)
           .getType() + " " + operands.get(0).getName() + " ");
       for (var i = 1; i < operands.size(); i++) {
         sb.append(", " + operands.get(i).getType() + " " + operands.get(i).getName());
@@ -170,7 +196,7 @@ public abstract class MemInst extends Instruction {
         return type;
       }
       if (type.isArrayTy()) {
-        for (int i = 0; i < indices.size(); i++) {
+        for (int i = 1; i < indices.size(); i++) {
           type = ((ArrayType) type).getELeType();
           assert (i < indices.size() - 1) || !type.isArrayTy();
         }
