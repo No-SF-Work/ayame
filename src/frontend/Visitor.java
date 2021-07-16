@@ -204,20 +204,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
       throw new SyntaxException("name already exists");
     }
     if (ctx.constExp().isEmpty()) { //not array
-      if (scope_.isGlobal()) {
-        if (ctx.constInitVal() != null) {
-          visit(ctx.constInitVal());
-          scope_.put(ctx.IDENT().getText(), tmp_);
-        } else {
-          scope_.put(ctx.IDENT().getText(), CONST0);
-        }
-      } else {
-        var allocator = f.buildAlloca(curBB_, i32Type_);
-        scope_.put(name, allocator);
-        if (ctx.constInitVal() != null) {
-          visit(ctx.constInitVal());
-          f.buildStore(tmp_, allocator, curBB_);
-        }
+      if (ctx.constInitVal() != null) {
+        visit(ctx.constInitVal());
+        scope_.put(ctx.IDENT().getText(), tmp_);
       }
     } else {// array
       //calculate dims of array
@@ -227,8 +216,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
         visit(context);
         dims.add(((ConstantInt) tmp_).getVal());
       });
-      for (var i = dims.size() - 1; i > 0; i--) {
-        arrty = f.getArrayTy(arrty, dims.get(i));// arr(arr(arr(i32,dim1),dim2),dim3)
+      for (var i = dims.size(); i > 0; i--) {
+        arrty = f.getArrayTy(arrty, dims.get(i - 1));// arr(arr(arr(i32,dim1),dim2),dim3)
       }
       if (scope_.isGlobal()) {
         if (ctx.constInitVal() != null) {
@@ -304,7 +293,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       for (ConstInitValContext constInitValContext : ctx.constInitVal()) {
         if (constInitValContext.constExp() == null) {
           var pos = arrOfCurDim.size();
-          for (int i = 0; i < sizeOfEachEle - (pos % sizeOfEachEle) % sizeOfEachEle; i++) {
+          for (int i = 0; i < (sizeOfEachEle - (pos % sizeOfEachEle)) % sizeOfEachEle; i++) {
             arrOfCurDim.add(CONST0);//长度不足一个ele的补0为一个ele长
           }
           constInitValContext.dimInfo_ = new ArrayList<>(
