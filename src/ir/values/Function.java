@@ -106,7 +106,7 @@ public class Function extends Value {
   private IList<BasicBlock, Function> list_;
   private INode<Function, MyModule> node;
   private ArrayList<Arg> argList_;//有序参数列表
-  private LoopInfo loopInfo; // 函数内的循环信息
+  private LoopInfo loopInfo = new LoopInfo(); // 函数内的循环信息
 
   public boolean isHasSideEffect() {
     return hasSideEffect;

@@ -45,7 +45,9 @@ public class GVNGCM implements IRPass {
 
     // TODO: usage of gvngcm
     for (INode<Function, MyModule> funcNode : m.__functions) {
-      runGVNGCM(funcNode.getVal());
+      if (!funcNode.getVal().isBuiltin_()) {
+        runGVNGCM(funcNode.getVal());
+      }
     }
   }
 
@@ -237,9 +239,10 @@ public class GVNGCM implements IRPass {
   public void runGVNOnBasicBlock(BasicBlock bb) {
     // TODO 可以加入消除重复 phi 指令
 
-    for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
-      Instruction inst = instNode.getVal();
-      runGVNOnInstruction(inst);
+    for (var instNode = bb.getList().getEntry(); instNode != null; ) {
+      var tmp = instNode.getNext();
+      runGVNOnInstruction(instNode.getVal());
+      instNode = tmp;
     }
   }
 
