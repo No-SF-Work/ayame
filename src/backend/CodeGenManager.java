@@ -590,6 +590,7 @@ public class CodeGenManager {
             };
             //处理phi指令
             handlePhi.handlephi();
+            //处理其余指令
             for (bIt = bList.iterator(); bIt.hasNext(); ) {
                 BasicBlock bb = bIt.next().getVal();
                 MachineBlock mb = bMap.get(bb);
@@ -602,7 +603,34 @@ public class CodeGenManager {
                         MachineOperand rhs = aV.analyzeValue(ir.getOperands().get(1));
                         boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                         boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
-                        assert (!(rhsIsConst && lhsIsConst));
+//                        assert (!(rhsIsConst && lhsIsConst));
+                        //TODO gvn gcm之前临时搞一个两个都是立即数的情况
+                        if(rhsIsConst&&lhsIsConst){
+                            MachineCode.TAG tag;
+                            BinaryInst bi = ((BinaryInst) ir);
+                            if (bi.isAdd()) {
+                                tag = MachineCode.TAG.Add;
+                            } else if (bi.isSub()) {
+                                tag = MachineCode.TAG.Sub;
+                            } else if (bi.isMul()) {
+                                tag = MachineCode.TAG.Mul;
+                            } else if (bi.isDiv()) {
+                                tag = MachineCode.TAG.Div;
+                            } else if (bi.isRsb()) {
+                                tag = MachineCode.TAG.Rsb;
+                            } else {
+                                assert (false);
+                                tag = MachineCode.TAG.Add;
+                            }
+                            MachineOperand tempLhs= ani.analyzeNoImm(ir.getOperands().get(0),mb);
+                            MachineOperand tempRhs=ani.analyzeNoImm(ir.getOperands().get(1),mb);
+                            MCBinary binary = new MCBinary(tag, mb);
+                            MachineOperand dst = aV.analyzeValue(ir);
+                            binary.setLhs(tempLhs);
+                            binary.setRhs(tempRhs);
+                            binary.setDst(dst);
+                            continue;
+                        }
                         if (rhsIsConst) {
                             int imm = ((Constants.ConstantInt) ir.getOperands().get(1)).getVal();
                             int temp = imm;
