@@ -204,9 +204,20 @@ public class Visitor extends SysYBaseVisitor<Void> {
       throw new SyntaxException("name already exists");
     }
     if (ctx.constExp().isEmpty()) { //not array
-      if (ctx.constInitVal() != null) {
-        visit(ctx.constInitVal());
-        scope_.put(ctx.IDENT().getText(), tmp_);
+      if (scope_.isGlobal()) {
+        if (ctx.constInitVal() != null) {
+          visit(ctx.constInitVal());
+          scope_.put(ctx.IDENT().getText(), tmp_);
+        } else {
+          scope_.put(ctx.IDENT().getText(), CONST0);
+        }
+      } else {
+        var allocator = f.buildAlloca(curBB_, i32Type_);
+        scope_.put(name, allocator);
+        if (ctx.constInitVal() != null) {
+          visit(ctx.constInitVal());
+          f.buildStore(tmp_, allocator, curBB_);
+        }
       }
     } else {// array
       //calculate dims of array
@@ -245,9 +256,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
           // GEP只计算指针，不访问内存，因此每次需要访问内存的时候需要解出需要的内存的指针并且build新的GEP指令
           var ptr = f.buildGEP(allocatedArray, new ArrayList<>() {{
             add(CONST0);
+            add(CONST0);
           }}, curBB_);
           for (int i = 1; i < ctx.constInitVal().dimInfo_.size(); i++) {
             ptr = f.buildGEP(ptr, new ArrayList<>() {{
+              add(CONST0);
               add(CONST0);
             }}, curBB_);
             ;
@@ -882,7 +895,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
 
     if (ARR) {
-      if (!ctx.exp().isEmpty()) {
+      if (ctx.exp().isEmpty()) {
         tmp_ = f.buildGEP(t, new ArrayList<>() {{
           add(CONST0);
         }}, curBB_);
@@ -892,6 +905,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           visit(expContext);
           var val = tmp_;
           t = f.buildGEP(t, new ArrayList<>() {{
+            add(CONST0);
             add(val);
           }}, curBB_);
         }
