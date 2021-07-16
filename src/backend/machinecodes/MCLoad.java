@@ -17,7 +17,7 @@ public class MCLoad extends MachineCode{
 
     public void setDst(MachineOperand dst) {
         dealReg(this.dst,dst,false);
-        addDef(dst);
+        this.dst=dst;
     }
 
     public MachineOperand getAddr() {
@@ -51,7 +51,7 @@ public class MCLoad extends MachineCode{
 
     @Override
     public String toString(){
-        String res="\tstr"+contString(cond)+"\t"+dst.getName()+",\t["+addr.getName();
+        String res="\tldr"+contString(cond)+"\t"+dst.getName()+",\t["+addr.getName();
         res+=",\t"+offset.getName()+getShift().toString()+"]\n";
 //        if(offset.getState()== MachineOperand.state.imm){
 //            if(offset.getImm()==0){

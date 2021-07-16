@@ -848,6 +848,21 @@ public class CodeGenManager {
                         }
                     } else if (ir.tag == Instruction.TAG_.Alloca) {
                         //TODO 如何获得到底是哪个指针
+                        assert(ir.getType() instanceof PointerType);
+                        Type ttype=((PointerType)ir.getType()).getContained();
+                        if(ttype instanceof PointerType){
+                            var type =((PointerType) ((PointerType)ir.getType()).getContained()).getContained();
+                            if(type.isIntegerTy()){
+
+                            }
+                            if (type.isArrayTy()){
+
+                            }
+                        }else if(ttype instanceof IntegerType){
+
+                        }else{
+                            assert(ttype instanceof  ArrayType);
+                        }
                         if (ir.getType() instanceof PointerType) {
 
                         } else {
@@ -877,6 +892,10 @@ public class CodeGenManager {
                         MachineOperand arr = aV.analyzeValue(ir.getOperands().get(1));
                         MachineOperand data = ani.analyzeNoImm(ir.getOperands().get(0), mb);
                         MachineOperand offset = new MachineOperand(0);
+                        MCStore store=new MCStore(mb);
+                        store.setData(data);
+                        store.setOffset(offset);
+                        store.setAddr(arr);
 
                     } else if (ir.tag == Instruction.TAG_.GEP) {
                         //最后一个gep应该被优化合并到load/store里
