@@ -343,6 +343,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
           var initializer = (Constant) tmp_;
           var v = f.getGlobalvariable(varName, i32Type_, initializer);
           scope_.put(varName, v);
+        } else {
+          var initializer = CONST0;
+          var v = f.getGlobalvariable(varName, i32Type_, initializer);
+          scope_.put(varName, v);
         }
       } else {//非数组局部
         var allocator = f.buildAlloca(curBB_, i32Type_);
@@ -829,7 +833,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
     //function call
     if (INT) {
-      if (!ctx.exp().isEmpty()) {
+      if (ctx.exp().isEmpty()) {
         tmp_ = t;
         return null;
       } else {
