@@ -357,8 +357,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
         visit(context);
         dims.add(((ConstantInt) tmp_).getVal());
       });
-      for (var i = dims.size() - 1; i > 0; i--) {
-        arrTy = f.getArrayTy(arrTy, dims.get(i));
+      for (var i = dims.size(); i > 0; i--) {
+        arrTy = f.getArrayTy(arrTy, dims.get(i - 1));
       }
       if (scope_.isGlobal()) {
         if (!(ctx.initVal() == null)) {
