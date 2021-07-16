@@ -446,7 +446,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
       ctx.initVal().forEach(context -> {
         if (context.exp() == null) {
           var pos = arrOfCurDim.size();
-          for (var i = 0; i < finalSizeOfEachEle - (pos % finalSizeOfEachEle) % finalSizeOfEachEle;
+          for (var i = 0;
+              i < (finalSizeOfEachEle - (pos % finalSizeOfEachEle)) % finalSizeOfEachEle;
               i++) {
             arrOfCurDim.add(CONST0);
           }
