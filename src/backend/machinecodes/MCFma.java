@@ -4,9 +4,9 @@ import backend.reg.VirtualReg;
 import backend.reg.MachineOperand;
 
 /**
- * Fma
+ * Fma smmla:Rn + (Rm * Rs)[63:32] or smmls:Rd := Rn – (Rm * Rs)[63:32]
  */
-public class MCFma extends MachineCode{
+public class MCFma extends MachineCode {
 
     private MachineOperand dst;
 
@@ -38,14 +38,15 @@ public class MCFma extends MachineCode{
 
     private ArmAddition.CondType cond;
 
-    public String toString(){
-        String res=add?"\tsmmla":"\tsmmls";
-        res+=contString(cond)+"\t"+dst.getName()+",\t"+lhs.getName()+",\t"+rhs.getName()+",\t"+acc.getName()+"\n";
+    public String toString() {
+        String res = sign ? "sm" : "";
+        res += add ? "\tmla" : "\tmls";
+        res += contString(cond) + "\t" + dst.getName() + ",\t" + lhs.getName() + ",\t" + rhs.getName() + ",\t" + acc.getName() + "\n";
         return res;
     }
 
-    public void setCond(ArmAddition.CondType cond){
-        this.cond=cond;
+    public void setCond(ArmAddition.CondType cond) {
+        this.cond = cond;
     }
 
     @Override
@@ -53,8 +54,8 @@ public class MCFma extends MachineCode{
         return cond;
     }
 
-    public MCFma( MachineBlock mb){
-        super(TAG.FMA,mb);
+    public MCFma(MachineBlock mb) {
+        super(TAG.FMA, mb);
     }
 
     public MachineOperand getDst() {
@@ -74,22 +75,22 @@ public class MCFma extends MachineCode{
     }
 
     public void setDst(MachineOperand dst) {
-        dealReg(this.dst,dst,false);
+        dealReg(this.dst, dst, false);
         this.dst = dst;
     }
 
     public void setLhs(MachineOperand lhs) {
-        dealReg(this.lhs,lhs,true);
+        dealReg(this.lhs, lhs, true);
         this.lhs = lhs;
     }
 
     public void setRhs(MachineOperand rhs) {
-        dealReg(this.rhs,rhs,true);
+        dealReg(this.rhs, rhs, true);
         this.rhs = rhs;
     }
 
     public void setAcc(MachineOperand acc) {
-        dealReg(this.acc,acc,true);
+        dealReg(this.acc, acc, true);
         this.acc = acc;
     }
 }

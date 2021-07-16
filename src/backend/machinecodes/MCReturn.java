@@ -17,7 +17,7 @@ public class MCReturn extends MachineCode{
             MachineOperand v1 = canEncodeImm(-stackSize) ? new MachineOperand(-stackSize) : new MachineOperand(stackSize);
             if(canEncodeImm(stackSize)||canEncodeImm(-stackSize)){
                 res+="\t"+op;
-                res+="\tsp, sp, "+v1+"\n";
+                res+="\tsp, sp, "+v1.getName()+"\n";
             }else{
                 MCMove mv=new MCMove();
                 mv.setRhs(v1);
