@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 import pass.Pass.MCPass;
 
 // Graph-Coloring
@@ -107,7 +108,7 @@ public class RegAllocator implements MCPass {
             } else if (binaryInstr.getRhs().equals(origin)) {
                 binaryInstr.setRhs(target);
             }
-        } else if (instr instanceof MCBranch ) {
+        } else if (instr instanceof MCBranch) {
         } else if (instr instanceof MCCall) {
         } else if (instr instanceof MCComment) {
         } else if (instr instanceof MCCompare) {
@@ -172,7 +173,6 @@ public class RegAllocator implements MCPass {
                     .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
 
             var done = false;
-            var allocated = new HashSet<MachineOperand>();
 
             while (!done) {
                 var liveInfoMap = livenessAnalysis(func);
@@ -194,8 +194,6 @@ public class RegAllocator implements MCPass {
                 var coalescedMoves = new HashSet<MCMove>();
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
-
-                Function<MachineOperand, Boolean> needsColor = n -> n.getState() != MachineOperand.state.imm && !allocated.contains(n);
 
                 Map<MachineOperand, Integer> degree = allocatable.stream()
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
@@ -238,7 +236,7 @@ public class RegAllocator implements MCPass {
                                 var mcInstr = (MCMove) instr;
                                 var dst = mcInstr.getDst();
                                 var rhs = mcInstr.getRhs();
-                                if (needsColor.apply(dst) && needsColor.apply(rhs) &&
+                                if (dst.needsColor() && rhs.needsColor() &&
                                         mcInstr.getCond() == ArmAddition.CondType.Any &&
                                         mcInstr.getShift().getType() == ArmAddition.ShiftType.None) {
                                     live.remove(mcInstr.getRhs());
@@ -252,8 +250,8 @@ public class RegAllocator implements MCPass {
                                     worklistMoves.add(mcInstr);
                                 }
                             }
-                            defs.stream().filter(needsColor::apply).forEach(live::add);
-                            defs.stream().filter(needsColor::apply).forEach(d -> live.forEach(l -> addEdge.accept(l, d)));
+                            defs.stream().filter(MachineOperand::needsColor).forEach(live::add);
+                            defs.stream().filter(MachineOperand::needsColor).forEach(d -> live.forEach(l -> addEdge.accept(l, d)));
                             // todo: [heuristic] add loop cnt
                         }
                     }
@@ -269,15 +267,16 @@ public class RegAllocator implements MCPass {
 
                 Function<MachineOperand, Boolean> moveRelated = n -> !nodeMoves.apply(n).isEmpty();
 
-                Runnable makeWorklist = () -> func.getVRegMap().values().forEach(vreg -> {
-                    if (degree.getOrDefault(vreg, 0) >= K) {
-                        spillWorklist.add(vreg);
-                    } else if (moveRelated.apply(vreg)) {
-                        freezeWorklist.add(vreg);
-                    } else {
-                        simplifyWorklist.add(vreg);
-                    }
-                });
+                Runnable makeWorklist = () ->
+                        func.getVRegMap().values().forEach(vreg -> {
+                            if (degree.getOrDefault(vreg, 0) >= K) {
+                                spillWorklist.add(vreg);
+                            } else if (moveRelated.apply(vreg)) {
+                                freezeWorklist.add(vreg);
+                            } else {
+                                simplifyWorklist.add(vreg);
+                            }
+                        });
 
                 Consumer<MachineOperand> enableMoves = n -> {
                     nodeMoves.apply(n).stream()
@@ -426,19 +425,19 @@ public class RegAllocator implements MCPass {
                     var colored = new HashMap<MachineOperand, MachineOperand>();
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
-                        var okColors = new HashSet<>(allocatable);
+                        var okColors = IntStream.range(0, 14).filter(i -> i != 13).boxed()
+                                .collect(Collectors.toSet());
 
                         adjList.getOrDefault(n, new HashSet<>()).forEach(w -> {
                             var a = getAlias.apply(w);
-                            if (allocated.contains(a) || a.isPrecolored()) {
-                                var color = colored.get(a);
-                                assert color instanceof PhyReg;
-                                okColors.remove(color);
+                            if (a.isAllocated() || a.isPrecolored()) {
+                                assert a instanceof PhyReg;
+                                okColors.remove(((PhyReg) a).getIdx());
                             } else if (a instanceof VirtualReg) {
                                 if (colored.containsKey(a)) {
                                     var color = colored.get(a);
                                     assert color instanceof PhyReg;
-                                    okColors.remove(color);
+                                    okColors.remove(((PhyReg) color).getIdx());
                                 }
                             }
                         });
@@ -447,8 +446,7 @@ public class RegAllocator implements MCPass {
                             spilledNodes.add(n);
                         } else {
                             var color = okColors.iterator().next();
-                            colored.put(n, color);
-                            allocated.add(n);
+                            colored.put(n, func.getAllocatedReg(color));
                         }
                     }
 
