@@ -47,7 +47,7 @@ public class ArrayType extends Type {
   @Override
   public String toString() {
     var sb = new StringBuilder();
-    sb.append("[" + num_elements + " * " + contained.toString() + "]");
+    sb.append("[").append(num_elements).append(" x ").append(contained.toString()).append("]");
     return sb.toString();
   }
 

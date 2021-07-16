@@ -121,24 +121,28 @@ public abstract class MemInst extends Instruction {
       super(TAG_.Store, VoidType.getType(), 2);
       CoSetOperand(0, val);
       CoSetOperand(1, pointer);
+      needname = false;
     }
 
     public StoreInst(Value val, Value pointer, BasicBlock parent) {
       super(TAG_.Store, VoidType.getType(), 2, parent);
       CoSetOperand(0, val);
       CoSetOperand(1, pointer);
+      needname = false;
     }
 
     public StoreInst(Value val, Value pointer, Instruction prev) {
       super(TAG_.Store, VoidType.getType(), 2, prev);
       CoSetOperand(0, val);
       CoSetOperand(1, pointer);
+      needname = false;
     }
 
     public StoreInst(Instruction next, Value val, Value pointer) {
       super(next, TAG_.Store, VoidType.getType(), 2);
       CoSetOperand(0, val);
       CoSetOperand(1, pointer);
+      needname = false;
     }
   }
 
