@@ -169,7 +169,7 @@ public class Mem2reg implements IRPass {
         continue;
       }
       data.bb.setDirty(true);
-      for (var instNode = data.bb.getList().getEntry(); instNode != null;) {
+      for (var instNode = data.bb.getList().getEntry(); instNode != null; ) {
         Instruction inst = instNode.getVal();
         var tmp = instNode.getNext();
         // AllocaInst
@@ -179,6 +179,10 @@ public class Mem2reg implements IRPass {
         // LoadInst
         else if (inst.tag == TAG_.Load) {
           LoadInst loadInst = (LoadInst) inst;
+          if (!(loadInst.getOperands().get(0) instanceof AllocaInst)) {
+            instNode = tmp;
+            continue;
+          }
           int allocaIndex = allocaLookup.get((AllocaInst) loadInst.getOperands().get(0));
           loadInst.COReplaceAllUseWith(currValues.get(allocaIndex));
           instNode.removeSelf();
@@ -186,6 +190,10 @@ public class Mem2reg implements IRPass {
         // StoreInst
         else if (inst.tag == TAG_.Store) {
           StoreInst storeInst = (StoreInst) inst;
+          if (!(storeInst.getOperands().get(1) instanceof AllocaInst)) {
+            instNode = tmp;
+            continue;
+          }
           int allocaIndex = allocaLookup.get((AllocaInst) storeInst.getOperands().get(1));
           currValues.set(allocaIndex, storeInst.getOperands().get(0));
           instNode.removeSelf();
