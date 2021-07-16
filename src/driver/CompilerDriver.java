@@ -106,9 +106,10 @@ public class CompilerDriver {
       }
       CodeGenManager cgm = CodeGenManager.getInstance();
       cgm.load(MyModule.getInstance());
+      cgm.MachineCodeGeneration();
       pm.runMCPasses(CodeGenManager.getInstance());
       //todo output
-      cgm.MachineCodeGeneration();
+
       File f = new File(target);
       FileWriter fw = new FileWriter(f);
       fw.append(cgm.genARM());
