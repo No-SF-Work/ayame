@@ -379,17 +379,19 @@ public class Visitor extends SysYBaseVisitor<Void> {
       } else {//local arr init
         var alloc = f.buildAlloca(curBB_, arrTy);
         scope_.put(ctx.IDENT().getText(), alloc);
-        if (!(ctx.initVal().isEmpty()) && (ctx.initVal().exp() != null)) {
+        if (!(ctx.initVal().isEmpty()) && !(ctx.initVal().initVal().isEmpty())) {
           alloc.setInit();
           ctx.initVal().dimInfo_ = dims;
           visit(ctx.initVal());
           var arr = tmpArr_;
           var pointer = f.buildGEP(alloc, new ArrayList<>() {{
             add(CONST0);
+            add(CONST0);
           }}, curBB_);
 
           for (var i = 1; i < dims.size(); i++) {
             pointer = f.buildGEP(pointer, new ArrayList<>() {{
+              add(CONST0);
               add(CONST0);
             }}, curBB_);
           }
@@ -422,7 +424,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitInitVal(InitValContext ctx) {
-    if (ctx.exp() != null && ctx.dimInfo_ == null) {
+    if (ctx.exp() != null && ctx.dimInfo_ == null) { //
       if (globalInit_) {
         usingInt_ = true;
         visit(ctx.exp());
@@ -463,11 +465,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
           }
           arrOfCurDim.add(tmp_);
         }
-        for (int i = arrOfCurDim.size(); i < curDimLength * finalSizeOfEachEle1; i++) {
-          arrOfCurDim.add(CONST0);
-        }
-        tmpArr_ = arrOfCurDim;
       });
+      for (int i = arrOfCurDim.size(); i < curDimLength * finalSizeOfEachEle1; i++) {
+        arrOfCurDim.add(CONST0);
+      }
+      tmpArr_ = arrOfCurDim;
     }
     return null;
 
