@@ -51,6 +51,18 @@ public class Constants {
 
     private ArrayList<Constant> const_arr_;
 
+    public ArrayList<Integer> getDims() {
+      ArrayList<Integer> tmp = new ArrayList<>();
+      ConstantArray arr = this;
+      while (true) {
+        tmp.add(arr.const_arr_.size());
+        if (arr.const_arr_.get(0) instanceof ConstantInt) {
+          break;
+        }
+        arr = (ConstantArray) const_arr_.get(0);
+      }
+      return tmp;
+    }
   }
 
 }

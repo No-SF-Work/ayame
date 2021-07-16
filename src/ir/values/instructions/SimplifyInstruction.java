@@ -2,6 +2,7 @@ package ir.values.instructions;
 
 import ir.MyFactoryBuilder;
 import ir.values.Constants.ConstantInt;
+import ir.values.GlobalVariable;
 import ir.values.UndefValue;
 import ir.values.Value;
 import ir.values.instructions.Instruction.TAG_;
@@ -80,6 +81,12 @@ public class SimplifyInstruction {
   public static Value simplifyAddInst(Instruction inst) {
     Value lhs = inst.getOperands().get(0);
     Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
 
     // try fold and swap
     Value c = foldConstant(inst.tag, lhs, rhs);
@@ -134,6 +141,12 @@ public class SimplifyInstruction {
   public static Value simplifySubInst(Instruction inst) {
     Value lhs = inst.getOperands().get(0);
     Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
 
     Value c = foldConstant(inst.tag, lhs, rhs);
     if (c != null) {

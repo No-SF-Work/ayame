@@ -1,17 +1,18 @@
 package ir.Analysis;
 
 import ir.MyFactoryBuilder;
+import ir.types.ArrayType;
+import ir.types.PointerType;
+import ir.types.Type;
 import ir.values.BasicBlock;
+import ir.values.Constants.ConstantArray;
 import ir.values.Function;
 import ir.values.GlobalVariable;
 import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
-import ir.values.instructions.MemInst;
-import ir.values.instructions.MemInst.AllocaInst;
-import ir.values.instructions.MemInst.LoadInst;
-import ir.values.instructions.MemInst.MemPhi;
-import ir.values.instructions.MemInst.StoreInst;
+import ir.values.instructions.MemInst.*;
+import ir.values.instructions.TerminatorInst.CallInst;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -21,20 +22,20 @@ import util.IList.INode;
 
 public class ArrayAliasAnalysis {
 
-  private static MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
+  private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
 
   private static class ArrayDefUses {
 
-    private Value array;
-    private ArrayList<LoadInst> loads;
-    private ArrayList<Instruction> defs;
+    public Value array;
+    public ArrayList<LoadInst> loads;
+    public ArrayList<Instruction> defs;
   }
 
   private static class RenameData {
 
-    BasicBlock bb;
-    BasicBlock pred;
-    ArrayList<Value> values;
+    public BasicBlock bb;
+    public BasicBlock pred;
+    public ArrayList<Value> values;
 
     public RenameData(BasicBlock bb, BasicBlock pred, ArrayList<Value> values) {
       this.bb = bb;
@@ -45,7 +46,7 @@ public class ArrayAliasAnalysis {
 
   // Use array as memory unit
   public static Value getArrayValue(Value pointer) {
-    while (((Instruction) pointer).tag == TAG_.GEP) {
+    while (pointer instanceof GEPInst) {
       pointer = ((Instruction) pointer).getOperands().get(0);
     }
     // pointer should be an AllocaInst or GlobalVariable
@@ -62,16 +63,93 @@ public class ArrayAliasAnalysis {
 
   public static boolean isParam(Value array) {
     // allocaType 为 i32ptr，表示是一个参数数组
+    if (array instanceof AllocaInst) {
+      AllocaInst allocaInst = (AllocaInst) array;
+      return allocaInst.getAllocatedType().isPointerTy();
+    }
     return false;
   }
 
+  public static boolean isLocal(Value array) {
+    return !isGlobal(array) && !isParam(array);
+  }
+
+  // TODO: 我裂了
+  public static boolean aliasGlobalParam(Value globalArray, Value paramArray) {
+    if (!isGlobal(globalArray) || !isParam(paramArray)) {
+      return false;
+    }
+    int dimNum1, dimNum2;
+    ArrayList<Integer> dims1 = new ArrayList<>();
+    ArrayList<Integer> dims2 = new ArrayList<>();
+
+    ConstantArray globalArr = (ConstantArray) ((GlobalVariable) globalArray).init;
+    dims1.addAll(globalArr.getDims());
+    dimNum1 = dims1.size();
+    for (var i = dimNum1 - 2; i >= 0; i--) {
+      dims1.set(i, dims1.get(i) * dims1.get(i + 1));
+    }
+
+    AllocaInst allocaInst = (AllocaInst) paramArray;
+    PointerType ptrTy = (PointerType) allocaInst.getAllocatedType();
+    if (ptrTy.getContained().isI32()) {
+      return true;
+    } else {
+      ArrayType arrayType = (ArrayType) ptrTy.getContained();
+      dims2.add(0);
+      dims2.addAll(arrayType.getDims());
+      dimNum2 = dims2.size();
+    }
+    for (var i = dimNum2 - 2; i >= 0; i--) {
+      dims2.set(i, dims2.get(i) * dims2.get(i + 1));
+    }
+
+    // dims从右向左累乘
+    boolean allSame = true;
+    var minDim = Math.min(dimNum1, dimNum2);
+    for (var i = 0; i < minDim; i++) {
+      // dims2[0] 始终为 0
+      if (i == 0 && minDim == dimNum2) {
+        continue;
+      }
+      allSame = dims1.get(i + dimNum1 - minDim) == dims2.get(i + dimNum2 - minDim);
+    }
+    return allSame;
+  }
+
+  // TODO: 可能有问题，还不太懂
   public static boolean alias(Value arr1, Value arr2) {
     // 都是param: 名字相等
     // param - glob: dim_alias
     // global - global: AllocaInst 相同
     // local - local: AllocaInst 相同
+    if ((isGlobal(arr1) && isGlobal(arr2)) || (isParam(arr1) && isParam(arr2)) || (isLocal(arr1)
+        && isLocal(arr2))) {
+      return arr1 == arr2;
+    }
+    if (isGlobal(arr1) && isParam(arr2)) {
+      return aliasGlobalParam(arr1, arr2);
+    }
+    if (isParam(arr1) && isGlobal(arr2)) {
+      return aliasGlobalParam(arr2, arr1);
+    }
+    return false;
+  }
 
-
+  // TODO: 可能有问题，还不太懂
+  public static boolean callAlias(Value arr, CallInst callinst) {
+    // 条件宽泛到了不是 local array 就可能 alias，不管是 Global 还是 Param，都是外来的，都有可能被 call 改变
+    if (isGlobal(arr) || isParam(arr)) {
+      return true;
+    }
+    for (Value arg : callinst.getOperands()) {
+      if (arg instanceof GEPInst) {
+        GEPInst gepInst = (GEPInst) arg;
+        if (alias(arr, getArrayValue(gepInst))) {
+          return true;
+        }
+      }
+    }
     return false;
   }
 
@@ -95,6 +173,7 @@ public class ArrayAliasAnalysis {
             ArrayDefUses newArray = new ArrayDefUses();
             arrays.add(newArray);
             arraysLookup.put(array, arrays.size() - 1);
+            defBlocks.set(arrays.size() - 1, new ArrayList<>());
           }
           arrays.get(arraysLookup.get(array)).loads.add(loadInst);
         }
@@ -103,6 +182,7 @@ public class ArrayAliasAnalysis {
 
     for (ArrayDefUses arrayDefUse : arrays) {
       Value array = arrayDefUse.array;
+      int index = arraysLookup.get(array);
       for (INode<BasicBlock, Function> bbNode : function.getList_()) {
         BasicBlock bb = bbNode.getVal();
         for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
@@ -112,9 +192,14 @@ public class ArrayAliasAnalysis {
             StoreInst storeInst = (StoreInst) inst;
             if (alias(array, getArrayValue(storeInst.getOperands().get(1)))) {
               arrayDefUse.defs.add(inst);
+              defBlocks.get(index).add(bb);
             }
           } else if (inst.tag == TAG_.Call) {
-            // TODO: know more about Call
+            Function func = (Function) inst.getOperands().get(0);
+            if (func.isHasSideEffect() && callAlias(array, (CallInst) inst)) {
+              arrayDefUse.defs.add(inst);
+              defBlocks.get(index).add(bb);
+            }
           }
         }
       }
