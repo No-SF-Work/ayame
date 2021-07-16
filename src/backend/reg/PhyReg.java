@@ -33,6 +33,16 @@ public class PhyReg extends Reg{
         this.name=name;
     }
 
+    public boolean isAllocated() {
+        return isAllocated;
+    }
+
+    public void setAllocated() {
+        isAllocated = true;
+    }
+
+    boolean isAllocated=false;
+
     public PhyReg(int n){
         super(state.phy);
         this.name=nameMap.get(n);

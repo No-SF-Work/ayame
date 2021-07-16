@@ -83,11 +83,23 @@ public class MachineFunction {
     private HashSet<PhyReg> usedSavedRegs=new HashSet<>();
 
     public PhyReg getPhyReg(String name){
-        return phyRegs.get(regNameMap.get(name));
+        return new PhyReg(regNameMap.get(name));
+    }
+
+    public PhyReg getAllocatedReg(String name){
+        PhyReg r=new PhyReg(regNameMap.get(name));
+        r.setAllocated();
+        return r;
+    }
+
+    public PhyReg getAllocatedReg(int n){
+        PhyReg r=new PhyReg(n);
+        r.setAllocated();
+        return r;
     }
 
     public PhyReg getPhyReg(int n){
-        return phyRegs.get(n);
+        return new PhyReg(n);
     }
 
     private static HashMap<String,Integer>regNameMap=new HashMap<>();
@@ -122,9 +134,6 @@ public class MachineFunction {
     public MachineFunction(CodeGenManager cgm,String name){
         this.cgm=cgm;
         this.name=name;
-        for(int i=0;i<=15;i++){
-            phyRegs.add(new PhyReg(i));
-        }
     }
 
     public HashSet<Reg> getUsedRegs() {
