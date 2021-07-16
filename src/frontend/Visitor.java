@@ -373,7 +373,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           var glo = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, init);
           scope_.put(ctx.IDENT().getText(), glo);
         } else {
-          var v = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, CONST0);
+          var v = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, null);
           scope_.put(ctx.IDENT().getText(), v);
         }
       } else {//local arr init
