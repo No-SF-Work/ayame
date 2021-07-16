@@ -1,5 +1,6 @@
 package ir.values;
 
+import ir.types.ArrayType;
 import ir.types.IntegerType;
 import ir.types.Type;
 import java.util.ArrayList;
@@ -31,6 +32,11 @@ public class Constants {
       this.val = val;
     }
 
+    @Override
+    public String getName() {
+      return String.valueOf(this.getVal());
+    }
+
     private int val;
   }
 
@@ -50,6 +56,11 @@ public class Constants {
     }
 
     private ArrayList<Constant> const_arr_;
+
+    @Override
+    public String toString() {
+      return ArrayType.buildConstInitStr((ArrayType) this.getType(), this);
+    }
 
     public ArrayList<Integer> getDims() {
       ArrayList<Integer> tmp = new ArrayList<>();

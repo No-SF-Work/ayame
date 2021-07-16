@@ -1,11 +1,28 @@
 package pass.ir;
 
 import ir.MyModule;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.HashMap;
+import javax.swing.text.Style;
 import pass.Pass.IRPass;
 
 public class EmitLLVM implements IRPass {
 
-  private int vnc = 0;//variable name counter
+
+  public EmitLLVM() {
+    sb = new StringBuilder();
+  }
+
+  StringBuilder sb;
+  private int vnc = 0;//value name counter
+
+  private String newName() {
+    var v = String.valueOf(vnc);
+    vnc++;
+    return v;
+  }
 
   @Override
   public String getName() {
@@ -14,19 +31,66 @@ public class EmitLLVM implements IRPass {
 
   @Override
   public void run(MyModule m) {
-    StringBuilder sb = new StringBuilder(
-
-    );
+    nameVariable(m);
     m.__globalVariables.forEach(gb -> {
-
+      sb.append("@").append(gb).append("\n");
     });
     m.__functions.forEach(func -> {
-
+      var val = func.getVal();
+      if (!val.isBuiltin_()) {
+        sb.append("define dso_local ")
+            .append(val)
+            .append("{\n");
+        val.getList_().forEach(
+            bbNode -> {
+              var bbval = bbNode.getVal();
+              if (!val.getList_().getEntry().equals(bbNode)) {
+                sb.append(bbval.getName()).append(":\n");
+              }
+              bbval.getList().forEach(
+                  instNode -> {
+                    var instVal = instNode.getVal();
+                    sb.append(instVal.toString()).append("\n");
+                  }
+              );
+            }
+        );
+        sb.append("}\n");
+      }
     });
+    try {
+      FileWriter fw = new FileWriter(new File("out.ll"));
+      fw.append(sb);
+      fw.close();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
-  private void nameVariable() {
-
+  private void nameVariable(MyModule m) {
+    m.__functions.forEach(
+        f -> {
+          vnc = 0;
+          var func = f.getVal();
+          if (!func.isBuiltin_()) {
+            func.getArgList().forEach(arg -> {
+              arg.setName("%" + newName());
+            });
+            func.getList_().forEach(bbInode -> {
+              if (!bbInode.equals(func.getList_().getEntry())) {
+                bbInode.getVal().setName(newName());
+              }
+              bbInode.getVal().getList().forEach(
+                  instNode -> {
+                    if (instNode.getVal().needname) {
+                      instNode.getVal().setName("%" + newName());
+                    }
+                  }
+              );
+            });
+          }
+        }
+    );
   }
 
   private void printIR() {

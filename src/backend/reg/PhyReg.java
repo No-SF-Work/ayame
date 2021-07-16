@@ -1,10 +1,12 @@
 package backend.reg;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 public class PhyReg extends Reg{
 
     private String name;
+    private int idx;
 
     @Override
     public String getName(){return name;}
@@ -28,13 +30,33 @@ public class PhyReg extends Reg{
         nameMap.put(14,"r14");
         nameMap.put(15,"r15");
     }
-    public PhyReg(String name){
-        super(state.phy);
-        this.name=name;
+
+    public void setAllocated() {
+        isAllocated = true;
     }
+
+    boolean isAllocated=false;
 
     public PhyReg(int n){
         super(state.phy);
+        this.idx = n;
         this.name=nameMap.get(n);
+    }
+
+    public int getIdx() {
+        return idx;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PhyReg phyReg = (PhyReg) o;
+        return idx == phyReg.idx && isAllocated == phyReg.isAllocated;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(idx, isAllocated);
     }
 }

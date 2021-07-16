@@ -19,18 +19,14 @@ public abstract class TerminatorInst extends Instruction {
   public static class CallInst extends TerminatorInst {
 
     /**
-     * 给 builtin func 用的
-     **/
-    public CallInst(Function func, BasicBlock parent) {
-      super(TAG_.Call, ((FunctionType) func.getType()).getRetType(), func.getNumArgs(), parent);
-    }
-
-    /**
      * 调用Func函数，args是传入的参数，bb是想要放置的bb
      */
     public CallInst(Function func, ArrayList<Value> args, BasicBlock bb) {
       super(TAG_.Call, ((FunctionType) func.getType()).getRetType(), args.size() + 1, bb);
       assert func.getNumArgs() == args.size();
+      if (this.getType().isVoidTy()) {
+        needname = false;
+      }
       CoSetOperand(0, func);//op1 is func
       for (int i = 0; i < args.size(); i++) {
         CoSetOperand(i + 1, args.get(i));//args
@@ -80,6 +76,7 @@ public abstract class TerminatorInst extends Instruction {
           0, cond);
       this.CoSetOperand(1, trueBlock);
       this.CoSetOperand(2, falseBlock);
+      needname = false;
     }
 
     /**
@@ -87,12 +84,14 @@ public abstract class TerminatorInst extends Instruction {
      */
     public BrInst(BasicBlock trueBlock, BasicBlock parent) {
       super(TAG_.Br, Type.VoidType.getType(), 1, parent);
+      needname = false;
       this.CoSetOperand(0, trueBlock);
     }
 
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
+      sb.append("br ");
       sb.append(operands.get(0).getType() + operands.get(0).getName() + ",");
       sb.append(operands.get(1).getType() + operands.get(1).getName() + ",");
       if (this.numOP == 3) {
@@ -111,6 +110,7 @@ public abstract class TerminatorInst extends Instruction {
     public RetInst(Value val, BasicBlock parent) {
       super(TAG_.Ret, VoidType.getType(), 1, parent);
       this.CoSetOperand(0, val);
+      needname = false;
     }
 
     /**
@@ -118,6 +118,8 @@ public abstract class TerminatorInst extends Instruction {
      */
     public RetInst(BasicBlock parent) {
       super(TAG_.Ret, VoidType.getType(), 0, parent);
+      needname = false;
+
     }
 
     @Override
@@ -129,7 +131,7 @@ public abstract class TerminatorInst extends Instruction {
       } else {
         sb.append("void ");
       }
-      return super.toString();
+      return sb.toString();
     }
   }
 

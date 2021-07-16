@@ -5,6 +5,7 @@ import backend.machinecodes.MachineCode;
 import backend.reg.MachineOperand;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 public class VirtualReg extends Reg {
 
@@ -54,5 +55,16 @@ public class VirtualReg extends Reg {
         this.isGlobal=isGlobal;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        VirtualReg that = (VirtualReg) o;
+        return isSSA == that.isSSA && isGlobal == that.isGlobal && Objects.equals(name, that.name) && Objects.equals(useMap, that.useMap);
+    }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(isSSA, isGlobal, name, useMap);
+    }
 }

@@ -41,6 +41,11 @@ public abstract class Type {
 
     private static VoidType type = new VoidType();
 
+    @Override
+    public String toString() {
+      return "void";
+    }
+
     private VoidType() {
     }
   }
