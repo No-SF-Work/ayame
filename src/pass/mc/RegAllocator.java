@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 import pass.Pass.MCPass;
 
 // Graph-Coloring
@@ -52,12 +53,12 @@ public class RegAllocator implements MCPass {
             for (var instrEntry : block.getmclist()) {
                 var instr = instrEntry.getVal();
                 instr.getDef().stream()
-                        .filter(useMachineOperand -> useMachineOperand instanceof VirtualReg)
-                        .filter(useMachineOperand -> !blockLiveInfo.liveDef.contains(useMachineOperand))
+                        .filter(MachineOperand::needsColor)
+                        .filter(use -> !blockLiveInfo.liveDef.contains(use))
                         .forEach(blockLiveInfo.liveUse::add);
                 instr.getUse().stream()
-                        .filter(defMachineOperand -> defMachineOperand instanceof VirtualReg)
-                        .filter(defMachineOperand -> !blockLiveInfo.liveUse.contains(defMachineOperand))
+                        .filter(MachineOperand::needsColor)
+                        .filter(def -> !blockLiveInfo.liveUse.contains(def))
                         .forEach(blockLiveInfo.liveDef::add);
             }
 
@@ -107,7 +108,7 @@ public class RegAllocator implements MCPass {
             } else if (binaryInstr.getRhs().equals(origin)) {
                 binaryInstr.setRhs(target);
             }
-        } else if (instr instanceof MCBranch ) {
+        } else if (instr instanceof MCBranch) {
         } else if (instr instanceof MCCall) {
         } else if (instr instanceof MCComment) {
         } else if (instr instanceof MCCompare) {
@@ -168,7 +169,8 @@ public class RegAllocator implements MCPass {
 
     public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
-            var allocatable = IntStream.range(0, 14).filter(i -> i != 13)
+            // fixme
+            var allocatable = IntStream.range(0, 15).filter(i -> i != 13)
                     .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
 
             var done = false;
@@ -185,19 +187,16 @@ public class RegAllocator implements MCPass {
                 var spillWorklist = new HashSet<MachineOperand>();
                 var spilledNodes = new HashSet<MachineOperand>();
                 var coalescedNodes = new HashSet<MachineOperand>();
-                var coloredNodes = new ArrayList<MachineOperand>();
                 var selectStack = new Stack<MachineOperand>();
                 var worklistMoves = new HashSet<MCMove>();
                 var activeMoves = new HashSet<MCMove>();
                 // maybe removed
-                var allocated = new HashSet<MachineOperand>();
                 var coalescedMoves = new HashSet<MCMove>();
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
 
-                Function<MachineOperand, Boolean> needsColor = n -> n.getState() != MachineOperand.state.imm && !allocated.contains(n);
-
-                Map<MachineOperand, Integer> degree = allocatable.stream()
+                Map<MachineOperand, Integer> degree = IntStream.range(0, 16)
+                        .mapToObj(func::getPhyReg)
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
                 BiConsumer<MachineOperand, MachineOperand> addEdge = (u, v) -> {
@@ -238,7 +237,7 @@ public class RegAllocator implements MCPass {
                                 var mcInstr = (MCMove) instr;
                                 var dst = mcInstr.getDst();
                                 var rhs = mcInstr.getRhs();
-                                if (needsColor.apply(dst) && needsColor.apply(rhs) &&
+                                if (dst.needsColor() && rhs.needsColor() &&
                                         mcInstr.getCond() == ArmAddition.CondType.Any &&
                                         mcInstr.getShift().getType() == ArmAddition.ShiftType.None) {
                                     live.remove(mcInstr.getRhs());
@@ -251,11 +250,13 @@ public class RegAllocator implements MCPass {
 
                                     worklistMoves.add(mcInstr);
                                 }
-
-                                defs.stream().filter(needsColor::apply).forEach(live::add);
-                                defs.stream().filter(needsColor::apply).forEach(d -> live.forEach(l -> addEdge.accept(l, d)));
-                                // todo: [heuristic] add loop cnt
                             }
+                            defs.stream().filter(MachineOperand::needsColor).forEach(live::add);
+                            defs.stream().filter(MachineOperand::needsColor).forEach(d -> live.forEach(l -> addEdge.accept(l, d)));
+                            // todo: [heuristic] add loop cnt
+                            defs.stream().filter(MachineOperand::needsColor).forEach(live::remove);
+
+                            uses.stream().filter(MachineOperand::needsColor).forEach(live::add);
                         }
                     }
                 };
@@ -270,15 +271,16 @@ public class RegAllocator implements MCPass {
 
                 Function<MachineOperand, Boolean> moveRelated = n -> !nodeMoves.apply(n).isEmpty();
 
-                Runnable makeWorklist = () -> func.getVRegMap().values().forEach(vreg -> {
-                    if (degree.get(vreg) >= K) {
-                        spillWorklist.add(vreg);
-                    } else if (moveRelated.apply(vreg)) {
-                        freezeWorklist.add(vreg);
-                    } else {
-                        simplifyWorklist.add(vreg);
-                    }
-                });
+                Runnable makeWorklist = () ->
+                        func.getVRegMap().values().forEach(vreg -> {
+                            if (degree.getOrDefault(vreg, 0) >= K) {
+                                spillWorklist.add(vreg);
+                            } else if (moveRelated.apply(vreg)) {
+                                freezeWorklist.add(vreg);
+                            } else {
+                                simplifyWorklist.add(vreg);
+                            }
+                        });
 
                 Consumer<MachineOperand> enableMoves = n -> {
                     nodeMoves.apply(n).stream()
@@ -427,15 +429,20 @@ public class RegAllocator implements MCPass {
                     var colored = new HashMap<MachineOperand, MachineOperand>();
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
-                        var okColors = new HashSet<>(allocatable);
+                        var okColors = IntStream.range(0, 15).filter(i -> i != 13).boxed()
+                                .collect(Collectors.toSet());
 
-                        adjList.get(n).forEach(w -> {
+                        adjList.getOrDefault(n, new HashSet<>()).forEach(w -> {
                             var a = getAlias.apply(w);
-                            if (allocated.contains(a) || a.isPrecolored()) {
+                            if (a.isAllocated() || a.isPrecolored()) {
                                 assert a instanceof PhyReg;
-                                okColors.remove(a);
+                                okColors.remove(((PhyReg) a).getIdx());
                             } else if (a instanceof VirtualReg) {
-                                colored.remove(a);
+                                if (colored.containsKey(a)) {
+                                    var color = colored.get(a);
+                                    assert color instanceof PhyReg;
+                                    okColors.remove(((PhyReg) color).getIdx());
+                                }
                             }
                         });
 
@@ -443,7 +450,7 @@ public class RegAllocator implements MCPass {
                             spilledNodes.add(n);
                         } else {
                             var color = okColors.iterator().next();
-                            colored.put(n, color);
+                            colored.put(n, func.getAllocatedReg(color));
                         }
                     }
 
@@ -465,10 +472,13 @@ public class RegAllocator implements MCPass {
 
                         for (var instrEntry : block.getmclist()) {
                             var instr = instrEntry.getVal();
-                            instr.getDef().stream().filter(colored::containsKey)
-                                    .forEach(origin -> replaceReg(instr, origin, colored.get(origin)));
-                            instr.getUse().stream().filter(colored::containsKey)
-                                    .forEach(origin -> replaceReg(instr, origin, colored.get(origin)));
+                            var defs = new ArrayList<>(instr.getDef());
+                            var uses = new ArrayList<>(instr.getUse());
+
+                            defs.stream().filter(colored::containsKey)
+                                    .forEach(def -> replaceReg(instr, def, colored.get(def)));
+                            uses.stream().filter(colored::containsKey)
+                                    .forEach(use -> replaceReg(instr, use, colored.get(use)));
                         }
                     }
                 };
@@ -562,8 +572,9 @@ public class RegAllocator implements MCPass {
                             int cntInstr = 0;
                             for (var instrEntry : block.getmclist()) {
                                 var instr = instrEntry.getVal();
-
-                                instr.getDef().stream().filter(def -> def.equals(n)).forEach(def -> {
+                                var defs = new HashSet<>(instr.getDef());
+                                var uses = new HashSet<>(instr.getUse());
+                                defs.stream().filter(def -> def.equals(n)).forEach(def -> {
                                     if (ref.vreg == null) {
                                         ref.vreg = new VirtualReg();
                                         func.addVirtualReg(ref.vreg);
@@ -573,7 +584,7 @@ public class RegAllocator implements MCPass {
                                     ref.lastDef = instr;
                                 });
 
-                                instr.getUse().stream().filter(use -> use.equals(n)).forEach(use -> {
+                                uses.stream().filter(use -> use.equals(n)).forEach(use -> {
                                     if (ref.vreg == null) {
                                         ref.vreg = new VirtualReg();
                                         func.addVirtualReg(ref.vreg);

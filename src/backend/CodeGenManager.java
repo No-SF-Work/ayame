@@ -286,7 +286,7 @@ public class CodeGenManager {
                 MachineOperand v1 = canEncodeImm(-mf.getStackSize()) ? new MachineOperand(mf.getStackSize()) : new MachineOperand(-mf.getStackSize());
                 if (canEncodeImm(mf.getStackSize()) || canEncodeImm(-mf.getStackSize())) {
                     arm += op;
-                    arm += "\tsp, sp, " + v1 + "\n";
+                    arm += "\tsp, sp, " + v1.getName() + "\n";
                 } else {
                     MCMove mv = new MCMove();
                     mv.setRhs(v1);

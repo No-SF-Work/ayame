@@ -22,7 +22,17 @@ public class MachineOperand {
     public state getState(){return s;}
 
     public boolean isPrecolored() {
-        return this.s.equals(state.phy);
+        return this instanceof PhyReg && !((PhyReg) this).isAllocated;
+    }
+
+    public boolean isAllocated() {
+        return this instanceof PhyReg && ((PhyReg) this).isAllocated;
+    }
+
+    public boolean isVirtual() { return this.s.equals(state.virtual); }
+
+    public boolean needsColor() {
+        return isPrecolored() || isVirtual();
     }
 
     public MachineOperand(int imme){

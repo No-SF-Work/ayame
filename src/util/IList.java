@@ -182,7 +182,9 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
       this.prev = next.prev;
       this.next = next;
       next.prev = this;
-
+      if (this.prev != null) {
+        this.prev.next = this;
+      }
     }
 
     //insert my self after prev node
@@ -195,6 +197,9 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
       this.prev = prev;
       this.next = prev.next;
       prev.next = this;
+      if (this.next != null) {
+        this.next.prev = this;
+      }
     }
 
     public INode<T, P> getPrev() {
