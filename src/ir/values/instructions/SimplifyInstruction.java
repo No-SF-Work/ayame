@@ -180,6 +180,12 @@ public class SimplifyInstruction {
   public static Value simplifyMulInst(Instruction inst) {
     Value lhs = inst.getOperands().get(0);
     Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
 
     Value c = foldConstant(inst.tag, lhs, rhs);
     if (c != null) {
@@ -214,6 +220,19 @@ public class SimplifyInstruction {
   }
 
   public static Value simplifyDivInst(Instruction inst) {
+    Value lhs = inst.getOperands().get(0);
+    Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
+
+    Value c = foldConstant(inst.tag, lhs, rhs);
+    if (c != null) {
+      return c;
+    }
     return inst;
   }
 

@@ -87,6 +87,11 @@ public abstract class Instruction extends User {
         && this.tag.ordinal() >= TAG_.Add.ordinal();
   }
 
+  public boolean isRelBinary() {
+    return this.tag.ordinal() >= TAG_.Lt.ordinal() &&
+        this.tag.ordinal() <= TAG_.Ne.ordinal();
+  }
+
   public boolean isArithmeticBinary() {
     return this.tag.ordinal() >= TAG_.Add.ordinal()
         && this.tag.ordinal() <= TAG_.Div.ordinal();
@@ -110,6 +115,8 @@ public abstract class Instruction extends User {
   public static int getHANDLE() {
     return HANDLE;
   }
+
+  public boolean needname = true;
 
   public BasicBlock getBB() {
     return this.node.getParent().getVal();

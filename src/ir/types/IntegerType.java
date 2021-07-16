@@ -30,6 +30,10 @@ public class IntegerType extends Type {
 
   @Override
   public String toString() {
-    return "i32 ";
+    if (this.numBits == 32) {
+      return "i32";
+    } else {
+      return "i1";
+    }
   }
 }

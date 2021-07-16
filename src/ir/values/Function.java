@@ -37,6 +37,11 @@ public class Function extends Value {
       this.bounds = bounds;
     }
 
+    @Override
+    public String toString() {
+      return this.getType() + " " + this.getName();
+    }
+
     private List<Value> bounds;
 
   }
@@ -100,6 +105,26 @@ public class Function extends Value {
 
   public boolean isBuiltin_() {
     return isBuiltin_;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(this.getType().getRetType())
+        .append(" ")
+        .append("@")
+        .append(this.getName())
+        .append("(");
+    this.argList_.forEach(
+        arg -> {
+          sb.append(arg).append(",");
+        }
+    );
+    if (argList_.size() != 0) {
+      sb.deleteCharAt(sb.length() - 1);
+    }
+    sb.append(")");
+    return sb.toString();
   }
 
   private boolean isBuiltin_ = false;//lib function
