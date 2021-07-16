@@ -53,6 +53,7 @@ public class BinaryInst extends Instruction {
       case Mul:
         return lhsVal * rhsVal;
       case Div:
+        assert rhsVal != 0;
         return lhsVal / rhsVal;
       case Lt:
         return (lhsVal < rhsVal) ? 1 : 0;
