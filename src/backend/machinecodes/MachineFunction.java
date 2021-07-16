@@ -2,29 +2,39 @@ package backend.machinecodes;
 
 import backend.CodeGenManager;
 import backend.reg.PhyReg;
+import backend.reg.Reg;
 import backend.reg.VirtualReg;
 import util.IList;
 import util.IList.INode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class MachineFunction {
 
     public void insertBlock(MachineBlock mb){
-        INode<MachineBlock, MachineFunction> mbNode = new INode<>(mb);
-        if(mbList.getNumNode()==0) {
-            mbNode.insertAtEntry(mbList);
-        } else {
-            mbNode.insertAfter(mbList.getLast());
-        }
+        mb.getNode().insertAtEnd(mbList);
+//        if(mbList.getNumNode()==0) {
+//            mbNode.insertAtEntry(mbList);
+//        } else {
+//            mbNode.insertAfter(mbList.getLast());
+//        }
     }
 
     //使基本块线性化，存储在mbList中
-    public void serializeBlocks(){}
+//    public void serializeBlocks(){}
 
     //get prev and next
     private INode<MachineFunction, CodeGenManager> node;
+
+    public int getStackSize(){
+        return stackSize;
+    }
+
+    public void addStackSize(int n){
+        stackSize+=n;
+    }
 
     //basic block list
     private IList<MachineBlock,MachineFunction> mbList = new IList<>(this);
@@ -38,18 +48,39 @@ public class MachineFunction {
 
     public void addVirtualReg(VirtualReg vr){
         regMap.put(vr.getName(),vr);
-        stackSize+=4;
     }
 
     public HashMap<String,VirtualReg> getVRegMap(){return regMap;}
 
+    public ArrayList<MCMove> getArgMoves() {
+        return argMoves;
+    }
+
+    private ArrayList<MCMove> argMoves=new ArrayList<>();
+
     //PhyReg nums
     private int regNums=0;
+
+    public boolean isUsedLr() {
+        return usedLr;
+    }
+
+    public void setUsedLr(boolean usedLr) {
+        this.usedLr = usedLr;
+    }
+
+    private boolean usedLr=false;
 
     //size of stack allocated for virtual register
     private int stackSize = 0;
 
     private CodeGenManager cgm;
+
+    public HashSet<PhyReg> getUsedSavedRegs() {
+        return usedSavedRegs;
+    }
+
+    private HashSet<PhyReg> usedSavedRegs=new HashSet<>();
 
     public PhyReg getPhyReg(String name){
         return phyRegs.get(regNameMap.get(name));
@@ -84,11 +115,30 @@ public class MachineFunction {
         regNameMap.put("pc",15);
     }
 
-    public MachineFunction(CodeGenManager cgm){
+    private String name;
+
+    public String getName(){return name;}
+
+    public MachineFunction(CodeGenManager cgm,String name){
         this.cgm=cgm;
+        this.name=name;
         for(int i=0;i<=15;i++){
             phyRegs.add(new PhyReg(i));
         }
     }
 
+    public HashSet<Reg> getUsedRegs() {
+        var ret = new HashSet<Reg>();
+        for (var blockEntry : getmbList()) {
+            var block = blockEntry.getVal();
+
+            for (var instrEntry : block.getmclist()) {
+                var instr = instrEntry.getVal();
+
+                ret.addAll(instr.getDef());
+                ret.addAll(instr.getUse());
+            }
+        }
+        return ret;
+    }
 }

@@ -30,6 +30,7 @@ public class DomInfo {
       bb.getDomers().clear();
       bb.getIdoms().clear();
       bbList.add(bb);
+      domers.add(new BitSet());
 
       if (bb == entry) {
         // use index instead of 0 to avoid case where entry is not the head of linked list

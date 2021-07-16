@@ -1,6 +1,5 @@
 package ir.values.instructions;
 
-import ir.Use;
 import ir.types.ArrayType;
 import ir.types.PointerType;
 import ir.types.Type;
@@ -9,7 +8,6 @@ import ir.values.BasicBlock;
 import ir.values.GlobalVariable;
 import ir.values.Value;
 import java.util.ArrayList;
-import java.util.Set;
 
 public abstract class MemInst extends Instruction {
 
@@ -64,13 +62,14 @@ public abstract class MemInst extends Instruction {
       return isInit;
     }
 
-    private Type allocatedType_;
+    private final Type allocatedType_;
     private boolean isInit = false;
   }
 
   public static class LoadInst extends MemInst {
+
     //todo typecheck
-    public LoadInst(Type type, Value v/**指针*/) {
+    public LoadInst(Type type, Value v) {/**指针*/
       super(TAG_.Load, type, 1);
       CoSetOperand(0, v);
     }
@@ -102,6 +101,16 @@ public abstract class MemInst extends Instruction {
     public void removeUseStore() {
       this.numOP--;
       CoSetOperand(1, null);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      var lhs = operands.get(0);
+      var rhs = operands.get(1);
+      sb.append("store " + lhs.getType().toString() + " " + lhs.getName() + ", ");
+      sb.append(rhs.getType().toString() + " " + rhs.getName());
+      return null;
     }
   }
 
@@ -135,7 +144,16 @@ public abstract class MemInst extends Instruction {
 
   public static class GEPInst extends MemInst {
 
-    //todo
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(this.getName() + "= getelementptr " + this.getElementType_() + "," + operands.get(0)
+          .getType() + " " + operands.get(0).getName() + " ");
+      for (var i = 1; i < operands.size(); i++) {
+        sb.append(", " + operands.get(i).getType() + " " + operands.get(i).getName());
+      }
+      return sb.toString();
+    }
 
     /**
      * 拿到这个pointer指向的数组/值的指针的type
@@ -242,7 +260,7 @@ public abstract class MemInst extends Instruction {
     }
 
     private Value aimTo;
-    private Type elementType_;
+    private final Type elementType_;
   }
 
   public static class Phi extends MemInst {

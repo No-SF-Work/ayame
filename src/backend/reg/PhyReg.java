@@ -6,6 +6,9 @@ public class PhyReg extends Reg{
 
     private String name;
 
+    @Override
+    public String getName(){return name;}
+
     private static HashMap<Integer,String> nameMap=new HashMap();
     static {
         nameMap.put(0,"r0");

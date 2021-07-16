@@ -10,6 +10,14 @@ import java.util.HashSet;
 
 public class MachineBlock {
 
+    public INode<MachineBlock, MachineFunction> getNode() {
+        return node;
+    }
+
+    private static int index=0;
+
+    private String name;
+
     //basic struct
     private INode<MachineBlock, MachineFunction> node;
 
@@ -36,19 +44,42 @@ public class MachineBlock {
 
     MachineCode entry;// MC list entry
 
-    public void addAtEndMC(MachineCode mc){
-        INode<MachineCode,MachineBlock> mcNode=new INode<>(mc);
-        mcNode.insertAtEnd(mclist);
+    public void addAtEndMC(INode<MachineCode,MachineBlock> node){
+        node.insertAtEnd(mclist);
     }
 
-    public void addAtEntryMC(MachineCode mc){
-        INode<MachineCode,MachineBlock> mcNode=new INode<>(mc);
-        mcNode.insertAtEntry(mclist);
+    public void addAtEntryMC(INode<MachineCode,MachineBlock> node){
+        node.insertAtEntry(mclist);
     }
+
+    private MachineFunction mf;
+
+    public MachineFunction getMF(){return mf;}
 
     public MachineBlock(MachineFunction mf) {
-        mf.insertBlock(this);
+//        mf.insertBlock(this);
+        this.mf=mf;
+        node=new INode<>(this);
+        node.setParent(mf.getmbList());
+        this.name=".__BB__"+((Integer)index).toString();
     }
+
+    public String getName(){return name;}
+
+    public MachineCode getControlTransferInst() {
+        return controlTransferInst;
+    }
+
+    public void setControlTransferInst(MachineCode controlTransferInst) {
+        this.controlTransferInst = controlTransferInst;
+    }
+
+    private MachineCode controlTransferInst;
+
+    public void removePred(MachineBlock mb){
+        this.pred.remove(mb);
+    }
+
 
     public void setFalseSucc(MachineBlock mb) {
         falseSucc = mb;
@@ -62,5 +93,13 @@ public class MachineBlock {
         pred.add(mb);
     }
 
+    public MachineBlock getTrueSucc() {
+        return trueSucc;
+    }
 
+    public ArrayList<MachineBlock> getPred(){return pred;}
+
+    public MachineBlock getFalseSucc() {
+        return falseSucc;
+    }
 }

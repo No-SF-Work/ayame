@@ -1,4 +1,4 @@
-package pass;
+package pass.ir;
 
 import ir.Analysis.DomInfo;
 import ir.MyFactoryBuilder;
@@ -50,7 +50,10 @@ public class Mem2reg implements IRPass {
     log.info("Running pass : mem2reg");
 
     for (INode<Function, MyModule> funcNode : m.__functions) {
-      runMem2reg(funcNode.getVal());
+      Function func = funcNode.getVal();
+      if (!func.isBuiltin_()) {
+        runMem2reg(func);
+      }
     }
   }
 
@@ -77,7 +80,7 @@ public class Mem2reg implements IRPass {
 //            defs.put(allocaInst, new ArrayList<>());
             allocas.add(allocaInst);
             allocaLookup.put(allocaInst, allocas.size() - 1);
-            defBlocks.set(allocas.size() - 1, new ArrayList<>());
+            defBlocks.add(new ArrayList<>());
           }
         }
       }
@@ -89,6 +92,9 @@ public class Mem2reg implements IRPass {
         Instruction inst = instNode.getVal();
         if (inst.tag == TAG_.Store) {
           StoreInst storeInst = (StoreInst) inst;
+          if (!(storeInst.getOperands().get(1) instanceof AllocaInst)) {
+            continue;
+          }
           Integer index = allocaLookup.get((AllocaInst) storeInst.getOperands().get(1));
           if (index != null) {
             defBlocks.get(index).add(bb);
@@ -133,7 +139,7 @@ public class Mem2reg implements IRPass {
     log.info("mem2reg: variable renaming");
     ArrayList<Value> values = new ArrayList<>();
     for (int i = 0; i < allocas.size(); i++) {
-      values.set(i, new UndefValue());
+      values.add(new UndefValue());
     }
     for (INode<BasicBlock, Function> bbNode : func.getList_()) {
       bbNode.getVal().setDirty(false);
@@ -166,8 +172,9 @@ public class Mem2reg implements IRPass {
         continue;
       }
       data.bb.setDirty(true);
-      for (INode<Instruction, BasicBlock> instNode : data.bb.getList()) {
+      for (var instNode = data.bb.getList().getEntry(); instNode != null; ) {
         Instruction inst = instNode.getVal();
+        var tmp = instNode.getNext();
         // AllocaInst
         if (inst.tag == TAG_.Alloca) {
           instNode.removeSelf();
@@ -175,6 +182,10 @@ public class Mem2reg implements IRPass {
         // LoadInst
         else if (inst.tag == TAG_.Load) {
           LoadInst loadInst = (LoadInst) inst;
+          if (!(loadInst.getOperands().get(0) instanceof AllocaInst)) {
+            instNode = tmp;
+            continue;
+          }
           int allocaIndex = allocaLookup.get((AllocaInst) loadInst.getOperands().get(0));
           loadInst.COReplaceAllUseWith(currValues.get(allocaIndex));
           instNode.removeSelf();
@@ -182,6 +193,10 @@ public class Mem2reg implements IRPass {
         // StoreInst
         else if (inst.tag == TAG_.Store) {
           StoreInst storeInst = (StoreInst) inst;
+          if (!(storeInst.getOperands().get(1) instanceof AllocaInst)) {
+            instNode = tmp;
+            continue;
+          }
           int allocaIndex = allocaLookup.get((AllocaInst) storeInst.getOperands().get(1));
           currValues.set(allocaIndex, storeInst.getOperands().get(0));
           instNode.removeSelf();
@@ -192,6 +207,7 @@ public class Mem2reg implements IRPass {
           int allocaIndex = phiToAllocaMap.get(phiInst);
           currValues.set(allocaIndex, phiInst);
         }
+        instNode = tmp;
       }
 
       for (BasicBlock bb : data.bb.getSuccessor_()) {

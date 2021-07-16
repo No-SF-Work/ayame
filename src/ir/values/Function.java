@@ -98,6 +98,10 @@ public class Function extends Value {
     return (FunctionType) super.getType();
   }
 
+  public boolean isBuiltin_() {
+    return isBuiltin_;
+  }
+
   private boolean isBuiltin_ = false;//lib function
   private IList<BasicBlock, Function> list_;
   private INode<Function, MyModule> node;

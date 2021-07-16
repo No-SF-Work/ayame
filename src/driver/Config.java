@@ -27,17 +27,7 @@ public class Config {
   public boolean isIRMode = false;
   public boolean isOutPutMode = false;
 
-  public void setConfig(Namespace res) throws IOException {
-    isIRMode = res.get("ir");
-    isDebugMode = res.get("debug");
-    isOutPutMode = res.get("output");
-    //only severe level msg will be recorded in console if not in debug mode
-    ConsoleHandler ch = new ConsoleHandler();
-    FileHandler fh = new FileHandler("record.log");
-    isDebugMode = true;//todo 默认打开方便debug记得release后删除
-    Mylogger.loadLogConfig(isDebugMode);
 
-  }
 
   private Config() {
   }

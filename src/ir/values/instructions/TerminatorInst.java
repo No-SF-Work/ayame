@@ -50,6 +50,23 @@ public abstract class TerminatorInst extends Instruction {
       }
       return true;
     }
+    
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(this.getName() + "= call " + this.getType() + operands.get(0).getName());
+      sb.append("(");
+      boolean a = false;
+      for (int i = 1; i < operands.size(); i++) {
+        a = true;
+        sb.append(operands.get(i).getType() + " " + operands.get(i).getName() + ",");
+      }
+      if (a) {
+        sb.deleteCharAt(sb.length() - 1);
+      }
+      sb.append(")");
+      return sb.toString();
+    }
   }
 
   public static class BrInst extends TerminatorInst {
@@ -75,8 +92,14 @@ public abstract class TerminatorInst extends Instruction {
 
     @Override
     public String toString() {
-      //todo
-      return super.toString();
+      StringBuilder sb = new StringBuilder();
+      sb.append(operands.get(0).getType() + operands.get(0).getName() + ",");
+      sb.append(operands.get(1).getType() + operands.get(1).getName() + ",");
+      if (this.numOP == 3) {
+        sb.append(operands.get(2).getType() + operands.get(2).getName() + " ");
+      }
+
+      return sb.toString();
     }
   }
 
@@ -99,7 +122,13 @@ public abstract class TerminatorInst extends Instruction {
 
     @Override
     public String toString() {
-      //todo
+      StringBuilder sb = new StringBuilder();
+      sb.append("ret ");
+      if (this.numOP == 1) {
+        sb.append(operands.get(0).getType() + " " + operands.get(0).getName());
+      } else {
+        sb.append("void ");
+      }
       return super.toString();
     }
   }

@@ -23,6 +23,9 @@ public class BasicBlock extends Value {
     //所以这里直接new了2个container
     this.predecessor_ = new ArrayList<>();
     this.successor_ = new ArrayList<>();
+    this.idoms = new ArrayList<>();
+    this.domers = new ArrayList<>();
+    this.dominanceFrontier = new ArrayList<>();
     list_ = new IList<>(this);
     node_ = new INode<>(this);
   }
@@ -32,8 +35,13 @@ public class BasicBlock extends Value {
     super(name, LabelType.getType());
     this.predecessor_ = new ArrayList<>();
     this.successor_ = new ArrayList<>();
+    this.idoms = new ArrayList<>();
+    this.domers = new ArrayList<>();
+    this.dominanceFrontier = new ArrayList<>();
+    this.parent = parent;
     list_ = new IList<>(this);
     node_ = new INode<>(this);
+    node_.setParent(parent.getList_());
     this.node_.insertAtEnd(parent.getList_());
   }
 
@@ -89,8 +97,8 @@ public class BasicBlock extends Value {
     return dominanceFrontier;
   }
 
-  private INode<BasicBlock, Function> node_;
-  private IList<Instruction, BasicBlock> list_; //在well form的bb里面,最后一个listNode是terminator
+  public INode<BasicBlock, Function> node_;
+  public IList<Instruction, BasicBlock> list_; //在well form的bb里面,最后一个listNode是terminator
   protected Function parent;//它所属的函数
   protected ArrayList<BasicBlock> predecessor_;//前驱
   protected ArrayList<BasicBlock> successor_;//后继

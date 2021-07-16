@@ -45,6 +45,10 @@ public class Constants {
       const_arr_ = new ArrayList<>(arr);
     }
 
+    public ArrayList<Constant> getConst_arr_() {
+      return const_arr_;
+    }
+
     private ArrayList<Constant> const_arr_;
 
     public ArrayList<Integer> getDims() {

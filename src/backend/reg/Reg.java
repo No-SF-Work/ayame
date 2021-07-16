@@ -19,5 +19,7 @@ public class Reg extends MachineOperand{
 
     ArrayList<MachineCode> MClist=new ArrayList<>();
 
+    public String getName(){return "";}
+
     Reg(state s){super(s);}
 }

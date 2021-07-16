@@ -1,9 +1,12 @@
 package pass;
 
+import backend.CodeGenManager;
 import ir.MyModule;
 import java.util.ArrayList;
 import pass.Pass.IRPass;
-import pass.Pass.MAPass;
+import pass.Pass.MCPass;
+import pass.ir.Mem2reg;
+import pass.mc.RegAllocator;
 
 public class PassManager {
 
@@ -11,12 +14,14 @@ public class PassManager {
   private ArrayList<String> openedPasses_ = new ArrayList<>() {{
     add("typeCheck");
   }};
-  private ArrayList<IRPass> irPasses = new ArrayList<>();
-  private ArrayList<MAPass> maPasses = new ArrayList<>();
+  private ArrayList<IRPass> irPasses = new ArrayList<>(){};
+  private ArrayList<MCPass> mcPasses = new ArrayList<>();
 
   private PassManager() {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
-    irPasses.add(new DeadCodeEmit());
+    irPasses.add(new Mem2reg());
+
+//    mcPasses.add(new RegAllocator());
 
   }
 
@@ -38,10 +43,10 @@ public class PassManager {
 
   }
 
-  public void runMAPasses(/*MaModule ma*/) {
-    maPasses.forEach(pass -> {
+  public void runMCPasses(CodeGenManager cgm) {
+    mcPasses.forEach(pass -> {
       if (!openedPasses_.contains(pass.getName())) {
-        pass.run();
+        pass.run(cgm);
       }
     });
   }

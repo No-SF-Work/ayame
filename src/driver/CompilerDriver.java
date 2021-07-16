@@ -4,6 +4,11 @@ import frontend.SysYLexer;
 import frontend.SysYParser;
 import frontend.Visitor;
 import ir.MyModule;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.annotation.Arg;
@@ -15,6 +20,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ParseTree;
 import pass.PassManager;
+import backend.CodeGenManager;
 
 import java.io.IOException;
 import util.Mylogger;
@@ -30,6 +36,18 @@ public class CompilerDriver {
    */
   private static Logger logger;
 
+  public static void setConfig(Config config, Namespace res) throws IOException {
+    config.isIRMode = res.get("ir");
+    config.isDebugMode = res.get("debug");
+    config.isOutPutMode = res.get("output");
+    //only severe level msg will be recorded in console if not in debug mode
+    ConsoleHandler ch = new ConsoleHandler();
+    FileHandler fh = new FileHandler("record.log");
+    config.isDebugMode = true;//todo 默认打开方便debug记得release后删除
+    Mylogger.loadLogConfig(config.isDebugMode);
+
+  }
+
   public static void run(String[] args) {
     Mylogger.init();
     Config config = Config.getInstance();
@@ -43,14 +61,14 @@ public class CompilerDriver {
     argParser.addArgument("-f", "--ir").action(Arguments.storeTrue())
         .help("write llvm ir to debug_{$source file name}.ll");
     argParser.addArgument("-d", "--debug").action(Arguments.storeTrue())
-        .help("use debug mode , which will record actions in current path");
+        .help("use debug mode,which will record actions in current path");
     //新的可选指令加在上面
     argParser.addArgument("source");
     argParser.addArgument("target");
     try {
       Namespace res = argParser.parseArgs(args);
       Mylogger.init();
-      config.setConfig(res);
+      setConfig(config, res);
       logger = Mylogger.getLogger(CompilerDriver.class);
       logger.info("Config -> " + res);
       String source = res.get("source");
@@ -86,9 +104,16 @@ public class CompilerDriver {
       if (config.isIRMode) {//做到可以同时使用 -o -f 指令，-o的文件进行底层的优化，-f的文件只进行中高层的优化
         //   pm.addpass(/* llvm ir generate */);
       }
-      pm.runMAPasses(/*MAModule mm*/);
+      CodeGenManager cgm = CodeGenManager.getInstance();
+      cgm.load(MyModule.getInstance());
+      cgm.MachineCodeGeneration();
+      pm.runMCPasses(CodeGenManager.getInstance());
       //todo output
 
+      File f = new File(target);
+      FileWriter fw = new FileWriter(f);
+      fw.append(cgm.genARM());
+      fw.close();
     } catch (HelpScreenException e) {
       //当使用 -h指令时抛出该异常，catch后直接退出。
     } catch (ArgumentParserException e) {

@@ -1,4 +1,4 @@
-package pass;
+package pass.ir;
 
 import ir.Analysis.ArrayAliasAnalysis;
 import ir.MyFactoryBuilder;

@@ -1,20 +1,14 @@
-package backend;
+package pass.mc;
 
-import backend.machinecodes.ArmAddition;
-import backend.machinecodes.MCBranch;
-import backend.machinecodes.MCCall;
-import backend.machinecodes.MCComment;
-import backend.machinecodes.MCJump;
-import backend.machinecodes.MCLoad;
-import backend.machinecodes.MCStore;
-import backend.machinecodes.MachineBlock;
-import backend.machinecodes.MachineCode;
+import backend.CodeGenManager;
+import backend.machinecodes.*;
 import backend.reg.PhyReg;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
@@ -34,53 +28,24 @@ public class ListScheduling {
             this.completeCycles = 0;
         }
 
-        public void runTask(Node curNode, int completeCycles) {
+        public void runTask(Node curNode, int completeCycles, Map<A72FUType, Integer> freeUnits) {
             this.curNode = curNode;
             this.completeCycles = completeCycles;
+            freeUnits.compute(type, (key, value) -> value - 1);
+        }
+
+        public void freeTask(Map<A72FUType, Integer> freeUnits) {
+            curNode = null;
+            freeUnits.compute(type, (key, value) -> value + 1);
         }
     }
 
-    private int getInstrLatency(MachineCode code) {
-        return switch (code.getTag()) {
-            case Add, Sub, Rsb, And, Or -> code.getShift().getType() == ArmAddition.ShiftType.None ? 1 : 2;
-            case Mul -> 3;
-            case Div -> 8;
-            // binary
-            case Compare -> 1;
-            case LongMul -> 3;
-            case FMA -> 4;
-            case Mv -> code.getCond() == ArmAddition.CondType.Any ? 1 : 2; // fixme movw & movt
-            case Branch, Jump, Return -> 1;
-            case Load -> 4;
-            case Store -> 3;
-            case Call -> 1;
-            case Global -> 1;
-            default -> throw new IllegalStateException("Unexpected value: " + code.getTag());
-        };
-    }
-
-    private A72FUType getInstrFUType(MachineCode code) {
-        return switch (code.getTag()) {
-            case Add, Sub, Rsb, And, Or, Mv ->
-                    code.getShift().getType() == ArmAddition.ShiftType.None ? A72FUType.Integer : A72FUType.Multiple;
-            case Mul, Div -> A72FUType.Multiple;
-            // binary
-            case Compare -> A72FUType.Integer;
-            case LongMul, FMA -> A72FUType.Multiple;
-            case Branch, Jump, Return, Call -> A72FUType.Branch;
-            case Load -> A72FUType.Load;
-            case Store -> A72FUType.Store;
-            case Global -> A72FUType.Integer;
-            default -> throw new IllegalStateException("Unexpected value: " + code.getTag());
-        };
-    }
-
-    private class Node implements Comparable<Node> {
+    private static class Node implements Comparable<Node> {
         private final MachineCode instr;
         private final int latency;
-        private final A72FUType FUType;
-        private final ArrayList<Node> outSet;
-        private final ArrayList<Node> inSet;
+        private final ArrayList<A72FUType> needFU = new ArrayList<>();
+        private final ArrayList<Node> outSet = new ArrayList<>();
+        private final ArrayList<Node> inSet = new ArrayList<>();
         private int outDegree;
         private int inDegree;
         private int criticalLatency;
@@ -88,10 +53,35 @@ public class ListScheduling {
         public Node(MachineCode instr) {
             this.instr = instr;
             this.criticalLatency = 0;
-            this.latency = getInstrLatency(instr);
-            this.FUType = getInstrFUType(instr);
-            this.outSet = new ArrayList<>();
-            this.inSet = new ArrayList<>();
+            this.latency = switch (instr.getTag()) {
+                case Add, Sub, Rsb, And, Or -> instr.getShift().getType() == ArmAddition.ShiftType.None ? 1 : 2;
+                case Mul -> 3;
+                case Div -> 8;
+                // binary
+                case Compare -> 1;
+                case LongMul -> 3;
+                case FMA -> 4;
+                case Mv -> instr.getCond() == ArmAddition.CondType.Any ? 1 : 2; // fixme movw & movt
+                case Branch, Jump, Return -> 1;
+                case Load -> 4;
+                case Store -> 3;
+                case Call -> 1;
+                case Global -> 1;
+                default -> throw new IllegalStateException("Unexpected value: " + instr.getTag());
+            };
+            this.needFU.add(switch (instr.getTag()) {
+                case Add, Sub, Rsb, And, Or, Mv ->
+                        instr.getShift().getType() == ArmAddition.ShiftType.None ? A72FUType.Integer : A72FUType.Multiple;
+                case Mul, Div -> A72FUType.Multiple;
+                // binary
+                case Compare -> A72FUType.Integer;
+                case LongMul, FMA -> A72FUType.Multiple;
+                case Branch, Jump, Return, Call -> A72FUType.Branch;
+                case Load -> A72FUType.Load;
+                case Store -> A72FUType.Store;
+                case Global -> A72FUType.Integer;
+                default -> throw new IllegalStateException("Unexpected value: " + instr.getTag());
+            });
         }
 
         public void addEdge(Node to) {
@@ -107,17 +97,6 @@ public class ListScheduling {
         }
     }
 
-    public void list_scheduling(CodeGenManager manager) {
-        for (var func : manager.getMachineFunctions()) {
-            for (var blockEntry : func.getmbList()) {
-                var block = blockEntry.getVal();
-                var nodes = buildConflictGraph(block);
-                calculateCriticalLatency(nodes);
-                scheduling(block, nodes);
-            }
-        }
-    }
-
     private void scheduling(MachineBlock block, ArrayList<Node> nodes) {
         var units = List.of(
                 new A72Unit(A72FUType.Branch),
@@ -127,6 +106,9 @@ public class ListScheduling {
                 new A72Unit(A72FUType.Load),
                 new A72Unit(A72FUType.Store)
         );
+
+        var freeUnits = units.stream()
+                .collect(Collectors.toMap(unit -> unit.type, unit -> 1, Integer::sum));
 
         block.getmclist().clear();
 
@@ -138,26 +120,36 @@ public class ListScheduling {
         int cntInflight = 0;
         int cycle = 0;
         while (!readyNodeList.isEmpty() || cntInflight > 0) {
+            // Simulate Frontend Firing
             for (var iter = readyNodeList.iterator(); iter.hasNext();) {
                 var curNode = iter.next();
 
-                for (var unit: units) {
-                    if (unit.type == curNode.FUType && unit.curNode == null) {
-                        block.addMC(curNode.instr);
-                        ++cntInflight;
-                        unit.runTask(curNode, cycle + curNode.latency);
-                        iter.remove();
-                        break;
+                var needUnitMap = curNode.needFU.stream()
+                        .collect(Collectors.toMap(type -> type, type -> 1, Integer::sum));
+                boolean canFire = needUnitMap.entrySet().stream()
+                        .allMatch(entry -> freeUnits.get(entry.getKey()) >= entry.getValue());
+                if (!canFire) continue;
+
+                for (var needUnit: curNode.needFU) {
+                    for (var unit: units) {
+                        if (unit.type.equals(needUnit) && unit.curNode == null) {
+                            block.addAtEndMC(curNode.instr.getNode());
+                            unit.runTask(curNode, cycle + curNode.latency, freeUnits);
+                            iter.remove();
+                            ++cntInflight;
+                            break;
+                        }
                     }
                 }
             }
 
+            // Simulate Backend Execution
             ++cycle;
             for (A72Unit unit : units) {
                 if (unit.curNode != null && unit.completeCycles == cycle) {
                     unit.curNode.outSet.forEach(outNode -> --outNode.inDegree);
                     unit.curNode.outSet.stream().filter(outNode -> outNode.inDegree == 0).forEach(readyNodeList::add);
-                    unit.curNode = null;
+                    unit.freeTask(freeUnits);
                     --cntInflight;
                 }
             }
@@ -165,20 +157,20 @@ public class ListScheduling {
     }
 
     private void calculateCriticalLatency(ArrayList<Node> nodes) {
-        var visit = new LinkedList<Node>();
+        var toVisit = new LinkedList<Node>();
         nodes.forEach(node -> node.outDegree = node.outSet.size());
         nodes.stream().filter(n -> n.outDegree != 0).forEach(n -> {
-            visit.add(n);
+            toVisit.add(n);
             n.criticalLatency = n.latency;
         });
 
-        while (!visit.isEmpty()) {
-            var n = visit.pollLast();
-            n.inSet.forEach(t -> {
-                t.criticalLatency = Math.max(t.criticalLatency, t.latency + n.criticalLatency);
-                --t.outDegree;
-                if (t.outDegree == 0) {
-                    visit.add(t);
+        while (!toVisit.isEmpty()) {
+            var n = toVisit.pollLast();
+            n.inSet.forEach(inNode -> {
+                inNode.criticalLatency = Math.max(inNode.criticalLatency, inNode.latency + n.criticalLatency);
+                --inNode.outDegree;
+                if (inNode.outDegree == 0) {
+                    toVisit.add(inNode);
                 }
             });
         }
@@ -203,15 +195,15 @@ public class ListScheduling {
             var curNode = new Node(instr);
             nodes.add(curNode);
 
-            uses.stream().filter(writeRegNodes::containsKey)
-                    .map(writeRegNodes::get)
-                    .forEach(writeNode -> writeNode.addEdge(curNode));
-
             defs.stream().filter(readRegNodes::containsKey)
                     .flatMap(defReg -> readRegNodes.get(defReg).stream())
                     .forEach(readNode -> readNode.addEdge(curNode));
 
             defs.stream().filter(writeRegNodes::containsKey)
+                    .map(writeRegNodes::get)
+                    .forEach(writeNode -> writeNode.addEdge(curNode));
+
+            uses.stream().filter(writeRegNodes::containsKey)
                     .map(writeRegNodes::get)
                     .forEach(writeNode -> writeNode.addEdge(curNode));
 
@@ -242,11 +234,22 @@ public class ListScheduling {
                 loadNodes.add(curNode);
             }
 
-            if (instr instanceof MCBranch || instr instanceof MCJump /* fixme: instr instanceof MCReturn */) {
+            if (instr instanceof MCBranch || instr instanceof MCJump || instr instanceof MCReturn) {
                 nodes.stream().filter(node -> node != curNode).forEach(node -> node.addEdge(curNode));
             }
         }
         
         return nodes;
+    }
+
+    public void list_scheduling(CodeGenManager manager) {
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+                var nodes = buildConflictGraph(block);
+                calculateCriticalLatency(nodes);
+                scheduling(block, nodes);
+            }
+        }
     }
 }

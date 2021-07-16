@@ -5,7 +5,6 @@ import java.security.PublicKey;
 /**
  * 拿来和GEP,load,store配套使用
  * <p>
- *
  */
 public class PointerType extends Type {
 
@@ -21,7 +20,8 @@ public class PointerType extends Type {
 
   @Override
   public String toString() {
-    return null;
-    //todo
+    var sb = new StringBuilder();
+    sb.append(contained.toString() + "* ");
+    return sb.toString();
   }
 }

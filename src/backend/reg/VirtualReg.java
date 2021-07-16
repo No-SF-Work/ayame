@@ -26,6 +26,7 @@ public class VirtualReg extends Reg {
         return isSSA;
     }
 
+    @Override
     public String getName() {
         return name;
     }
@@ -35,7 +36,11 @@ public class VirtualReg extends Reg {
 
     public VirtualReg(String name){
         super(state.virtual);
-        this.name=name;
+        if(name==""){
+            this.name="%%"+Integer.toString(Name++);
+        }else{
+            this.name=name;
+        }
     }
 
     public VirtualReg(){

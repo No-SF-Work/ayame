@@ -6,6 +6,7 @@ import ir.values.Constants.ConstantInt;
 import ir.values.Value;
 
 public class BinaryInst extends Instruction {
+
   //不插
   public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs) {
     super(tag, type, 2);
@@ -136,15 +137,34 @@ public class BinaryInst extends Instruction {
     return this.tag == TAG_.Or;
   }
 
+  public boolean isCond() {
+    return this.tag == TAG_.Lt || this.tag == TAG_.Le || this.tag == TAG_.Gt ||
+        this.tag == TAG_.Ge || this.tag == TAG_.Eq || this.tag == TAG_.Ne;
+  }
+
   @Override
   public String toString() {
-    switch (this.tag) {
-      case Alloca -> {
-      }
-      default -> {
-      }
-    }
-    //todo
+    StringBuilder sb = new StringBuilder();
+    sb.append(this.getName() + " = ");
+    sb.append(
+        switch (this.tag) {
+          case Add -> "add nsw i32 ";
+          case Sub -> "sub nsw i32 ";
+          case Rsb -> "rsb nsw i32 ";
+          case Mul -> "mul nsw i32 ";
+          case Div -> "div nsw i32 ";
+          case Lt -> "icmp slt i32 ";
+          case Le -> "icmp sle i32 ";
+          case Ge -> "icmp sge i32 ";
+          case Gt -> "icmp sgt i32 ";
+          case Eq -> "icmp eq i32 ";
+          case Ne -> "icmp ne i32 ";
+          case And -> "";
+          case Or -> "";//todo and and or
+          default -> "";
+        }
+    );
+    sb.append(operands.get(0).getName() + "," + operands.get(1).getName());
     return null;
   }
 
