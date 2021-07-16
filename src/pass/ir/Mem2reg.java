@@ -169,8 +169,9 @@ public class Mem2reg implements IRPass {
         continue;
       }
       data.bb.setDirty(true);
-      for (INode<Instruction, BasicBlock> instNode : data.bb.getList()) {
+      for (var instNode = data.bb.getList().getEntry(); instNode != null;) {
         Instruction inst = instNode.getVal();
+        var tmp = instNode.getNext();
         // AllocaInst
         if (inst.tag == TAG_.Alloca) {
           instNode.removeSelf();
@@ -195,6 +196,7 @@ public class Mem2reg implements IRPass {
           int allocaIndex = phiToAllocaMap.get(phiInst);
           currValues.set(allocaIndex, phiInst);
         }
+        instNode = tmp;
       }
 
       for (BasicBlock bb : data.bb.getSuccessor_()) {

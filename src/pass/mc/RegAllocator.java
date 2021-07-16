@@ -3,6 +3,7 @@ package pass.mc;
 import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.*;
+import pass.Pass;
 import util.Pair;
 
 import java.util.ArrayList;
@@ -17,11 +18,17 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import pass.Pass.MCPass;
 
 // Graph-Coloring
-public class RegAllocator {
+public class RegAllocator implements MCPass {
     private final int INF = 0x3f3f3f3f;
     private final int K = 14;
+
+    @Override
+    public String getName() {
+        return "RegAlloc";
+    }
 
     private static class BlockLiveInfo {
         private final MachineBlock block;
@@ -159,7 +166,7 @@ public class RegAllocator {
         }
     }
 
-    public void RegisterAllocation(CodeGenManager manager) {
+    public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
             var allocatable = IntStream.range(0, 14).filter(i -> i != 13)
                     .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
