@@ -102,6 +102,16 @@ public abstract class MemInst extends Instruction {
       this.numOP--;
       CoSetOperand(1, null);
     }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      var lhs = operands.get(0);
+      var rhs = operands.get(1);
+      sb.append("store " + lhs.getType().toString() + " " + lhs.getName() + ", ");
+      sb.append(rhs.getType().toString() + " " + rhs.getName());
+      return null;
+    }
   }
 
   public static class StoreInst extends MemInst {
@@ -134,7 +144,16 @@ public abstract class MemInst extends Instruction {
 
   public static class GEPInst extends MemInst {
 
-    //todo
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(this.getName() + "= getelementptr " + this.getElementType_() + "," + operands.get(0)
+          .getType() + " " + operands.get(0).getName() + " ");
+      for (var i = 1; i < operands.size(); i++) {
+        sb.append(", " + operands.get(i).getType() + " " + operands.get(i).getName());
+      }
+      return sb.toString();
+    }
 
     /**
      * 拿到这个pointer指向的数组/值的指针的type
