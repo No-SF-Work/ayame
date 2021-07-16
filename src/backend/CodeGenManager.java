@@ -850,36 +850,40 @@ public class CodeGenManager {
                         //TODO 如何获得到底是哪个指针
                         assert(ir.getType() instanceof PointerType);
                         Type ttype=((PointerType)ir.getType()).getContained();
-                        if(ttype instanceof PointerType){
-                            var type =((PointerType) ((PointerType)ir.getType()).getContained()).getContained();
-                            if(type.isIntegerTy()){
-
-                            }
-                            if (type.isArrayTy()){
-
-                            }
-                        }else if(ttype instanceof IntegerType){
-
+//                        if(ttype instanceof PointerType){
+//                            var type =((PointerType) ((PointerType)ir.getType()).getContained()).getContained();
+//                            if(type.isIntegerTy()){
+//
+//                            }
+//                            if (type.isArrayTy()){
+//
+//                            }
+//                        }else
+                        MachineOperand offset;
+                        if(ttype instanceof IntegerType || ttype instanceof PointerType){
+                            offset = genImm(4, mb);
                         }else{
                             assert(ttype instanceof  ArrayType);
-                        }
-                        if (ir.getType() instanceof PointerType) {
-
-                        } else {
-                            //alloca整数已被mem2reg优化
-                            assert (ir.getType() instanceof ArrayType);
                             int size = 4;
                             Iterator<Integer> dimList = ((ArrayType) ir.getType()).getDims().iterator();
                             while (dimList.hasNext()) {
                                 size *= dimList.next();
                             }
-                            MachineOperand dst = aV.analyzeValue(ir);
-                            MachineOperand offset = genImm(mf.getStackSize(), mb);
-                            MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
-                            add.setDst(dst);
-                            add.setLhs(mf.getPhyReg("sp"));
-                            add.setRhs(offset);
+                            offset = genImm(mf.getStackSize(), mb);
+                            mf.addStackSize(size);
                         }
+                        assert (ir.getType() instanceof ArrayType);
+                        MachineOperand dst = aV.analyzeValue(ir);
+                        MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
+                        add.setDst(dst);
+                        add.setLhs(mf.getPhyReg("sp"));
+                        add.setRhs(offset);
+
+//                        if (ir.getType() instanceof PointerType) {
+//
+//                        } else {
+//                            //alloca整数已被mem2reg优化
+//                        }
                     } else if (ir.tag == Instruction.TAG_.Load) {
                         MachineOperand dst = aV.analyzeValue(ir);
                         MachineOperand addr = aV.analyzeValue(ir.getOperands().get(0));
