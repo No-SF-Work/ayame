@@ -8,3 +8,4 @@ tests/
 .vscode/
 out/
 util/.antlr/
+out.s
