@@ -188,6 +188,7 @@ public class GVNGCM implements IRPass {
   public void replace(Instruction inst, Value val) {
     valueTable.removeIf(pair -> pair.getFirst() == inst);
     inst.COReplaceAllUseWith(val);
+    inst.removeUsesOfOPs();
     inst.node.removeSelf();
   }
 
