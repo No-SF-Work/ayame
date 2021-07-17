@@ -46,11 +46,11 @@ public abstract class TerminatorInst extends Instruction {
       }
       return true;
     }
-    
+
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append(this.getName() + "= call " + this.getType() + operands.get(0).getName());
+      sb.append(this.getName() + "= call " + this.getType() + " @" + operands.get(0).getName());
       sb.append("(");
       boolean a = false;
       for (int i = 1; i < operands.size(); i++) {

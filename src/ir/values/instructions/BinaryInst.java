@@ -166,7 +166,7 @@ public class BinaryInst extends Instruction {
         }
     );
     sb.append(operands.get(0).getName() + "," + operands.get(1).getName());
-    return null;
+    return sb.toString();
   }
 
   public Value selfAlgebraOpt() {

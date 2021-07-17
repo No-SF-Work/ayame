@@ -330,18 +330,18 @@ public class GVNGCM implements IRPass {
       }
 
       // Load 的 useStore
-      if (inst.tag == TAG_.Load) {
-        LoadInst loadInst = (LoadInst) inst;
-        Value value = loadInst.getUseStore();
-        if (value instanceof Instruction) {
-          Instruction valueInst = (Instruction) value;
-          scheduleEarly(valueInst, func);
-          if (valueInst.getBB().getDomLevel() > inst.getBB().getDomLevel()) {
-            inst.node.removeSelf();
-            inst.node.insertAtEnd(valueInst.getBB().getList());
-          }
-        }
-      }
+//      if (inst.tag == TAG_.Load) {
+//        LoadInst loadInst = (LoadInst) inst;
+//        Value value = loadInst.getUseStore();
+//        if (value instanceof Instruction) {
+//          Instruction valueInst = (Instruction) value;
+//          scheduleEarly(valueInst, func);
+//          if (valueInst.getBB().getDomLevel() > inst.getBB().getDomLevel()) {
+//            inst.node.removeSelf();
+//            inst.node.insertAtEnd(valueInst.getBB().getList());
+//          }
+//        }
+//      }
 
       if (inst.tag == TAG_.Call && ((CallInst) inst).isPureCall()) {
         for (var i = 1; i < inst.getNumOP(); i++) {
