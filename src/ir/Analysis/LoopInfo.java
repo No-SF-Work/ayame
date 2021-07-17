@@ -30,6 +30,9 @@ public class LoopInfo {
   }
 
   public Integer getLoopDepthForBB(BasicBlock bb) {
+    if (bbLoopMap.get(bb) == null) {
+      return 0;
+    }
     return bbLoopMap.get(bb).getLoopDepth();
   }
 
@@ -107,10 +110,12 @@ public class LoopInfo {
   }
 
   public void populateLoopsDFS(BasicBlock bb) {
-    if (bb.isDirty()) return;
+    if (bb.isDirty()) {
+      return;
+    }
     bb.setDirty(true);
 
-    for (BasicBlock succBB: bb.getSuccessor_()) {
+    for (BasicBlock succBB : bb.getSuccessor_()) {
       populateLoopsDFS(succBB);
     }
 
