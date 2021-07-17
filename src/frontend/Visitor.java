@@ -128,6 +128,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private boolean usingInt_ = false;//常量初始化要对表达式求值，并且用的Ident也要是常量
   private boolean globalInit_ = false;
   private boolean buildCall = false;
+  private boolean expInRel = false;
 
   /**
    * program : compUnit ;
@@ -415,7 +416,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       } else {//local arr init
         var alloc = f.buildAlloca(curBB_, arrTy);
         scope_.put(ctx.IDENT().getText(), alloc);
-        if (!(ctx.initVal().isEmpty()) && !(ctx.initVal().initVal().isEmpty())) {
+        if (!(ctx.initVal() == null) && !(ctx.initVal().initVal().isEmpty())) {
           alloc.setInit();
           ctx.initVal().dimInfo_ = dims;
           visit(ctx.initVal());
@@ -703,6 +704,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var falseBlock = ctx.ELSE_KW() == null ? nxtBlock :
         f.buildBasicBlock(parentBB.getName() + "_else", curFunc_);
 
+    nxtBlkStk_.push(nxtBlock);
     ctx.cond().falseblock = falseBlock;
     ctx.cond().trueblock = trueBlock;
     // Parse [cond]
@@ -710,16 +712,17 @@ public class Visitor extends SysYBaseVisitor<Void> {
     // Parse [then] branch
     changeBB(trueBlock);
     visitStmt(ctx.stmt(0));
-    f.buildBr(nxtBlock, trueBlock);
+    f.buildBr(nxtBlock, curBB_);
 
     // Parse [else] branch
     if (ctx.ELSE_KW() != null) {
       changeBB(falseBlock);
       visitStmt(ctx.stmt(1));
-      f.buildBr(nxtBlock, falseBlock);
+      f.buildBr(nxtBlock, curBB_);
     }
     //todo if(cond){return something}else{return something}
     curBB_ = nxtBlock;
+    nxtBlkStk_.pop();
     return null;
   }
 
@@ -942,6 +945,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       if (ctx.exp().isEmpty()) {
         tmp_ = f.buildGEP(t, new ArrayList<>() {{
           add(CONST0);
+          add(CONST0);
         }}, curBB_);
         return null;
       } else {
@@ -988,7 +992,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
         if (buildCall) {
           buildCall = false;
           visit(ctx.lVal());
-          tmp_ = f.buildLoad(((PointerType) tmp_.getType()).getContained(), tmp_, curBB_);
           return null;
         } else {
           visit(ctx.lVal());
@@ -1115,9 +1118,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
         var param = paramsCtx.get(i);
         var paramTy = paramTys.get(i);
         if (paramTy.isIntegerTy()) {
-          buildCall = true;
-        } else {
           buildCall = false;
+        } else {
+          buildCall = true;
         }
         visit(param.exp());// 没有String
         buildCall = false;
@@ -1233,9 +1236,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitRelExp(RelExpContext ctx) {
+
     visit(ctx.addExp(0));
     var lhs = tmp_;
     for (int i = 1; i < ctx.addExp().size(); i++) {
+      expInRel = false;
       visit(ctx.addExp(i));
       if (ctx.relOp(i - 1).LE() != null) {
         lhs = f.buildBinary(TAG_.Le, lhs, tmp_, curBB_);
@@ -1263,6 +1268,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     visit(ctx.relExp(0));
     var lhs = tmp_;
     for (int i = 1; i < ctx.relExp().size(); i++) {
+      expInRel = false;
       visit(ctx.relExp(i));
       if (ctx.eqOp(i - 1).EQ() != null) {
         lhs = f.buildBinary(TAG_.Eq, lhs, tmp_, curBB_);
@@ -1283,7 +1289,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
   public Void visitLAndExp(LAndExpContext ctx) {
     ctx.eqExp().forEach(exp -> {
       var nb = f.buildBasicBlock("", curFunc_);
+      expInRel = true;
       visit(exp);
+      if (expInRel) {
+        expInRel = false;
+        tmp_ = f.buildBinary(TAG_.Ne, tmp_, CONST0, curBB_);
+      }
       f.buildBr(tmp_, nb, ctx.falseblock, curBB_);
       changeBB(nb);
     });

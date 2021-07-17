@@ -833,6 +833,7 @@ public class CodeGenManager {
 
 
                     } else if (ir.tag == Instruction.TAG_.Call) {
+                        MachineCode call = new MCCall(mb);
                         //获取调用函数的参数数量
                         int argNum = ir.getOperands().size() - 1;
                         for (int i = 0; i < argNum; i++) {
@@ -841,6 +842,8 @@ public class CodeGenManager {
                                 MachineCode mv = new MCMove(mb);
                                 ((MCMove) mv).setRhs(rhs);
                                 ((MCMove) mv).setDst(mf.getPhyReg(i));
+                                //防止寄存器分配消除掉这些move
+                                call.addUse(((MCMove)mv).getDst());
                             } else {
                                 VirtualReg vr = (VirtualReg) ani.analyzeNoImm(ir.getOperands().get(i + 1), mb);
                                 MachineCode st = new MCStore(mb);
@@ -856,8 +859,6 @@ public class CodeGenManager {
                             ((MCBinary) sub).setLhs(mf.getPhyReg("sp"));
                             ((MCBinary) sub).setRhs(new MachineOperand(4 * (argNum - 4)));
                         }
-
-                        MachineCode call = new MCCall(mb);
                         assert (ir.getOperands().get(0) instanceof Function);
                         ((MCCall) call).setFunc(fMap.get((Function) ir.getOperands().get(0)));
                         if (argNum > 4) {
@@ -866,11 +867,18 @@ public class CodeGenManager {
                             ((MCBinary) add).setLhs(mf.getPhyReg("sp"));
                             ((MCBinary) add).setRhs(new MachineOperand(4 * (argNum - 4)));
                         }
+                        for(int i=0;i<4;i++){
+                            call.addDef(mf.getPhyReg(i));
+                        }
+                        //TODO:如果调用的函数有返回值，那么会def里应有r0，但是r1-r3不应该出现在def里，后面考虑删去
                         if (!((Function) (ir.getOperands().get(0))).getType().getRetType().isVoidTy()) {
                             MCMove mv = new MCMove(mb);
                             mv.setDst(aV.analyzeValue(ir));
                             mv.setRhs(mf.getPhyReg("r0"));
                         }
+                        call.addDef(mf.getPhyReg("lr"));
+                        //TODO:可能没用，后面考虑把ip寄存器当通用寄存器分配
+                        call.addDef(mf.getPhyReg("ip"));
                     } else if (ir.tag == Instruction.TAG_.Ret) {
                         //如果有返回值
                         if (((TerminatorInst.RetInst) ir).getNumOP() != 0) {
