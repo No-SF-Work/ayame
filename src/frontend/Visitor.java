@@ -8,6 +8,7 @@ import ir.types.FunctionType;
 import ir.types.IntegerType;
 import ir.types.PointerType;
 import ir.types.Type;
+import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Constant;
 import ir.values.Constants.ConstantInt;
@@ -15,6 +16,8 @@ import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.Instruction.TAG_;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -133,6 +136,32 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitProgram(ProgramContext ctx) {
     log.info("Syntax begin");
+    IntegerType i32Type = f.getI32Ty();
+    IntegerType i1Type = f.getI1Ty();
+    VoidType voidType = f.getVoidTy();
+    PointerType ptri32Type = f.getPointTy(i32Type);
+
+    log.warning("begin to build builtin functions");
+    ArrayList<Type> params_empty = new ArrayList<>(Collections.emptyList());
+    ArrayList<Type> params_int = new ArrayList<>(Collections.singletonList(i32Type));
+    ArrayList<Type> params_array = new ArrayList<>(Collections.singletonList(ptri32Type));
+    ArrayList<Type> params_int_and_array = new ArrayList<>(Arrays.asList(i32Type, ptri32Type));
+    // TODO what about putf(string, int, ...) ?
+    ArrayList<Type> params_putf = new ArrayList<>(Collections.emptyList());
+
+    scope_.put("getint", f.buildFunction("getint", f.getFuncTy(i32Type, params_empty), true));
+    scope_.put("getarray", f.buildFunction("getarray", f.getFuncTy(i32Type, params_array), true));
+    scope_.put("getch", f.buildFunction("getch", f.getFuncTy(i32Type, params_empty), true));
+    scope_.put("putint", f.buildFunction("putint", f.getFuncTy(voidType, params_int), true));
+    scope_.put("putch", f.buildFunction("putch", f.getFuncTy(voidType, params_int), true));
+    scope_.put("putarray",
+        f.buildFunction("putarray", f.getFuncTy(voidType, params_int_and_array), true));
+    scope_.put("putf", f.buildFunction("putf", f.getFuncTy(voidType, params_putf), true));
+    scope_.put("starttime",
+        f.buildFunction("starttime", f.getFuncTy(voidType, params_empty), true));
+    scope_
+        .put("stoptime", f.buildFunction("stoptime", f.getFuncTy(voidType, params_empty), true));
+
     return super.visitProgram(ctx);
   }
 
