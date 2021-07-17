@@ -168,6 +168,7 @@ public class RegAllocator implements MCPass {
     }
 
     public void run(CodeGenManager manager) {
+        System.err.println("R!!");
         for (var func : manager.getMachineFunctions()) {
             // fixme
 //            var allocatable = IntStream.range(0, 15).filter(i -> i != 13)
