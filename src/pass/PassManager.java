@@ -16,7 +16,7 @@ public class PassManager {
   private ArrayList<String> openedPasses_ = new ArrayList<>() {{
     add("typeCheck");
     add("Mem2reg");
-    add("emitllvm");
+//    add("emitllvm");
 //    add("gvngcm");
     add("RegAlloc");
 //    add("ListScheduling");
