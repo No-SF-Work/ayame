@@ -1,12 +1,10 @@
 package backend;
 
-import backend.LiveInterval;
 import backend.machinecodes.*;
 import backend.reg.MachineOperand;
 import backend.reg.PhyReg;
 import backend.reg.Reg;
 import backend.reg.VirtualReg;
-import driver.CompilerDriver;
 import ir.MyModule;
 import ir.types.ArrayType;
 import ir.types.IntegerType;
@@ -20,13 +18,8 @@ import util.IList;
 import util.IList.INode;
 import ir.values.instructions.MemInst.Phi;
 import util.Mylogger;
-import util.Pair;
 import backend.machinecodes.ArmAddition.CondType;
-import backend.machinecodes.ArmAddition.Shift;
 
-import javax.crypto.Mac;
-import java.lang.reflect.Array;
-import java.rmi.registry.Registry;
 import java.util.*;
 import java.util.logging.Logger;
 

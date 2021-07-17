@@ -1,8 +1,6 @@
 package backend.reg;
 
-import backend.LiveInterval;
 import backend.machinecodes.MachineCode;
-import backend.reg.MachineOperand;
 
 import java.util.HashMap;
 import java.util.Objects;
