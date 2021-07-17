@@ -22,12 +22,12 @@ public class PassManager {
   private static PassManager passManager = new PassManager();
   private ArrayList<String> openedPasses_ = new ArrayList<>() {{
     add("typeCheck");
-//    add("bbPredSucc");
-//    add("deadcodeemit");
+    add("bbPredSucc");
     add("Mem2reg");
-//    add("emitllvm");
-//    add("interproceduralAnalysis");
-//    add("gvngcm");
+    add("emitllvm");
+    add("interproceduralAnalysis");
+    add("gvngcm");
+    add("deadcodeemit");
     add("RegAlloc");
 //    add("ListScheduling");
   }};
@@ -38,11 +38,12 @@ public class PassManager {
   private PassManager() {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new BBPredSucc());
-    irPasses.add(new DeadCodeEmit());
     irPasses.add(new Mem2reg());
-    irPasses.add(new EmitLLVM());
+//    irPasses.add(new EmitLLVM());
 //    irPasses.add(new InterproceduralAnalysis());
 //    irPasses.add(new GVNGCM());
+//    irPasses.add(new DeadCodeEmit());
+    irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());
 
