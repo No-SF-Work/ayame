@@ -120,7 +120,7 @@ public class CodeGenManager {
         if (mb.getTrueSucc() == null && mb.getFalseSucc() == null) {
             return;
         }
-        //只有一个后继
+        //只有一个后继的情况
         if (mb.getFalseSucc() == null) {
             //当前基本块只有一个后继，且后继一定排在当前基本块之后，那么跳转指令就是废的
             MachineCode mcl = mb.getmclist().getLast().getVal();
@@ -151,7 +151,7 @@ public class CodeGenManager {
                 CondType cond = mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
             }
-            //有两个后继的情况下优先让false后继放到自己后面，处理False后继和只有一种后继的情况相同
+            //如果此时false块依然在mblist中，那么说明两个块都在mblist中
             if (isVisit.containsKey(mb.getFalseSucc())) {
                 if (waiting.containsKey(mb)) {
                     if (waiting.get(mb).containsKey(mb.getFalseSucc())) {
@@ -175,10 +175,8 @@ public class CodeGenManager {
                 MCJump jump = new MCJump(mb);
                 jump.setTarget(mb.getFalseSucc());
             } else {
-                MachineCode mcl = mb.getmclist().getLast().getVal();
-                assert (mcl instanceof MCBranch);
-                mb.getmclist().getLast().removeSelf();
-                //如果waiting中有copy，则插入当前块之后，即两个块中间
+                //如果false块没有被访问过，那么就放在当前块后面，当前块的br(跳向true块)指令后，
+                //false块之前可以插入waiting中的copy指令
                 if (waiting.containsKey(mb)) {
                     if (waiting.get(mb).containsKey(mb.getFalseSucc())) {
                         Iterator<MachineCode> mcIte = waiting.get(mb).get(mb.getFalseSucc()).iterator();
@@ -193,6 +191,7 @@ public class CodeGenManager {
             //处理True后继
             if (waiting.containsKey(mb)) {
                 if (waiting.get(mb).containsKey(mb.getTrueSucc())) {
+                    //如果true块只有一个前驱基本块，那么就可以把waiting中的copy插入true块的最前面
                     if (mb.getTrueSucc().getPred().size() == 1) {
                         Iterator<MachineCode> mcIte = waiting.get(mb).get(mb.getTrueSucc()).iterator();
                         while (mcIte.hasNext()) {
@@ -200,6 +199,7 @@ public class CodeGenManager {
                             mci.insertBeforeNode(mb.getTrueSucc().getmclist().getEntry().getVal());
                         }
                     } else {
+                        //如果true块有多个前驱块，那么只能在当前块和true块之间新建一个块插入waiting中的copy
                         MachineBlock newMB = new MachineBlock(mf);
                         Iterator<MachineCode> mcIte = waiting.get(mb).get(mb.getTrueSucc()).iterator();
                         while (mcIte.hasNext()) {
@@ -213,7 +213,7 @@ public class CodeGenManager {
                         mb.getTrueSucc().addPred(newMB);
                         newMB.setTrueSucc(mb.getTrueSucc());
                         newMB.addPred(mb);
-                        mb.setFalseSucc(newMB);
+                        mb.setTrueSucc(newMB);
                     }
 
                 }
@@ -229,6 +229,9 @@ public class CodeGenManager {
         for (; mbNode.getNext() != null; mbNode = mbNode.getNext()) {
             MachineBlock mb = mbNode.getVal();
             INode<MachineCode, MachineBlock> mcNode = mb.getmclist().getEntry();
+            if(mcNode==null){
+                continue;
+            }
             for (; mcNode.getNext() != null; mcNode = mcNode.getNext()) {
                 HashSet useRegs = mf.getUsedRegs();
                 Iterator<Reg> ite = useRegs.iterator();
@@ -326,58 +329,61 @@ public class CodeGenManager {
                     MachineCode mc = mcNode.getVal();
                     arm += mc.toString();
                 }
-                ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
-                arm += "\n\n.data\n";
-                arm += ".align 4\n";
-                for (GlobalVariable gv : gVs) {
-                    assert irMap.containsKey(gv);
-                    arm += ".global\t" + irMap.get(gv).getName() + "\n";
-                    arm += irMap.get(gv).getName() + ":\n";
-                    PointerType p=(PointerType) gv.getType();
-                    if (p.getContained() instanceof IntegerType) {
-                        arm += "\t.word\t";
-                        assert (gv.init != null);
-                        arm += ((Constants.ConstantInt) gv.init).getVal();
-                        arm += "\n";
-                    } else {
-                        assert (p.getContained() instanceof ArrayType);
-                        if (gv.init == null) {
-                            int n = 1;
-                            ArrayList<Integer> dims = ((ArrayType) gv.getType()).getDims();
-                            for (Integer d : dims) {
-                                n *= d;
-                            }
-                            arm += "\t.fill\t" + n + ",\t4,\t0\n";
+                arm+="\n";
+            }
+            arm+="\n";
+        }
+        ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
+        if(!gVs.isEmpty()){
+            arm += "\n\n.data\n";
+            arm += ".align 4\n";
+        }
+        for (GlobalVariable gv : gVs) {
+            assert irMap.containsKey(gv);
+            arm += ".global\t" + irMap.get(gv).getName() + "\n";
+            arm += irMap.get(gv).getName() + ":\n";
+            PointerType p=(PointerType) gv.getType();
+            if (p.getContained() instanceof IntegerType) {
+                arm += "\t.word\t";
+                assert (gv.init != null);
+                arm += ((Constants.ConstantInt) gv.init).getVal();
+                arm += "\n";
+            } else {
+                assert (p.getContained() instanceof ArrayType);
+                if (gv.init == null) {
+                    int n = 1;
+                    ArrayList<Integer> dims = ((ArrayType) gv.getType()).getDims();
+                    for (Integer d : dims) {
+                        n *= d;
+                    }
+                    arm += "\t.fill\t" + n + ",\t4,\t0\n";
+                } else {
+                    ArrayList<Constant> initValues = ((Constants.ConstantArray) gv.init).getConst_arr_();
+                    int lastv = ((Constants.ConstantInt) initValues.get(0)).getVal();
+                    int count = 0;
+                    for (Constant c : initValues) {
+                        int v = ((Constants.ConstantInt) c).getVal();
+                        if (v == lastv) {
+                            count++;
                         } else {
-                            ArrayList<Constant> initValues = ((Constants.ConstantArray) gv.init).getConst_arr_();
-                            int lastv = ((Constants.ConstantInt) initValues.get(0)).getVal();
-                            int count = 0;
-                            for (Constant c : initValues) {
-                                int v = ((Constants.ConstantInt) c).getVal();
-                                if (v == lastv) {
-                                    count++;
-                                } else {
-                                    if (count == 1) {
-                                        arm += "\t.word\t" + lastv + "\n";
-                                    } else {
-                                        arm += "\t.fill" + count + ",\t4,\t" + lastv + "\n";
-                                    }
-                                    lastv = v;
-                                    count = 1;
-                                }
-                            }
                             if (count == 1) {
                                 arm += "\t.word\t" + lastv + "\n";
                             } else {
                                 arm += "\t.fill" + count + ",\t4,\t" + lastv + "\n";
                             }
+                            lastv = v;
+                            count = 1;
                         }
-
+                    }
+                    if (count == 1) {
+                        arm += "\t.word\t" + lastv + "\n";
+                    } else {
+                        arm += "\t.fill" + count + ",\t4,\t" + lastv + "\n";
                     }
                 }
+
             }
         }
-
         return arm;
     }
 
@@ -619,6 +625,7 @@ public class CodeGenManager {
                         if (rhsIsConst && lhsIsConst) {
                             MachineCode.TAG tag;
                             BinaryInst bi = ((BinaryInst) ir);
+                            CondType t=CondType.Any;
                             if (bi.isAdd()) {
                                 tag = MachineCode.TAG.Add;
                             } else if (bi.isSub()) {
@@ -630,8 +637,7 @@ public class CodeGenManager {
                             } else if (bi.isRsb()) {
                                 tag = MachineCode.TAG.Rsb;
                             } else {
-                                assert (false);
-                                tag = MachineCode.TAG.Add;
+                                 continue;
                             }
                             MachineOperand tempLhs = ani.analyzeNoImm(ir.getOperands().get(0), mb);
                             MachineOperand tempRhs = ani.analyzeNoImm(ir.getOperands().get(1), mb);
@@ -640,6 +646,7 @@ public class CodeGenManager {
                             binary.setLhs(tempLhs);
                             binary.setRhs(tempRhs);
                             binary.setDst(dst);
+                            binary.setCond(t);
                             continue;
                         }
                         if (rhsIsConst) {
@@ -670,7 +677,7 @@ public class CodeGenManager {
                                     mc0.setRhs(new MachineOperand(n));
                                     VirtualReg v1 = new VirtualReg();
                                     mf.addVirtualReg(v1);
-                                    long a = 2147483648L;
+                                    //2147483648L=0x80000000
                                     if (m >= 2147483648L) {
                                         MCFma mc2 = new MCFma(mb);
                                         mc2.setAdd(true);
@@ -779,6 +786,7 @@ public class CodeGenManager {
                             assert (false);
                         } else {
                             MachineCode.TAG tag;
+
                             if (bi.isAdd()) {
                                 tag = MachineCode.TAG.Add;
                             } else if (bi.isSub()) {
@@ -790,15 +798,14 @@ public class CodeGenManager {
                             } else if (bi.isRsb()) {
                                 tag = MachineCode.TAG.Rsb;
                             } else {
-                                assert (false);
-                                tag = MachineCode.TAG.Add;
+
+                                tag = MachineCode.TAG.Compare;
                             }
                             MCBinary binary = new MCBinary(tag, mb);
                             MachineOperand dst = aV.analyzeValue(ir);
                             binary.setLhs(lhs);
                             binary.setRhs(rhs);
                             binary.setDst(dst);
-
                         }
 
                     } else if (ir.tag == Instruction.TAG_.Br) {
@@ -828,12 +835,7 @@ public class CodeGenManager {
                             MachineCode j = new MCJump(mb);
                             ((MCJump) j).setTarget(bMap.get(ir.getOperands().get(0)));
                             mb.setTrueSucc(bMap.get(ir.getOperands().get(0)));
-                            if (ir.getOperands().get(0) == bb.getPredecessor_().get(0)) {
-                                mb.setFalseSucc(bMap.get(bb.getPredecessor_().get(1)));
-                            } else {
-                                assert (ir.getOperands().get(0) == bb.getPredecessor_().get(1));
-                                mb.setFalseSucc(bMap.get(bb.getPredecessor_().get(0)));
-                            }
+
                         }
 
 

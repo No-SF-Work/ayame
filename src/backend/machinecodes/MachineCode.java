@@ -53,21 +53,10 @@ public class MachineCode {
 
     private MachineFunction mf;
 
-    //使用的virtualreg
-    private ArrayList<VirtualReg> virtualUses = new ArrayList<>();
-
-    //定义的virtualreg
-    private ArrayList<VirtualReg> virtualDef = new ArrayList<>();
 
     private ArrayList<Reg> regDef = new ArrayList<>();
 
     private ArrayList<Reg> regUse = new ArrayList<>();
-
-    //使用的phyreg
-    private ArrayList<PhyReg> phyUses = new ArrayList<>();
-
-    //定义的phyreg
-    private ArrayList<PhyReg> phyDef = new ArrayList<>();
 
     public TAG getTag() {
         return tag;
@@ -113,39 +102,14 @@ public class MachineCode {
         return ArmAddition.CondType.Any;
     }
 
-    //返回本MC定义的virtualreg
-    public ArrayList<VirtualReg> getVirtualDef() {
-        return virtualDef;
-    }
-
-    //返回本MC使用的virtualreg
-    public ArrayList<VirtualReg> getVirtualUses() {
-        return virtualUses;
-    }
-
-    public ArrayList<PhyReg> getPhyUses() {
-        return phyUses;
-    }
-
-    public ArrayList<PhyReg> getPhyDef() {
-        return phyDef;
-    }
 
     public void addUse(MachineOperand r) {
-        if (r.getState() == MachineOperand.state.virtual)
-            virtualUses.add((VirtualReg) r);
-        if (r.getState() == MachineOperand.state.phy)
-            phyUses.add((PhyReg) r);
         if (r instanceof VirtualReg || r instanceof PhyReg) {
             regUse.add((Reg) r);
         }
     }
 
     public void addDef(MachineOperand r) {
-        if (r.getState() == MachineOperand.state.virtual)
-            virtualDef.add((VirtualReg) r);
-        if (r.getState() == MachineOperand.state.phy)
-            phyDef.add((PhyReg) r);
         if (r instanceof VirtualReg || r instanceof PhyReg) {
             regDef.add((Reg) r);
         }
