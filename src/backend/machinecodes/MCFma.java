@@ -5,6 +5,7 @@ import backend.reg.MachineOperand;
 
 /**
  * Fma smmla:Rn + (Rm * Rs)[63:32] or smmls:Rd := Rn – (Rm * Rs)[63:32]
+ * dst = acc +(-) lhs * rhs
  */
 public class MCFma extends MachineCode {
 
@@ -39,8 +40,8 @@ public class MCFma extends MachineCode {
     private ArmAddition.CondType cond;
 
     public String toString() {
-        String res = sign ? "sm" : "";
-        res += add ? "\tmla" : "\tmls";
+        String res = sign ? "\tsm" : "\t";
+        res += add ? "mla" : "mls";
         res += contString(cond) + "\t" + dst.getName() + ",\t" + lhs.getName() + ",\t" + rhs.getName() + ",\t" + acc.getName() + "\n";
         return res;
     }
