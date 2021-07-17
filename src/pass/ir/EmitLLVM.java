@@ -16,7 +16,7 @@ public class EmitLLVM implements IRPass {
   }
 
   StringBuilder sb;
-  private int vnc = 1;//value name counter
+  private int vnc = 0;//value name counter
 
   private String newName() {
     var v = String.valueOf(vnc);
@@ -73,12 +73,13 @@ public class EmitLLVM implements IRPass {
     });
     m.__functions.forEach(
         f -> {
-          vnc = 1;
+          vnc = 0;
           var func = f.getVal();
           if (!func.isBuiltin_()) {
             func.getArgList().forEach(arg -> {
               arg.setName("%" + newName());
             });
+            vnc++;
             func.getList_().forEach(bbInode -> {
               if (!bbInode.equals(func.getList_().getEntry())) {
                 bbInode.getVal().setName(newName());
