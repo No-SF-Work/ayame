@@ -58,7 +58,11 @@ public abstract class Type {
 
     private static LabelType type = new LabelType();
 
-    //todo
+    @Override
+    public String toString() {
+      return "label ";
+    }
+
     private LabelType() {
     }
   }
