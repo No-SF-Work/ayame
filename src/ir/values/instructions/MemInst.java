@@ -117,6 +117,10 @@ public abstract class MemInst extends Instruction {
       CoSetOperand(1, null);
     }
 
+    public Value getPointer() {
+      return this.getOperands().get(0);
+    }
+
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
@@ -171,6 +175,14 @@ public abstract class MemInst extends Instruction {
       CoSetOperand(0, val);
       CoSetOperand(1, pointer);
       needname = false;
+    }
+
+    public Value getVal() {
+      return this.getOperands().get(0);
+    }
+
+    public Value getPointer() {
+      return this.getOperands().get(1);
     }
   }
 

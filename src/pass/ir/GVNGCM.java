@@ -109,7 +109,7 @@ public class GVNGCM implements IRPass {
       if (key instanceof LoadInst && loadInst.equals(key)) {
         LoadInst keyInst = (LoadInst) key;
         var allSame =
-            lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(0));
+            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
         allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
         if (allSame) {
           return valueNumber;
@@ -117,10 +117,10 @@ public class GVNGCM implements IRPass {
       } else if (key instanceof StoreInst) {
         StoreInst keyInst = (StoreInst) key;
         var allSame =
-            lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(1));
+            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
         allSame = allSame && (loadInst.getUseStore() == keyInst);
         if (allSame) {
-          return keyInst.getOperands().get(0);
+          return keyInst.getVal();
         }
       }
     }
@@ -137,7 +137,7 @@ public class GVNGCM implements IRPass {
       var valueNumber = valueTable.get(i).getSecond();
       if (key instanceof CallInst) {
         CallInst keyInst = (CallInst) key;
-        if (callInst.getOperands().get(0) != keyInst.getOperands().get(0)) {
+        if (callInst.getFunc() != keyInst.getFunc()) {
           continue;
         }
         var argSize = callInst.getNumOP();
@@ -175,14 +175,15 @@ public class GVNGCM implements IRPass {
       }
     }
     valueTable.add(new Pair<>(val, val));
+    int pos = valueTable.size() - 1;
     if (val.isInstruction()) {
       Instruction inst = (Instruction) val;
       if (inst.isBinary() || inst.tag == TAG_.GEP || inst.tag == TAG_.Load
           || inst.tag == TAG_.Call) {
-        valueTable.get(valueTable.size() - 1).setSecond(findValueNumber(inst));
+        valueTable.get(pos).setSecond(findValueNumber(inst));
       }
     }
-    return valueTable.get(valueTable.size() - 1).getSecond();
+    return valueTable.get(pos).getSecond();
   }
 
   public void replace(Instruction inst, Value val) {
@@ -202,6 +203,8 @@ public class GVNGCM implements IRPass {
 
     // clear MemorySSA, dead code elimination, compute MemorySSA
     ArrayAliasAnalysis.clear(func);
+    DeadCodeEmit dce = new DeadCodeEmit();
+    dce.runDCE(func);
     ArrayAliasAnalysis.run(func);
 
     runGCM(func);
@@ -257,7 +260,10 @@ public class GVNGCM implements IRPass {
     Instruction simpInst = (Instruction) v;
 
     if (inst.isBinary()) {
-      replace(inst, lookupOrAdd(simpInst));
+      Value val = lookupOrAdd(simpInst);
+      if (inst != val) {
+        replace(inst, val);
+      }
     } else if (inst.tag == TAG_.GEP) {
       replace(inst, lookupOrAdd(simpInst));
     } else if (inst.tag == TAG_.Load) {
