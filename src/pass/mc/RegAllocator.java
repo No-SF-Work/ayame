@@ -6,12 +6,7 @@ import backend.reg.*;
 import pass.Pass;
 import util.Pair;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -24,7 +19,7 @@ import pass.Pass.MCPass;
 // Graph-Coloring
 public class RegAllocator implements MCPass {
     private final int INF = 0x3f3f3f3f;
-    private final int K = 6;
+    private final int K = 4;
 
     @Override
     public String getName() {
@@ -195,6 +190,7 @@ public class RegAllocator implements MCPass {
                 var coalescedMoves = new HashSet<MCMove>();
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
+                System.out.println(manager.genARM());
 
                 Map<MachineOperand, Integer> degree = IntStream.range(0, 16)
                         .mapToObj(func::getPhyReg)
@@ -313,7 +309,10 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable simplify = () -> {
-                    var n = simplifyWorklist.iterator().next();
+                    // todo: for debug
+                    var tree = new TreeSet<>(simplifyWorklist);
+                    var n = tree.first();
+//                    var n = simplifyWorklist.iterator().next();
                     simplifyWorklist.remove(n);
                     selectStack.push(n);
                     getAdjacent.apply(n).forEach(decrementDegree);
@@ -368,6 +367,8 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable coalesce = () -> {
+                    // todo: debug
+                    var tree = new ArrayList<>(worklistMoves);
                     var m = worklistMoves.iterator().next();
                     var u = getAlias.apply(m.getDst());
                     var v = getAlias.apply(m.getRhs());
@@ -411,6 +412,8 @@ public class RegAllocator implements MCPass {
                         });
 
                 Runnable freeze = () -> {
+                    // todo: debug
+                    var tree = new ArrayList<>(freezeWorklist);
                     var u = freezeWorklist.iterator().next();
                     freezeWorklist.remove(u);
                     simplifyWorklist.add(u);
@@ -419,6 +422,8 @@ public class RegAllocator implements MCPass {
 
                 Runnable selectSpill = () -> {
                     // todo: heuristic
+                    // todo: debug
+                    var tree = new ArrayList<>(spillWorklist);
                     var m = spillWorklist.iterator().next();
                     simplifyWorklist.add(m);
                     freezeMoves.accept(m);
@@ -429,7 +434,7 @@ public class RegAllocator implements MCPass {
                     var colored = new HashMap<MachineOperand, MachineOperand>();
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
-                        var okColors = IntStream.range(0, 6).filter(i -> i != 13).boxed() // 15
+                        var okColors = IntStream.range(0, 4).filter(i -> i != 13).boxed() // 15
                                 .collect(Collectors.toSet());
 
                         adjList.getOrDefault(n, new HashSet<>()).forEach(w -> {
@@ -449,6 +454,8 @@ public class RegAllocator implements MCPass {
                         if (okColors.isEmpty()) {
                             spilledNodes.add(n);
                         } else {
+                            // todo: debug
+                            var tree = new ArrayList<>(okColors);
                             var color = okColors.iterator().next();
                             colored.put(n, func.getAllocatedReg(color));
                         }
