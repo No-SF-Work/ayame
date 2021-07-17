@@ -92,12 +92,18 @@ public abstract class TerminatorInst extends Instruction {
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("br ");
-      sb.append(operands.get(0).getType() + operands.get(0).getName() + ",");
-      sb.append(operands.get(1).getType() + operands.get(1).getName() + ",");
-      if (this.numOP == 3) {
-        sb.append(operands.get(2).getType() + operands.get(2).getName() + " ");
+      if (this.numOP == 1) {
+        sb.append(operands.get(0).getType()).append(" ").append("%" + operands.get(0).getName());
       }
-
+      if (this.numOP == 3) {
+        sb.append(operands.get(0).getType()).append(" ").append(operands.get(0).getName())
+            .append(",");
+        sb.append(operands.get(1).getType()).append(" ").append("%" + operands.get(1).getName())
+            .append(",");
+        sb.append(operands.get(2).getType()).append(" ").append("%" + operands.get(2).getName())
+            .append(" ");
+      }
+      sb.append("\n");
       return sb.toString();
     }
   }

@@ -683,6 +683,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var falseBlock = ctx.ELSE_KW() == null ? nxtBlock :
         f.buildBasicBlock(parentBB.getName() + "_else", curFunc_);
 
+    ctx.cond().falseblock = falseBlock;
+    ctx.cond().trueblock = trueBlock;
     // Parse [cond]
     visitCond(ctx.cond());
     // Parse [then] branch

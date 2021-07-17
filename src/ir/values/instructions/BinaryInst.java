@@ -1,5 +1,6 @@
 package ir.values.instructions;
 
+import ir.types.IntegerType;
 import ir.types.Type;
 import ir.values.BasicBlock;
 import ir.values.Constants.ConstantInt;
@@ -10,6 +11,12 @@ public class BinaryInst extends Instruction {
   //不插
   public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs) {
     super(tag, type, 2);
+    if (this.isLogicalBinary()) {
+      setType(IntegerType.getI1());
+    }
+    if (this.isArithmeticBinary()) {
+      setType(IntegerType.getI32());
+    }
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
     module.__instructions.put(this.handle, this);
@@ -18,6 +25,12 @@ public class BinaryInst extends Instruction {
   //插在bb末尾
   public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs, BasicBlock parent) {
     super(tag, type, 2, parent);
+    if (this.isLogicalBinary()) {
+      setType(IntegerType.getI1());
+    }
+    if (this.isArithmeticBinary()) {
+      setType(IntegerType.getI32());
+    }
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
     module.__instructions.put(this.handle, this);
@@ -26,6 +39,12 @@ public class BinaryInst extends Instruction {
   //插在next前面
   public BinaryInst(Instruction next, TAG_ tag, Type type, Value lhs, Value rhs) {
     super(next, tag, type, 2);
+    if (this.isLogicalBinary()) {
+      setType(IntegerType.getI1());
+    }
+    if (this.isArithmeticBinary()) {
+      setType(IntegerType.getI32());
+    }
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
     module.__instructions.put(this.handle, this);
@@ -34,6 +53,12 @@ public class BinaryInst extends Instruction {
   //插在prev后面
   public BinaryInst(TAG_ tag, Type type, Value lhs, Value rhs, Instruction prev) {
     super(tag, type, 2, prev);
+    if (this.isLogicalBinary()) {
+      setType(IntegerType.getI1());
+    }
+    if (this.isArithmeticBinary()) {
+      setType(IntegerType.getI32());
+    }
     this.CoSetOperand(0, lhs);
     this.CoSetOperand(1, rhs);
     module.__instructions.put(this.handle, this);
