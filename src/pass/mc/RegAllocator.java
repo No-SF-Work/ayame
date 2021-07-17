@@ -310,9 +310,8 @@ public class RegAllocator implements MCPass {
 
                 Runnable simplify = () -> {
                     // todo: for debug
-                    var tree = new TreeSet<>(simplifyWorklist);
-                    var n = tree.first();
-//                    var n = simplifyWorklist.iterator().next();
+                    var tree = new ArrayList<>(simplifyWorklist);
+                    var n = simplifyWorklist.iterator().next();
                     simplifyWorklist.remove(n);
                     selectStack.push(n);
                     getAdjacent.apply(n).forEach(decrementDegree);
