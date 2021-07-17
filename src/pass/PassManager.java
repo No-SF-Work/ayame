@@ -9,6 +9,7 @@ import pass.ir.BBPredSucc;
 import pass.ir.DeadCodeEmit;
 import pass.ir.EmitLLVM;
 import pass.ir.GVNGCM;
+import pass.ir.InterproceduralAnalysis;
 import pass.ir.Mem2reg;
 import pass.mc.RegAllocator;
 
@@ -17,15 +18,17 @@ public class PassManager {
   private static PassManager passManager = new PassManager();
   private ArrayList<String> openedPasses_ = new ArrayList<>() {{
     add("typeCheck");
-    add("bbPredSucc");
-    add("deadcodeemit");
+//    add("bbPredSucc");
+//    add("deadcodeemit");
     add("Mem2reg");
-    add("emitllvm");
+//    add("emitllvm");
+//    add("interproceduralAnalysis");
 //    add("gvngcm");
     add("RegAlloc");
 //    add("ListScheduling");
   }};
-  private ArrayList<IRPass> irPasses = new ArrayList<>(){};
+  private ArrayList<IRPass> irPasses = new ArrayList<>() {
+  };
   private ArrayList<MCPass> mcPasses = new ArrayList<>();
 
   private PassManager() {
@@ -34,6 +37,7 @@ public class PassManager {
     irPasses.add(new DeadCodeEmit());
     irPasses.add(new Mem2reg());
     irPasses.add(new EmitLLVM());
+//    irPasses.add(new InterproceduralAnalysis());
 //    irPasses.add(new GVNGCM());
 
     mcPasses.add(new RegAllocator());

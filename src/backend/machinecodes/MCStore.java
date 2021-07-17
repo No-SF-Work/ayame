@@ -42,7 +42,7 @@ public class MCStore extends MachineCode{
         this.cond = cond;
     }
 
-    private ArmAddition.CondType cond;
+    private ArmAddition.CondType cond= ArmAddition.CondType.Any;
 
     private MachineOperand addr;
 

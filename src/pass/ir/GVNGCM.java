@@ -109,7 +109,7 @@ public class GVNGCM implements IRPass {
       if (key instanceof LoadInst && loadInst.equals(key)) {
         LoadInst keyInst = (LoadInst) key;
         var allSame =
-            lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(0));
+            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
         allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
         if (allSame) {
           return valueNumber;
@@ -117,10 +117,10 @@ public class GVNGCM implements IRPass {
       } else if (key instanceof StoreInst) {
         StoreInst keyInst = (StoreInst) key;
         var allSame =
-            lookupOrAdd(loadInst.getOperands().get(0)) == lookupOrAdd(keyInst.getOperands().get(1));
+            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
         allSame = allSame && (loadInst.getUseStore() == keyInst);
         if (allSame) {
-          return keyInst.getOperands().get(0);
+          return keyInst.getVal();
         }
       }
     }
@@ -137,7 +137,7 @@ public class GVNGCM implements IRPass {
       var valueNumber = valueTable.get(i).getSecond();
       if (key instanceof CallInst) {
         CallInst keyInst = (CallInst) key;
-        if (callInst.getOperands().get(0) != keyInst.getOperands().get(0)) {
+        if (callInst.getFunc() != keyInst.getFunc()) {
           continue;
         }
         var argSize = callInst.getNumOP();

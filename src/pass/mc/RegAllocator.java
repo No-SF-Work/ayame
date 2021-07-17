@@ -52,11 +52,11 @@ public class RegAllocator implements MCPass {
 
             for (var instrEntry : block.getmclist()) {
                 var instr = instrEntry.getVal();
-                instr.getDef().stream()
+                instr.getUse().stream()
                         .filter(MachineOperand::needsColor)
                         .filter(use -> !blockLiveInfo.liveDef.contains(use))
                         .forEach(blockLiveInfo.liveUse::add);
-                instr.getUse().stream()
+                instr.getDef().stream()
                         .filter(MachineOperand::needsColor)
                         .filter(def -> !blockLiveInfo.liveUse.contains(def))
                         .forEach(blockLiveInfo.liveDef::add);
@@ -168,10 +168,11 @@ public class RegAllocator implements MCPass {
     }
 
     public void run(CodeGenManager manager) {
+        System.err.println("R!!");
         for (var func : manager.getMachineFunctions()) {
             // fixme
-            var allocatable = IntStream.range(0, 15).filter(i -> i != 13)
-                    .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
+//            var allocatable = IntStream.range(0, 15).filter(i -> i != 13)
+//                    .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
 
             var done = false;
 
@@ -195,7 +196,7 @@ public class RegAllocator implements MCPass {
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
 
-                Map<MachineOperand, Integer> degree = IntStream.range(0, 16)
+                Map<MachineOperand, Integer> degree = IntStream.range(0, 15)
                         .mapToObj(func::getPhyReg)
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
@@ -223,8 +224,7 @@ public class RegAllocator implements MCPass {
                          blockEntry != null;
                          blockEntry = blockEntry.getPrev()) {
                         var block = blockEntry.getVal();
-                        var liveInfo = liveInfoMap.get(block);
-                        var live = liveInfo.liveOut;
+                        var live = new HashSet<>(liveInfoMap.get(block).liveOut);
 
                         for (var instrEntry = block.getmclist().getLast();
                              instrEntry != null;
@@ -272,8 +272,8 @@ public class RegAllocator implements MCPass {
                 Function<MachineOperand, Boolean> moveRelated = n -> !nodeMoves.apply(n).isEmpty();
 
                 Runnable makeWorklist = () ->
-                        func.getVRegMap().values().forEach(vreg -> {
-                            if (degree.getOrDefault(vreg, 0) >= K) {
+                        func.getVRegMap().values().stream().filter(degree::containsKey).forEach(vreg -> {
+                            if (degree.get(vreg) >= K) {
                                 spillWorklist.add(vreg);
                             } else if (moveRelated.apply(vreg)) {
                                 freezeWorklist.add(vreg);
@@ -394,7 +394,7 @@ public class RegAllocator implements MCPass {
                     }
                 };
 
-                Consumer<MachineOperand> freeMoves = u ->
+                Consumer<MachineOperand> freezeMoves = u ->
                         nodeMoves.apply(u).forEach(m -> {
                             if (activeMoves.contains(m)) {
                                 activeMoves.remove(m);
@@ -403,7 +403,7 @@ public class RegAllocator implements MCPass {
                             }
                             frozenMoves.add(m);
 
-                            var v = m.getDst() == u ? m.getRhs() : m.getDst();
+                            var v = m.getDst().equals(u) ? m.getRhs() : m.getDst();
                             if (!moveRelated.apply(v) && degree.get(v) < K) {
                                 freezeWorklist.remove(v);
                                 simplifyWorklist.add(v);
@@ -414,14 +414,14 @@ public class RegAllocator implements MCPass {
                     var u = freezeWorklist.iterator().next();
                     freezeWorklist.remove(u);
                     simplifyWorklist.add(u);
-                    freeMoves.accept(u);
+                    freezeMoves.accept(u);
                 };
 
                 Runnable selectSpill = () -> {
                     // todo: heuristic
                     var m = spillWorklist.iterator().next();
                     simplifyWorklist.add(m);
-                    freeMoves.accept(m);
+                    freezeMoves.accept(m);
                     spillWorklist.remove(m);
                 };
 
@@ -429,7 +429,7 @@ public class RegAllocator implements MCPass {
                     var colored = new HashMap<MachineOperand, MachineOperand>();
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
-                        var okColors = IntStream.range(0, 15).filter(i -> i != 13).boxed()
+                        var okColors = IntStream.range(0, 15).filter(i -> i != 13).boxed() // 15
                                 .collect(Collectors.toSet());
 
                         adjList.getOrDefault(n, new HashSet<>()).forEach(w -> {
@@ -527,6 +527,7 @@ public class RegAllocator implements MCPass {
                                     moveInstr.setRhs(offsetOperand);
 
                                     var newVReg = new VirtualReg();
+                                    func.addVirtualReg(newVReg);
                                     moveInstr.setDst(newVReg);
 
                                     if (inst instanceof MCLoad) {
@@ -567,6 +568,8 @@ public class RegAllocator implements MCPass {
                                     storeInstr.setData(ref.vreg);
                                     ref.lastDef = null;
                                 }
+
+                                ref.vreg = null;
                             };
 
                             int cntInstr = 0;
@@ -591,7 +594,9 @@ public class RegAllocator implements MCPass {
                                     }
 
                                     replaceReg(instr, use, ref.vreg);
-                                    ref.firstUse = instr;
+                                    if (ref.firstUse == null && ref.lastDef == null) {
+                                        ref.firstUse = instr;
+                                    }
                                 });
 
                                 if (cntInstr > 30) {

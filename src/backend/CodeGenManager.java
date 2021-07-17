@@ -6,6 +6,7 @@ import backend.reg.MachineOperand;
 import backend.reg.PhyReg;
 import backend.reg.Reg;
 import backend.reg.VirtualReg;
+import driver.CompilerDriver;
 import ir.MyModule;
 import ir.types.ArrayType;
 import ir.types.IntegerType;
@@ -18,6 +19,7 @@ import ir.values.instructions.TerminatorInst;
 import util.IList;
 import util.IList.INode;
 import ir.values.instructions.MemInst.Phi;
+import util.Mylogger;
 import util.Pair;
 import backend.machinecodes.ArmAddition.CondType;
 import backend.machinecodes.ArmAddition.Shift;
@@ -26,6 +28,7 @@ import javax.crypto.Mac;
 import java.lang.reflect.Array;
 import java.rmi.registry.Registry;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * 后端的顶层模块，管理整个后端的流程，
@@ -46,8 +49,10 @@ public class CodeGenManager {
     //ir moudle
     private static MyModule myModule;
 
+    private static Logger logger;
+
     private CodeGenManager() {
-        this.myModule = myModule;
+        logger = Mylogger.getLogger(CodeGenManager.class);
     }
 
     public void load(MyModule m) {
@@ -328,13 +333,14 @@ public class CodeGenManager {
                     assert irMap.containsKey(gv);
                     arm += ".global\t" + irMap.get(gv).getName() + "\n";
                     arm += irMap.get(gv).getName() + ":\n";
-                    if (gv.getType() instanceof IntegerType) {
+                    PointerType p=(PointerType) gv.getType();
+                    if (p.getContained() instanceof IntegerType) {
                         arm += "\t.word\t";
                         assert (gv.init != null);
                         arm += ((Constants.ConstantInt) gv.init).getVal();
                         arm += "\n";
                     } else {
-                        assert (gv.getType() instanceof ArrayType);
+                        assert (p.getContained() instanceof ArrayType);
                         if (gv.init == null) {
                             int n = 1;
                             ArrayList<Integer> dims = ((ArrayType) gv.getType()).getDims();
@@ -379,6 +385,7 @@ public class CodeGenManager {
 
     public void MachineCodeGeneration() {
         ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
+        logger.info("CodeGeneration begin");
         Iterator<GlobalVariable> itgVs = gVs.iterator();
         while (itgVs.hasNext()) {
             GlobalVariable gV = itgVs.next();
@@ -491,6 +498,10 @@ public class CodeGenManager {
             HandlePhi handlePhi = () -> {
                 for (INode<BasicBlock, Function> bbNode : bList) {
                     BasicBlock bb = bbNode.getVal();
+                    int predNum = bb.getPredecessor_().size();
+                    if(predNum<=1){
+                        continue;
+                    }
                     MachineBlock mbb = bMap.get(bb);
                     if (mbb.getPred() != null) {
                         for (MachineBlock predM : mbb.getPred()) {
@@ -503,6 +514,7 @@ public class CodeGenManager {
                     }
                     IList<Instruction, BasicBlock> irList = bb.getList();
                     //构造phiTarget到phiSet的映射
+                    logger.info(bb.getName()+"Map phi target to phi set");
                     for (INode<Instruction, BasicBlock> irNode : irList) {
                         Instruction ir = irNode.getVal();
                         if (ir.tag == Instruction.TAG_.Phi) {
@@ -525,19 +537,17 @@ public class CodeGenManager {
                     //大风车吱呀吱哟哟地转 见SSA Elimination after Register Allocation
                     //key是每个前驱块，value的map为phiTarget->phiParam
 //                    HashMap<MachineBlock,HashMap<VirtualReg,VirtualReg>> phiGraph=new HashMap<>();
-                    int predNum = bb.getPredecessor_().size();
                     //遍历该块的所有pred块
+                    logger.info("build phi graph");
                     for (int i = 0; i < predNum; i++) {
                         IList<Instruction, BasicBlock> irrList = bb.getList();
                         HashMap<VirtualReg, VirtualReg> edges = new HashMap<>();
                         for (INode<Instruction, BasicBlock> irrNode : irrList) {
                             Instruction ir = irrNode.getVal();
                             if (ir.tag == Instruction.TAG_.Phi) {
-//                                MachineOperand phiTarget = aV.analyzeValue(ir,bMap.get(f.getList_().getEntry()));
                                 MachineOperand phiTarget = aV.analyzeValue(ir);
                                 assert (phiTarget instanceof VirtualReg);
                                 MachineOperand phiParam = aV.analyzeValue(((Phi) ir).getIncomingVals().get(i));
-//                                MachineOperand phiParam = aV.analyzeValue(((Phi) ir).getIncomingVals().get(i),bMap.get(ir.getBB()));
                                 edges.put((VirtualReg) phiTarget, (VirtualReg) phiParam);
                             } else {
                                 break;
@@ -589,6 +599,7 @@ public class CodeGenManager {
                 }
             };
             //处理phi指令
+            logger.info("HandlePhi begin");
             handlePhi.handlephi();
             //处理其余指令
             for (bIt = bList.iterator(); bIt.hasNext(); ) {
@@ -659,7 +670,8 @@ public class CodeGenManager {
                                     mc0.setRhs(new MachineOperand(n));
                                     VirtualReg v1 = new VirtualReg();
                                     mf.addVirtualReg(v1);
-                                    if (m >= 0x80000000) {
+                                    long a = 2147483648L;
+                                    if (m >= 2147483648L) {
                                         MCFma mc2 = new MCFma(mb);
                                         mc2.setAdd(true);
                                         mc2.setSign(true);

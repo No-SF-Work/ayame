@@ -60,6 +60,8 @@ public class Function extends Value {
     list_ = new IList<>(this);
     node = new INode<>(this);
     argList_ = new ArrayList<>();
+    callerList = new ArrayList<>();
+    calleeList = new ArrayList<>();
     buildArgs();
   }
 
@@ -69,6 +71,8 @@ public class Function extends Value {
     node = new INode<>(this);
     this.node.insertAtEnd(module.__functions);
     argList_ = new ArrayList<>();
+    callerList = new ArrayList<>();
+    calleeList = new ArrayList<>();
     buildArgs();
   }
 
@@ -78,6 +82,8 @@ public class Function extends Value {
     node = new INode<>(this);
     this.node.insertAtEnd(module.__functions);
     argList_ = new ArrayList<>();
+    callerList = new ArrayList<>();
+    calleeList = new ArrayList<>();
     buildArgs();
     this.isBuiltin_ = isBuiltin;
   }
@@ -132,6 +138,16 @@ public class Function extends Value {
   private INode<Function, MyModule> node;
   private ArrayList<Arg> argList_;//有序参数列表
   private LoopInfo loopInfo = new LoopInfo(); // 函数内的循环信息
+  private ArrayList<Function> callerList; // 调用此函数的所有函数
+  private ArrayList<Function> calleeList; // 此函数调用的所有函数
+
+  public ArrayList<Function> getCallerList() {
+    return callerList;
+  }
+
+  public ArrayList<Function> getCalleeList() {
+    return calleeList;
+  }
 
   public boolean isHasSideEffect() {
     return hasSideEffect;

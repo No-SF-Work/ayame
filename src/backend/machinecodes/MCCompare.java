@@ -16,7 +16,7 @@ public class MCCompare extends MachineCode{
         this.cond = cond;
     }
 
-    private ArmAddition.CondType cond;
+    private ArmAddition.CondType cond= ArmAddition.CondType.Any;
 
     public MachineOperand getLhs() {
         return lhs;

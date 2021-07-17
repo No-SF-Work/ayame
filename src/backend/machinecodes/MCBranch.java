@@ -9,7 +9,7 @@ public class MCBranch extends MachineCode{
 
     private MachineBlock target;
 
-    private ArmAddition.CondType cond;
+    private ArmAddition.CondType cond = ArmAddition.CondType.Any;
 
     public void setCond(ArmAddition.CondType cond){
         this.cond=cond;

@@ -47,6 +47,10 @@ public abstract class TerminatorInst extends Instruction {
       return true;
     }
 
+    public Function getFunc() {
+      return (Function) this.getOperands().get(0);
+    }
+
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();

@@ -157,10 +157,11 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
       if (parent.getLast() == this) {
         parent.setLast(this.prev);
       }
-      if (this.prev != null && this.next != null) {
+      if (this.prev == null && this.next == null) {
+
+      } else if (this.prev != null && this.next != null) {
         this.prev.next = this.next;
         this.next.prev = this.prev;
-
       } else if (this.prev == null) {
         this.next.prev = null;
       } else {
