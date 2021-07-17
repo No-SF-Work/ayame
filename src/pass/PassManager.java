@@ -5,6 +5,8 @@ import ir.MyModule;
 import java.util.ArrayList;
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
+import pass.ir.BBPredSucc;
+import pass.ir.DeadCodeEmit;
 import pass.ir.EmitLLVM;
 import pass.ir.GVNGCM;
 import pass.ir.Mem2reg;
@@ -15,6 +17,8 @@ public class PassManager {
   private static PassManager passManager = new PassManager();
   private ArrayList<String> openedPasses_ = new ArrayList<>() {{
     add("typeCheck");
+    add("bbPredSucc");
+    add("deadcodeemit");
     add("Mem2reg");
     add("emitllvm");
 //    add("gvngcm");
@@ -26,6 +30,8 @@ public class PassManager {
 
   private PassManager() {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
+    irPasses.add(new BBPredSucc());
+    irPasses.add(new DeadCodeEmit());
     irPasses.add(new Mem2reg());
     irPasses.add(new EmitLLVM());
 //    irPasses.add(new GVNGCM());

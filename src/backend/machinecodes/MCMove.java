@@ -55,7 +55,7 @@ public class MCMove extends MachineCode{
         this.cond = cond;
     }
 
-    private ArmAddition.CondType cond;
+    private ArmAddition.CondType cond = ArmAddition.CondType.Any;
 
     public MCMove(MachineBlock mb){
         super(TAG.Mv,mb);
