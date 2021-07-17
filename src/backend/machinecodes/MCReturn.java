@@ -46,7 +46,7 @@ public class MCReturn extends MachineCode{
                 res += "}\n";
             }
         }
-        res+="\tb\tlr\n";
+        res+="\tbx\tlr\n";
         return res;
     }
 

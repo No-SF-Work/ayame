@@ -37,7 +37,7 @@ public class MCFma extends MachineCode {
 
     boolean sign;
 
-    private ArmAddition.CondType cond;
+    private ArmAddition.CondType cond= ArmAddition.CondType.Any;
 
     public String toString() {
         String res = sign ? "\tsm" : "\t";

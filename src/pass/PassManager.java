@@ -17,8 +17,8 @@ public class PassManager {
   private static PassManager passManager = new PassManager();
   private ArrayList<String> openedPasses_ = new ArrayList<>() {{
     add("typeCheck");
-    add("bbPredSucc");
-    add("deadcodeemit");
+//    add("bbPredSucc");
+//    add("deadcodeemit");
     add("Mem2reg");
 //    add("emitllvm");
 //    add("gvngcm");
@@ -33,8 +33,13 @@ public class PassManager {
     irPasses.add(new BBPredSucc());
     irPasses.add(new DeadCodeEmit());
     irPasses.add(new Mem2reg());
+<<<<<<< Updated upstream
 //    irPasses.add(new EmitLLVM());
 //    irPasses.add(new GVNGCM());
+=======
+    irPasses.add(new EmitLLVM());
+    irPasses.add(new GVNGCM());
+>>>>>>> Stashed changes
 
     mcPasses.add(new RegAllocator());
 
