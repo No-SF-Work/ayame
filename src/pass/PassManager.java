@@ -3,6 +3,7 @@ package pass;
 import backend.CodeGenManager;
 import ir.MyModule;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
 import pass.ir.BBPredSucc;
@@ -12,9 +13,11 @@ import pass.ir.GVNGCM;
 import pass.ir.InterproceduralAnalysis;
 import pass.ir.Mem2reg;
 import pass.mc.RegAllocator;
+import util.Mylogger;
 
 public class PassManager {
 
+  private Logger mylogger = Mylogger.getLogger(PassManager.class);
   private static PassManager passManager = new PassManager();
   private ArrayList<String> openedPasses_ = new ArrayList<>() {{
     add("typeCheck");
@@ -56,6 +59,7 @@ public class PassManager {
   public void runIRPasses(MyModule m) {
     irPasses.forEach(pass -> {
       if (openedPasses_.contains(pass.getName())) {
+        mylogger.info("running pass :" + pass.getName());
         pass.run(m);
       }
     });
@@ -65,6 +69,7 @@ public class PassManager {
   public void runMCPasses(CodeGenManager cgm) {
     mcPasses.forEach(pass -> {
       if (openedPasses_.contains(pass.getName())) {
+        mylogger.info("running pass :" + pass.getName());
         pass.run(cgm);
       }
     });
