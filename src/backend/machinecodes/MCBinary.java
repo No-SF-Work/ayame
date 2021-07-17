@@ -63,6 +63,10 @@ public class MCBinary extends MachineCode{
 
     private ArmAddition.CondType cond = ArmAddition.CondType.Any;
 
+    public void setCond(ArmAddition.CondType cond) {
+        this.cond = cond;
+    }
+
     @Override
     public ArmAddition.CondType getCond() {
         return cond;
