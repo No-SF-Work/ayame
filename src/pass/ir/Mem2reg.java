@@ -124,7 +124,7 @@ public class Mem2reg implements IRPass {
         for (BasicBlock y : bb.getDominanceFrontier()) {
           if (!y.isDirty()) {
             y.setDirty(true);
-            Phi phiInst = new Phi(TAG_.Phi, factory.getI32Ty(), 0, y);
+            Phi phiInst = new Phi(TAG_.Phi, factory.getI32Ty(), y.getPredecessor_().size(), y);
             phiToAllocaMap.put(phiInst, index);
             if (!defBlocks.get(index).contains(y)) {
               W.add(y);
