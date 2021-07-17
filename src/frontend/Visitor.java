@@ -937,7 +937,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
         if (buildCall) {
           buildCall = false;
           visit(ctx.lVal());
-          return null;//tmp may be GEP
+          tmp_ = f.buildLoad(((PointerType) tmp_.getType()).getContained(), tmp_, curBB_);
+          return null;
         } else {
           visit(ctx.lVal());
           if (tmp_.getType().isIntegerTy()) {
@@ -1054,20 +1055,23 @@ public class Visitor extends SysYBaseVisitor<Void> {
   public Void visitCallee(CalleeContext ctx) {
     var func = scope_.find(ctx.IDENT().getText());
     var args = new ArrayList<Value>();
-    var paramsCtx = ctx.funcRParams().param();
-    assert func != null;
-    var paramTys = ((Function) func).getType().getParams();
-    for (int i = 0; i < paramsCtx.size(); i++) {
-      var param = paramsCtx.get(i);
-      var paramTy = paramTys.get(i);
-      if (paramTy.isIntegerTy()) {
-        buildCall = true;
-      } else {
+    List<ParamContext> paramsCtx;
+    if (ctx.funcRParams() != null) {
+      paramsCtx = ctx.funcRParams().param();
+      assert func != null;
+      var paramTys = ((Function) func).getType().getParams();
+      for (int i = 0; i < paramsCtx.size(); i++) {
+        var param = paramsCtx.get(i);
+        var paramTy = paramTys.get(i);
+        if (paramTy.isIntegerTy()) {
+          buildCall = true;
+        } else {
+          buildCall = false;
+        }
+        visit(param.exp());// 没有String
         buildCall = false;
+        args.add(tmp_);
       }
-      visit(param.exp());// 没有String
-      buildCall = false;
-      args.add(tmp_);
     }
     tmp_ = f.buildFuncCall((Function) func, args, curBB_);
     return null;
