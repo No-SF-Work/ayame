@@ -38,7 +38,7 @@ public class MCLoad extends MachineCode{
 
     private MachineOperand dst;
 
-    private ArmAddition.CondType cond;
+    private ArmAddition.CondType cond= ArmAddition.CondType.Any;
 
     @Override
     public ArmAddition.CondType getCond() {
