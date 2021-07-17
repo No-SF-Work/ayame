@@ -25,7 +25,8 @@ public class PassManager {
     add("RegAlloc");
 //    add("ListScheduling");
   }};
-  private ArrayList<IRPass> irPasses = new ArrayList<>(){};
+  private ArrayList<IRPass> irPasses = new ArrayList<>() {
+  };
   private ArrayList<MCPass> mcPasses = new ArrayList<>();
 
   private PassManager() {
@@ -33,13 +34,8 @@ public class PassManager {
     irPasses.add(new BBPredSucc());
     irPasses.add(new DeadCodeEmit());
     irPasses.add(new Mem2reg());
-<<<<<<< Updated upstream
-//    irPasses.add(new EmitLLVM());
-//    irPasses.add(new GVNGCM());
-=======
     irPasses.add(new EmitLLVM());
-    irPasses.add(new GVNGCM());
->>>>>>> Stashed changes
+//    irPasses.add(new GVNGCM());
 
     mcPasses.add(new RegAllocator());
 

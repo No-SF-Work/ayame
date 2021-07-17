@@ -48,7 +48,7 @@ public abstract class TerminatorInst extends Instruction {
     }
 
     public Function getFunc() {
-      return this.getOperands().get(0);
+      return (Function) this.getOperands().get(0);
     }
 
     @Override
