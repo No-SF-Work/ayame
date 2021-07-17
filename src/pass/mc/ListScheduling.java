@@ -2,6 +2,7 @@ package pass.mc;
 
 import backend.CodeGenManager;
 import backend.machinecodes.*;
+import backend.reg.MachineOperand;
 import backend.reg.PhyReg;
 import pass.Pass;
 
@@ -185,8 +186,8 @@ public class ListScheduling implements Pass.MCPass {
     private ArrayList<Node> buildConflictGraph(MachineBlock block) {
         var nodes = new ArrayList<Node>();
         
-        var readRegNodes = new HashMap<PhyReg, ArrayList<Node>>();
-        var writeRegNodes = new HashMap<PhyReg, Node>();
+        var readRegNodes = new HashMap<MachineOperand, ArrayList<Node>>();
+        var writeRegNodes = new HashMap<MachineOperand, Node>();
         var loadNodes = new ArrayList<Node>();
         Node sideEffectNode = null;
         
@@ -196,8 +197,10 @@ public class ListScheduling implements Pass.MCPass {
                 continue;
             }
 
-            var defs = instr.getPhyDef();
-            var uses = instr.getPhyUses();
+            var defs = instr.getDef();
+            var uses = instr.getUse();
+            assert defs.stream().allMatch(def -> def instanceof PhyReg);
+            assert uses.stream().allMatch(use -> use instanceof PhyReg);
             var curNode = new Node(instr);
             nodes.add(curNode);
 

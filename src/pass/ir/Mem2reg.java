@@ -189,6 +189,7 @@ public class Mem2reg implements IRPass {
           int allocaIndex = allocaLookup.get((AllocaInst) loadInst.getOperands().get(0));
           loadInst.COReplaceAllUseWith(currValues.get(allocaIndex));
           instNode.removeSelf();
+          inst.removeUsesOfOPs();
         }
         // StoreInst
         else if (inst.tag == TAG_.Store) {
@@ -200,6 +201,8 @@ public class Mem2reg implements IRPass {
           int allocaIndex = allocaLookup.get((AllocaInst) storeInst.getOperands().get(1));
           currValues.set(allocaIndex, storeInst.getOperands().get(0));
           instNode.removeSelf();
+          inst.removeUsesOfOPs();
+          inst.COReplaceAllUseWith(null);
         }
         // Phi
         else if (inst.tag == TAG_.Phi) {

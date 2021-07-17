@@ -175,14 +175,15 @@ public class GVNGCM implements IRPass {
       }
     }
     valueTable.add(new Pair<>(val, val));
+    int pos = valueTable.size() - 1;
     if (val.isInstruction()) {
       Instruction inst = (Instruction) val;
       if (inst.isBinary() || inst.tag == TAG_.GEP || inst.tag == TAG_.Load
           || inst.tag == TAG_.Call) {
-        valueTable.get(valueTable.size() - 1).setSecond(findValueNumber(inst));
+        valueTable.get(pos).setSecond(findValueNumber(inst));
       }
     }
-    return valueTable.get(valueTable.size() - 1).getSecond();
+    return valueTable.get(pos).getSecond();
   }
 
   public void replace(Instruction inst, Value val) {
@@ -202,6 +203,8 @@ public class GVNGCM implements IRPass {
 
     // clear MemorySSA, dead code elimination, compute MemorySSA
     ArrayAliasAnalysis.clear(func);
+    DeadCodeEmit dce = new DeadCodeEmit();
+    dce.runDCE(func);
     ArrayAliasAnalysis.run(func);
 
     runGCM(func);
@@ -257,7 +260,10 @@ public class GVNGCM implements IRPass {
     Instruction simpInst = (Instruction) v;
 
     if (inst.isBinary()) {
-      replace(inst, lookupOrAdd(simpInst));
+      Value val = lookupOrAdd(simpInst);
+      if (inst != val) {
+        replace(inst, val);
+      }
     } else if (inst.tag == TAG_.GEP) {
       replace(inst, lookupOrAdd(simpInst));
     } else if (inst.tag == TAG_.Load) {
@@ -302,6 +308,8 @@ public class GVNGCM implements IRPass {
     for (Instruction inst : instructions) {
       scheduleLate(inst, func);
     }
+
+
   }
 
   public void scheduleEarly(Instruction inst, Function func) {
@@ -368,7 +376,7 @@ public class GVNGCM implements IRPass {
         User user = use.getUser();
         if (user instanceof Instruction) {
           Instruction userInst = (Instruction) user;
-          scheduleLate(inst, func);
+          scheduleLate(userInst, func);
           BasicBlock userbb = null;
           if (userInst.tag == TAG_.Phi) {
             int idx = 0;

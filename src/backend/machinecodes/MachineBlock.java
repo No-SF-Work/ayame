@@ -40,7 +40,7 @@ public class MachineBlock {
     MachineBlock trueSucc=null;
 
     //predecessor block
-    ArrayList<MachineBlock> pred;
+    ArrayList<MachineBlock> pred=new ArrayList<>();
 
     MachineCode entry;// MC list entry
 
@@ -62,6 +62,7 @@ public class MachineBlock {
         node=new INode<>(this);
         node.setParent(mf.getmbList());
         this.name=".__BB__"+((Integer)index).toString();
+        index++;
     }
 
     public String getName(){return name;}
