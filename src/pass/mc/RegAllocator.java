@@ -195,7 +195,7 @@ public class RegAllocator implements MCPass {
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
 
-                Map<MachineOperand, Integer> degree = IntStream.range(0, 16)
+                Map<MachineOperand, Integer> degree = IntStream.range(0, 15)
                         .mapToObj(func::getPhyReg)
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
@@ -271,10 +271,7 @@ public class RegAllocator implements MCPass {
                 Function<MachineOperand, Boolean> moveRelated = n -> !nodeMoves.apply(n).isEmpty();
 
                 Runnable makeWorklist = () ->
-                        func.getVRegMap().values().forEach(vreg -> {
-                            if (!degree.containsKey(vreg)) {
-                                return;
-                            }
+                        func.getVRegMap().values().stream().filter(degree::containsKey).forEach(vreg -> {
                             if (degree.get(vreg) >= K) {
                                 spillWorklist.add(vreg);
                             } else if (moveRelated.apply(vreg)) {
