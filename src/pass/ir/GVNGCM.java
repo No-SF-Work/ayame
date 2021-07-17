@@ -5,6 +5,7 @@ import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.Use;
 import ir.values.BasicBlock;
+import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.User;
 import ir.values.Value;
@@ -81,7 +82,7 @@ public class GVNGCM implements IRPass {
     for (var i = 0; i < sz; i++) {
       var key = valueTable.get(i).getFirst();
       var valueNumber = valueTable.get(i).getSecond();
-      if (key instanceof GEPInst && gepInst.equals(key)) {
+      if (key instanceof GEPInst && !gepInst.equals(key)) {
         GEPInst keyInst = (GEPInst) key;
         boolean allSame = gepInst.getNumOP() == keyInst.getNumOP();
         if (allSame) {
@@ -106,7 +107,7 @@ public class GVNGCM implements IRPass {
     for (var i = 0; i < sz; i++) {
       var key = valueTable.get(i).getFirst();
       var valueNumber = valueTable.get(i).getSecond();
-      if (key instanceof LoadInst && loadInst.equals(key)) {
+      if (key instanceof LoadInst && !loadInst.equals(key)) {
         LoadInst keyInst = (LoadInst) key;
         var allSame =
             lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
@@ -172,6 +173,12 @@ public class GVNGCM implements IRPass {
     for (var pair : valueTable) {
       if (pair.getFirst() == val) {
         return pair.getSecond();
+      }
+      // 保证每个常数只会出现一次
+      if (val instanceof ConstantInt && pair.getFirst() instanceof ConstantInt) {
+        if (((ConstantInt)val).getVal() == ((ConstantInt) pair.getFirst()).getVal()) {
+          return pair.getSecond();
+        }
       }
     }
     valueTable.add(new Pair<>(val, val));
@@ -265,10 +272,16 @@ public class GVNGCM implements IRPass {
         replace(inst, val);
       }
     } else if (inst.tag == TAG_.GEP) {
-      replace(inst, lookupOrAdd(simpInst));
+      Value val = lookupOrAdd(simpInst);
+      if (inst != val) {
+        replace(inst, val);
+      }
     } else if (inst.tag == TAG_.Load) {
       // 没有全局 const []
-      replace(inst, lookupOrAdd(simpInst));
+      Value val = lookupOrAdd(simpInst);
+      if (inst != val) {
+        replace(inst, val);
+      }
     } else if (inst.tag == TAG_.Phi) {
       // 所有 incomingVals 相同
       Phi phiInst = (Phi) simpInst;

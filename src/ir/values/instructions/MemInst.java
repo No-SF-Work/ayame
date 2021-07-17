@@ -101,8 +101,11 @@ public abstract class MemInst extends Instruction {
     }
 
     public void setUseStore(Value store) {
-      this.numOP++;
-      CoSetOperand(1, store);
+      if (this.numOP == 1) {
+        COaddOperand(store);
+      } else {
+        CoSetOperand(1, store);
+      }
     }
 
     public Value getUseStore() {
