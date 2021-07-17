@@ -9,6 +9,7 @@ import pass.ir.BBPredSucc;
 import pass.ir.DeadCodeEmit;
 import pass.ir.EmitLLVM;
 import pass.ir.GVNGCM;
+import pass.ir.InterproceduralAnalysis;
 import pass.ir.Mem2reg;
 import pass.mc.RegAllocator;
 
@@ -21,6 +22,7 @@ public class PassManager {
 //    add("deadcodeemit");
     add("Mem2reg");
 //    add("emitllvm");
+//    add("interproceduralAnalysis");
 //    add("gvngcm");
     add("RegAlloc");
 //    add("ListScheduling");
@@ -35,6 +37,7 @@ public class PassManager {
     irPasses.add(new DeadCodeEmit());
     irPasses.add(new Mem2reg());
     irPasses.add(new EmitLLVM());
+//    irPasses.add(new InterproceduralAnalysis());
 //    irPasses.add(new GVNGCM());
 
     mcPasses.add(new RegAllocator());
