@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Stack;
 import java.util.logging.Logger;
 
 import ir.values.instructions.Instruction;
@@ -110,7 +111,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private Scope scope_ = new Scope(); // symbol table
   private BasicBlock curBB_; // current basicBlock
   private Function curFunc_; // current function
-
+  private Stack<BasicBlock> nxtBlkStk_ = new Stack<>();
   // pass values between `visit` functions
   private ArrayList<Value> tmpArr_;//只允许赋值以及被赋值，不能直接操作
   private Value tmp_;
