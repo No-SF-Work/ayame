@@ -308,6 +308,8 @@ public class GVNGCM implements IRPass {
     for (Instruction inst : instructions) {
       scheduleLate(inst, func);
     }
+
+
   }
 
   public void scheduleEarly(Instruction inst, Function func) {
@@ -374,7 +376,7 @@ public class GVNGCM implements IRPass {
         User user = use.getUser();
         if (user instanceof Instruction) {
           Instruction userInst = (Instruction) user;
-          scheduleLate(inst, func);
+          scheduleLate(userInst, func);
           BasicBlock userbb = null;
           if (userInst.tag == TAG_.Phi) {
             int idx = 0;
