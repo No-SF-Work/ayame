@@ -11,6 +11,7 @@ import ir.types.Type;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Constant;
+import ir.values.Constants.ConstantArray;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
@@ -218,8 +219,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
       }
     }
 
-    for (int i = dims.size() - 1; i > 0; i--) {
-      arrTy = f.getArrayTy(arrTy, dims.get(i));
+    for (int i = dims.size(); i > 0; i--) {
+      arrTy = f.getArrayTy(arrTy, dims.get(i - 1));
     }
     return f.getConstantArray(arrTy, curDimArr);
   }
@@ -256,12 +257,18 @@ public class Visitor extends SysYBaseVisitor<Void> {
           globalInit_ = true;
           visit(ctx.constInitVal());//dim.size()=n
           globalInit_ = false;
-          var initializer = genConstArr(dims, tmpArr_);
-          var variable = f.getGlobalvariable(ctx.IDENT().getText(), arrty, initializer);
+          var arr = tmpArr_;
+          ArrayList<Constant> g = new ArrayList<>();
+          arr.forEach(i -> {
+            g.add(((ConstantInt) i));
+          });
+          var plainInit = new ConstantArray(arrty, g);
+          var foldedInit = genConstArr(dims, tmpArr_);
+          var variable = f.getGlobalvariable(ctx.IDENT().getText(), arrty, foldedInit, plainInit);
           variable.setConst();
           scope_.put(ctx.IDENT().getText(), variable);
         } else {
-          var variable = f.getGlobalvariable(ctx.IDENT().getText(), arrty, CONST0);
+          var variable = f.getGlobalvariable(ctx.IDENT().getText(), arrty, null, null);
           scope_.put(ctx.IDENT().getText(), variable);
         }
       } else {
@@ -372,11 +379,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
           visit(ctx.initVal());
           globalInit_ = false;
           var initializer = (Constant) tmp_;
-          var v = f.getGlobalvariable(varName, i32Type_, initializer);
+          var v = f.getGlobalvariable(varName, i32Type_, initializer, initializer);
           scope_.put(varName, v);
         } else {
           var initializer = CONST0;
-          var v = f.getGlobalvariable(varName, i32Type_, initializer);
+          var v = f.getGlobalvariable(varName, i32Type_, initializer, initializer);
           scope_.put(varName, v);
         }
       } else {//非数组局部
@@ -406,11 +413,16 @@ public class Visitor extends SysYBaseVisitor<Void> {
           globalInit_ = false;
 
           var arr = tmpArr_;
-          var init = genConstArr(dims, arr);
-          var glo = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, init);
+          ArrayList<Constant> g = new ArrayList<>();
+          arr.forEach(i -> {
+            g.add(((ConstantInt) i));
+          });
+          var plainInit = new ConstantArray(arrTy, g);
+          var fixedInit = genConstArr(dims, arr);
+          var glo = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, fixedInit, plainInit);
           scope_.put(ctx.IDENT().getText(), glo);
         } else {
-          var v = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, null);
+          var v = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, null, null);
           scope_.put(ctx.IDENT().getText(), v);
         }
       } else {//local arr init
@@ -720,7 +732,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
       visitStmt(ctx.stmt(1));
       f.buildBr(nxtBlock, curBB_);
     }
-    //todo if(cond){return something}else{return something}
     curBB_ = nxtBlock;
     nxtBlkStk_.pop();
     return null;
