@@ -251,7 +251,7 @@ public class SimplifyInstruction {
           }
         }
 
-        // Z - (X - Y) -> (Z - X) + Y if everything simplifies.
+        // Z - (X - Y) -> (Z - X) + Y or (Z + Y) - X if everything simplifies.
         case Sub -> {
           var subInst = (BinaryInst) rhs;
           var subLhs = subInst.getOperands().get(0);
@@ -261,6 +261,13 @@ public class SimplifyInstruction {
           if (simpleSub != tmpInst) {
             return simplifyAddInst(
                 new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subRhs, targetBB));
+          }
+
+          tmpInst = new BinaryInst(TAG_.Add, factory.getI32Ty(), lhs, subRhs, targetBB);
+          Value simpleAdd = simplifyAddInst(tmpInst);
+          if (simpleAdd != tmpInst) {
+            return simplifySubInst(
+                new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subLhs, targetBB));
           }
         }
       }

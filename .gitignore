@@ -11,3 +11,4 @@ util/.antlr/
 out.s
 out.ll
 code_0.iml
+test.s

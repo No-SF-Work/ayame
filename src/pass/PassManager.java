@@ -29,7 +29,7 @@ public class PassManager {
     add("gvngcm");
     add("deadcodeemit");
     add("RegAlloc");
-//    add("ListScheduling");
+    add("ListScheduling");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
   };
@@ -42,10 +42,10 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM());
 //    irPasses.add(new InterproceduralAnalysis());
 //    irPasses.add(new GVNGCM());
-//    irPasses.add(new DeadCodeEmit());
+    irPasses.add(new DeadCodeEmit());
     irPasses.add(new EmitLLVM());
 
-    mcPasses.add(new RegAllocator());
+//    mcPasses.add(new RegAllocator());
 
   }
 
