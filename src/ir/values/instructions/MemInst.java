@@ -99,6 +99,9 @@ public abstract class MemInst extends Instruction {
     }
 
     public void removeUseStore() {
+      if (numOP == 1) {
+        return;
+      }
       this.numOP--;
       CoSetOperand(1, null);
     }

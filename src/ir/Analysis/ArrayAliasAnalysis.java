@@ -29,6 +29,11 @@ public class ArrayAliasAnalysis {
     public Value array;
     public ArrayList<LoadInst> loads;
     public ArrayList<Instruction> defs;
+
+    public ArrayDefUses() {
+      this.loads = new ArrayList<>();
+      this.defs = new ArrayList<>();
+    }
   }
 
   private static class RenameData {
@@ -168,12 +173,15 @@ public class ArrayAliasAnalysis {
         Instruction inst = instNode.getVal();
         if (inst.tag == TAG_.Load) {
           LoadInst loadInst = (LoadInst) inst;
+          if (loadInst.getOperands().get(0) instanceof AllocaInst) {
+            continue;
+          }
           Value array = getArrayValue(loadInst.getOperands().get(0));
           if (arraysLookup.get(array) == null) {
             ArrayDefUses newArray = new ArrayDefUses();
             arrays.add(newArray);
             arraysLookup.put(array, arrays.size() - 1);
-            defBlocks.set(arrays.size() - 1, new ArrayList<>());
+            defBlocks.add(new ArrayList<>());
           }
           arrays.get(arraysLookup.get(array)).loads.add(loadInst);
         }
