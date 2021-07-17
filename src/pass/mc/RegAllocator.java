@@ -24,7 +24,7 @@ import pass.Pass.MCPass;
 // Graph-Coloring
 public class RegAllocator implements MCPass {
     private final int INF = 0x3f3f3f3f;
-    private final int K = 14;
+    private final int K = 6;
 
     @Override
     public String getName() {
@@ -195,7 +195,7 @@ public class RegAllocator implements MCPass {
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
 
-                Map<MachineOperand, Integer> degree = IntStream.range(0, 15)
+                Map<MachineOperand, Integer> degree = IntStream.range(0, 16)
                         .mapToObj(func::getPhyReg)
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
@@ -271,8 +271,8 @@ public class RegAllocator implements MCPass {
                 Function<MachineOperand, Boolean> moveRelated = n -> !nodeMoves.apply(n).isEmpty();
 
                 Runnable makeWorklist = () ->
-                        func.getVRegMap().values().stream().filter(degree::containsKey).forEach(vreg -> {
-                            if (degree.get(vreg) >= K) {
+                        func.getVRegMap().values().forEach(vreg -> {
+                            if (degree.getOrDefault(vreg, 0) >= K) {
                                 spillWorklist.add(vreg);
                             } else if (moveRelated.apply(vreg)) {
                                 freezeWorklist.add(vreg);
@@ -428,7 +428,7 @@ public class RegAllocator implements MCPass {
                     var colored = new HashMap<MachineOperand, MachineOperand>();
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
-                        var okColors = IntStream.range(0, 15).filter(i -> i != 13).boxed() // 15
+                        var okColors = IntStream.range(0, 6).filter(i -> i != 13).boxed() // 15
                                 .collect(Collectors.toSet());
 
                         adjList.getOrDefault(n, new HashSet<>()).forEach(w -> {
