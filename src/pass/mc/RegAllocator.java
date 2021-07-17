@@ -53,12 +53,12 @@ public class RegAllocator implements MCPass {
             for (var instrEntry : block.getmclist()) {
                 var instr = instrEntry.getVal();
                 instr.getDef().stream()
-                        .filter(useMachineOperand -> useMachineOperand instanceof VirtualReg)
-                        .filter(useMachineOperand -> !blockLiveInfo.liveDef.contains(useMachineOperand))
+                        .filter(MachineOperand::needsColor)
+                        .filter(use -> !blockLiveInfo.liveDef.contains(use))
                         .forEach(blockLiveInfo.liveUse::add);
                 instr.getUse().stream()
-                        .filter(defMachineOperand -> defMachineOperand instanceof VirtualReg)
-                        .filter(defMachineOperand -> !blockLiveInfo.liveUse.contains(defMachineOperand))
+                        .filter(MachineOperand::needsColor)
+                        .filter(def -> !blockLiveInfo.liveUse.contains(def))
                         .forEach(blockLiveInfo.liveDef::add);
             }
 
@@ -169,7 +169,8 @@ public class RegAllocator implements MCPass {
 
     public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
-            var allocatable = IntStream.range(0, 14).filter(i -> i != 13)
+            // fixme
+            var allocatable = IntStream.range(0, 15).filter(i -> i != 13)
                     .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
 
             var done = false;
@@ -186,7 +187,6 @@ public class RegAllocator implements MCPass {
                 var spillWorklist = new HashSet<MachineOperand>();
                 var spilledNodes = new HashSet<MachineOperand>();
                 var coalescedNodes = new HashSet<MachineOperand>();
-                var coloredNodes = new ArrayList<MachineOperand>();
                 var selectStack = new Stack<MachineOperand>();
                 var worklistMoves = new HashSet<MCMove>();
                 var activeMoves = new HashSet<MCMove>();
@@ -195,7 +195,8 @@ public class RegAllocator implements MCPass {
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
 
-                Map<MachineOperand, Integer> degree = allocatable.stream()
+                Map<MachineOperand, Integer> degree = IntStream.range(0, 16)
+                        .mapToObj(func::getPhyReg)
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
                 BiConsumer<MachineOperand, MachineOperand> addEdge = (u, v) -> {
@@ -253,6 +254,9 @@ public class RegAllocator implements MCPass {
                             defs.stream().filter(MachineOperand::needsColor).forEach(live::add);
                             defs.stream().filter(MachineOperand::needsColor).forEach(d -> live.forEach(l -> addEdge.accept(l, d)));
                             // todo: [heuristic] add loop cnt
+                            defs.stream().filter(MachineOperand::needsColor).forEach(live::remove);
+
+                            uses.stream().filter(MachineOperand::needsColor).forEach(live::add);
                         }
                     }
                 };
@@ -425,7 +429,7 @@ public class RegAllocator implements MCPass {
                     var colored = new HashMap<MachineOperand, MachineOperand>();
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
-                        var okColors = IntStream.range(0, 14).filter(i -> i != 13).boxed()
+                        var okColors = IntStream.range(0, 15).filter(i -> i != 13).boxed()
                                 .collect(Collectors.toSet());
 
                         adjList.getOrDefault(n, new HashSet<>()).forEach(w -> {

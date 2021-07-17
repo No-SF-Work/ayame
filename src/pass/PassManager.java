@@ -19,6 +19,7 @@ public class PassManager {
     add("emitllvm");
 //    add("gvngcm");
     add("RegAlloc");
+//    add("ListScheduling");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>(){};
   private ArrayList<MCPass> mcPasses = new ArrayList<>();

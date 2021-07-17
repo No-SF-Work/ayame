@@ -33,7 +33,7 @@ public class EmitLLVM implements IRPass {
   public void run(MyModule m) {
     nameVariable(m);
     m.__globalVariables.forEach(gb -> {
-      sb.append("@").append(gb).append("\n");
+      sb.append(gb).append("\n");
     });
     m.__functions.forEach(func -> {
       var val = func.getVal();
@@ -68,6 +68,9 @@ public class EmitLLVM implements IRPass {
   }
 
   private void nameVariable(MyModule m) {
+    m.__globalVariables.forEach(gv -> {
+      gv.setName("@" + gv.getName());
+    });
     m.__functions.forEach(
         f -> {
           vnc = 0;
@@ -76,6 +79,7 @@ public class EmitLLVM implements IRPass {
             func.getArgList().forEach(arg -> {
               arg.setName("%" + newName());
             });
+            vnc++;
             func.getList_().forEach(bbInode -> {
               if (!bbInode.equals(func.getList_().getEntry())) {
                 bbInode.getVal().setName(newName());

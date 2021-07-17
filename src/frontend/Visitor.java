@@ -216,8 +216,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
         visit(context);
         dims.add(((ConstantInt) tmp_).getVal());
       });
-      for (var i = dims.size() - 1; i > 0; i--) {
-        arrty = f.getArrayTy(arrty, dims.get(i));// arr(arr(arr(i32,dim1),dim2),dim3)
+      for (var i = dims.size(); i > 0; i--) {
+        arrty = f.getArrayTy(arrty, dims.get(i - 1));// arr(arr(arr(i32,dim1),dim2),dim3)
       }
       if (scope_.isGlobal()) {
         if (ctx.constInitVal() != null) {
@@ -245,9 +245,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
           // GEP只计算指针，不访问内存，因此每次需要访问内存的时候需要解出需要的内存的指针并且build新的GEP指令
           var ptr = f.buildGEP(allocatedArray, new ArrayList<>() {{
             add(CONST0);
+            add(CONST0);
           }}, curBB_);
           for (int i = 1; i < ctx.constInitVal().dimInfo_.size(); i++) {
             ptr = f.buildGEP(ptr, new ArrayList<>() {{
+              add(CONST0);
               add(CONST0);
             }}, curBB_);
             ;
@@ -291,7 +293,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       for (ConstInitValContext constInitValContext : ctx.constInitVal()) {
         if (constInitValContext.constExp() == null) {
           var pos = arrOfCurDim.size();
-          for (int i = 0; i < sizeOfEachEle - (pos % sizeOfEachEle) % sizeOfEachEle; i++) {
+          for (int i = 0; i < (sizeOfEachEle - (pos % sizeOfEachEle)) % sizeOfEachEle; i++) {
             arrOfCurDim.add(CONST0);//长度不足一个ele的补0为一个ele长
           }
           constInitValContext.dimInfo_ = new ArrayList<>(
@@ -341,6 +343,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
           var initializer = (Constant) tmp_;
           var v = f.getGlobalvariable(varName, i32Type_, initializer);
           scope_.put(varName, v);
+        } else {
+          var initializer = CONST0;
+          var v = f.getGlobalvariable(varName, i32Type_, initializer);
+          scope_.put(varName, v);
         }
       } else {//非数组局部
         var allocator = f.buildAlloca(curBB_, i32Type_);
@@ -357,8 +363,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
         visit(context);
         dims.add(((ConstantInt) tmp_).getVal());
       });
-      for (var i = dims.size() - 1; i > 0; i--) {
-        arrTy = f.getArrayTy(arrTy, dims.get(i));
+      for (var i = dims.size(); i > 0; i--) {
+        arrTy = f.getArrayTy(arrTy, dims.get(i - 1));
       }
       if (scope_.isGlobal()) {
         if (!(ctx.initVal() == null)) {
@@ -379,17 +385,19 @@ public class Visitor extends SysYBaseVisitor<Void> {
       } else {//local arr init
         var alloc = f.buildAlloca(curBB_, arrTy);
         scope_.put(ctx.IDENT().getText(), alloc);
-        if (!(ctx.initVal().isEmpty()) && (ctx.initVal().exp() != null)) {
+        if (!(ctx.initVal().isEmpty()) && !(ctx.initVal().initVal().isEmpty())) {
           alloc.setInit();
           ctx.initVal().dimInfo_ = dims;
           visit(ctx.initVal());
           var arr = tmpArr_;
           var pointer = f.buildGEP(alloc, new ArrayList<>() {{
             add(CONST0);
+            add(CONST0);
           }}, curBB_);
 
           for (var i = 1; i < dims.size(); i++) {
             pointer = f.buildGEP(pointer, new ArrayList<>() {{
+              add(CONST0);
               add(CONST0);
             }}, curBB_);
           }
@@ -422,7 +430,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitInitVal(InitValContext ctx) {
-    if (ctx.exp() != null && ctx.dimInfo_ == null) {
+    if (ctx.exp() != null && ctx.dimInfo_ == null) { //
       if (globalInit_) {
         usingInt_ = true;
         visit(ctx.exp());
@@ -444,7 +452,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
       ctx.initVal().forEach(context -> {
         if (context.exp() == null) {
           var pos = arrOfCurDim.size();
-          for (var i = 0; i < finalSizeOfEachEle - (pos % finalSizeOfEachEle) % finalSizeOfEachEle;
+          for (var i = 0;
+              i < (finalSizeOfEachEle - (pos % finalSizeOfEachEle)) % finalSizeOfEachEle;
               i++) {
             arrOfCurDim.add(CONST0);
           }
@@ -463,11 +472,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
           }
           arrOfCurDim.add(tmp_);
         }
-        for (int i = arrOfCurDim.size(); i < curDimLength * finalSizeOfEachEle1; i++) {
-          arrOfCurDim.add(CONST0);
-        }
-        tmpArr_ = arrOfCurDim;
       });
+      for (int i = arrOfCurDim.size(); i < curDimLength * finalSizeOfEachEle1; i++) {
+        arrOfCurDim.add(CONST0);
+      }
+      tmpArr_ = arrOfCurDim;
     }
     return null;
 
@@ -824,7 +833,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
     //function call
     if (INT) {
-      if (!ctx.exp().isEmpty()) {
+      if (ctx.exp().isEmpty()) {
         tmp_ = t;
         return null;
       } else {
@@ -879,7 +888,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
 
     if (ARR) {
-      if (!ctx.exp().isEmpty()) {
+      if (ctx.exp().isEmpty()) {
         tmp_ = f.buildGEP(t, new ArrayList<>() {{
           add(CONST0);
         }}, curBB_);
@@ -889,6 +898,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           visit(expContext);
           var val = tmp_;
           t = f.buildGEP(t, new ArrayList<>() {{
+            add(CONST0);
             add(val);
           }}, curBB_);
         }
@@ -927,7 +937,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
         if (buildCall) {
           buildCall = false;
           visit(ctx.lVal());
-          return null;//tmp may be GEP
+          tmp_ = f.buildLoad(((PointerType) tmp_.getType()).getContained(), tmp_, curBB_);
+          return null;
         } else {
           visit(ctx.lVal());
           if (tmp_.getType().isIntegerTy()) {
@@ -1044,20 +1055,23 @@ public class Visitor extends SysYBaseVisitor<Void> {
   public Void visitCallee(CalleeContext ctx) {
     var func = scope_.find(ctx.IDENT().getText());
     var args = new ArrayList<Value>();
-    var paramsCtx = ctx.funcRParams().param();
-    assert func != null;
-    var paramTys = ((Function) func).getType().getParams();
-    for (int i = 0; i < paramsCtx.size(); i++) {
-      var param = paramsCtx.get(i);
-      var paramTy = paramTys.get(i);
-      if (paramTy.isIntegerTy()) {
-        buildCall = true;
-      } else {
+    List<ParamContext> paramsCtx;
+    if (ctx.funcRParams() != null) {
+      paramsCtx = ctx.funcRParams().param();
+      assert func != null;
+      var paramTys = ((Function) func).getType().getParams();
+      for (int i = 0; i < paramsCtx.size(); i++) {
+        var param = paramsCtx.get(i);
+        var paramTy = paramTys.get(i);
+        if (paramTy.isIntegerTy()) {
+          buildCall = true;
+        } else {
+          buildCall = false;
+        }
+        visit(param.exp());// 没有String
         buildCall = false;
+        args.add(tmp_);
       }
-      visit(param.exp());// 没有String
-      buildCall = false;
-      args.add(tmp_);
     }
     tmp_ = f.buildFuncCall((Function) func, args, curBB_);
     return null;
