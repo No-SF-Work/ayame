@@ -2,6 +2,10 @@ package backend.machinecodes;
 
 import backend.reg.MachineOperand;
 import backend.CodeGenManager;
+import backend.reg.PhyReg;
+import backend.reg.Reg;
+
+import java.util.ArrayList;
 
 import static backend.CodeGenManager.canEncodeImm;
 
@@ -48,6 +52,16 @@ public class MCReturn extends MachineCode{
         }
         res+="\tbx\tlr\n";
         return res;
+    }
+
+    static ArrayList<Reg> use=new ArrayList<>();
+    static{
+        use.add(new PhyReg(0));
+    }
+
+    @Override
+    public ArrayList<Reg> getUse(){
+        return use;
     }
 
     public MCReturn(MachineBlock mb){
