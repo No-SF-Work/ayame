@@ -36,29 +36,6 @@ public class MyModule {
     Logger log = Mylogger.getLogger(MyModule.class);
 
     MyFactoryBuilder f = MyFactoryBuilder.getInstance();
-    IntegerType i32Type = f.getI32Ty();
-    IntegerType i1Type = f.getI1Ty();
-    VoidType voidType = f.getVoidTy();
-    PointerType ptri32Type = f.getPointTy(i32Type);
-
-    log.warning("begin to build builtin functions");
-    ArrayList<Type> params_empty = new ArrayList<>(Collections.emptyList());
-    ArrayList<Type> params_int = new ArrayList<>(Collections.singletonList(i32Type));
-    ArrayList<Type> params_array = new ArrayList<>(Collections.singletonList(ptri32Type));
-    ArrayList<Type> params_int_and_array = new ArrayList<>(Arrays.asList(i32Type, ptri32Type));
-    // TODO what about putf(string, int, ...) ?
-    ArrayList<Type> params_putf = new ArrayList<>(Collections.emptyList());
-
-    f.buildFunction("getint", f.getFuncTy(i32Type, params_empty), true);
-    f.buildFunction("getch", f.getFuncTy(i32Type, params_empty), true);
-    f.buildFunction("getarray", f.getFuncTy(i32Type, params_array), true);
-    f.buildFunction("putint", f.getFuncTy(voidType, params_int), true);
-    f.buildFunction("putch", f.getFuncTy(voidType, params_int), true);
-    f.buildFunction("putarray", f.getFuncTy(voidType, params_int_and_array), true);
-    f.buildFunction("putf", f.getFuncTy(voidType, params_putf), true);
-
-    f.buildFunction("starttime", f.getFuncTy(voidType, params_empty), true);
-    f.buildFunction("stoptime", f.getFuncTy(voidType, params_empty), true);
 
     /**
      * lib IO functions
