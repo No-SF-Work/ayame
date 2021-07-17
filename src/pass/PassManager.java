@@ -17,6 +17,7 @@ public class PassManager {
     add("typeCheck");
     add("Mem2reg");
     add("emitllvm");
+//    add("gvngcm");
     add("RegAlloc");
 //    add("ListScheduling");
   }};
