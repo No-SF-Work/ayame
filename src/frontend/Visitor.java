@@ -555,6 +555,25 @@ public class Visitor extends SysYBaseVisitor<Void> {
       visit(ctx.funcFParams());
     }
     visit(ctx.block());
+    //todo checkeifright
+    if (curBB_.getList().getLast() != null &&
+        (curBB_.getList().getLast().getVal().tag != TAG_.Br
+            && curBB_.getList().getLast().getVal().tag != TAG_.Ret)) {
+
+      if (curFunc_.getType().getRetType().isVoidTy()) {
+        f.buildRet(curBB_);
+      } else {
+        f.buildRet(CONST0, curBB_);
+      }
+    }
+    if (curBB_.getList().getLast() == null) {
+      if (curFunc_.getType().getRetType().isVoidTy()) {
+        f.buildRet(curBB_);
+      } else {
+        f.buildRet(CONST0, curBB_);
+      }
+    }
+    //todo pretty not sure
     log.info("funcDef end@" + functionName);
     return null;
   }
@@ -698,9 +717,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
       visitStmt(ctx.stmt(1));
       f.buildBr(nxtBlock, falseBlock);
     }
-
+    //todo if(cond){return something}else{return something}
     curBB_ = nxtBlock;
-    return super.visitConditionStmt(ctx);
+    return null;
   }
 
   /**

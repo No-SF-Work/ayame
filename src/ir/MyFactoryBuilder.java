@@ -187,6 +187,13 @@ public class MyFactoryBuilder {
    * 在bb末尾造一个无条件转移
    */
   public BrInst buildBr(BasicBlock trueblock, BasicBlock parent) {
+    if (parent.getList().getLast() != null && parent.getList().getLast().getVal().tag == TAG_.Ret) {
+      return null;
+      //防止下面这种情况出现
+      //ret i32 1
+      //br label  %4
+
+    }
     return new BrInst(trueblock, parent);
   }
 
@@ -195,6 +202,13 @@ public class MyFactoryBuilder {
    */
   public BrInst buildBr(Value cond, BasicBlock trueblock, BasicBlock falseBlock,
       BasicBlock parent) {
+    if (parent.getList().getLast() != null && parent.getList().getLast().getVal().tag == TAG_.Ret) {
+      return null;
+      //防止下面这种情况出现
+      //ret i32 1
+      //br label  %4
+
+    }
     return new BrInst(cond, trueblock, falseBlock, parent);
   }
 
