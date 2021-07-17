@@ -945,6 +945,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       if (ctx.exp().isEmpty()) {
         tmp_ = f.buildGEP(t, new ArrayList<>() {{
           add(CONST0);
+          add(CONST0);
         }}, curBB_);
         return null;
       } else {
@@ -991,7 +992,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
         if (buildCall) {
           buildCall = false;
           visit(ctx.lVal());
-          tmp_ = f.buildLoad(((PointerType) tmp_.getType()).getContained(), tmp_, curBB_);
           return null;
         } else {
           visit(ctx.lVal());
@@ -1118,9 +1118,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
         var param = paramsCtx.get(i);
         var paramTy = paramTys.get(i);
         if (paramTy.isIntegerTy()) {
-          buildCall = true;
-        } else {
           buildCall = false;
+        } else {
+          buildCall = true;
         }
         visit(param.exp());// 没有String
         buildCall = false;
