@@ -43,6 +43,10 @@ public class BBPredSucc implements IRPass {
       BasicBlock bb = bbNode.getVal();
       bb.getPredecessor_().clear();
       bb.getSuccessor_().clear();
+    }
+
+    for (var bbNode: func.getList_()) {
+      BasicBlock bb = bbNode.getVal();
       Instruction brInst = bb.getList().getLast().getVal();
       if (! (brInst instanceof BrInst)) {
         continue;
