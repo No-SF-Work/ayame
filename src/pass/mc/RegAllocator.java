@@ -109,6 +109,13 @@ public class RegAllocator implements MCPass {
         } else if (instr instanceof MCCall) {
         } else if (instr instanceof MCComment) {
         } else if (instr instanceof MCCompare) {
+            var compareInstr = (MCCompare) instr;
+            if (compareInstr.getLhs().equals(origin)) {
+                compareInstr.setLhs(target);
+            }
+            if (compareInstr.getRhs().equals(origin)) {
+                compareInstr.setRhs(target);
+            }
         } else if (instr instanceof MCFma) {
             var fmaInstr = (MCFma) instr;
             if (fmaInstr.getDst().equals(origin)) {
