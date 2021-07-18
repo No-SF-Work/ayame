@@ -176,7 +176,7 @@ public class Mem2reg implements IRPass {
         Instruction inst = instNode.getVal();
         var tmp = instNode.getNext();
         // AllocaInst
-        if (inst.tag == TAG_.Alloca) {
+        if (inst.tag == TAG_.Alloca && (allocaLookup.containsKey((AllocaInst) inst))) {
           instNode.removeSelf();
         }
         // LoadInst

@@ -11,13 +11,14 @@ import ir.values.Constants.ConstantInt;
  */
 public class GlobalVariable extends User {
 
-  public GlobalVariable(String name, final Type type, Constant init) {
+  public GlobalVariable(String name, final Type type, Constant foldedInit, Constant plainInit) {
     super(name, new PointerType(type));
     module.__globalVariables.add(this);
     if (init != null) {
-      this.COaddOperand(init);
+      this.COaddOperand(plainInit);
     }
-    this.init = init;
+    this.init = plainInit;
+    this.fixedInit = foldedInit;
   }
 
   public void setConst() {
@@ -25,7 +26,8 @@ public class GlobalVariable extends User {
   }
 
   public boolean isConst = false;
-  public Constant init;
+  public Constant init; //todo 这个是展开成为一维数组的
+  public Constant fixedInit;//todo 这个是封装成了ConstArray套ConstArray的形式的
 
   @Override
   public String toString() {
@@ -40,13 +42,11 @@ public class GlobalVariable extends User {
       sb.append(((PointerType) this.getType()).getContained().toString()).append(" ");
       sb.append(this.init == null ? "0 " : ((ConstantInt) this.init).getVal());
     } else if (((PointerType) this.getType()).getContained().isArrayTy()) {
-      sb.append(((PointerType) this.getType()).getContained().toString()).append(" ");
-      if (this.init == null) {
+      if (this.fixedInit == null) {
+        sb.append(((PointerType) this.getType()).getContained().toString()).append(" ");
         sb.append("zeroinitializer ");
       } else {
-        sb.append(ArrayType
-            .buildConstInitStr((ArrayType) ((PointerType) this.getType()).getContained(),
-                (ConstantArray) init));
+        sb.append(fixedInit.toString());
       }
     }
     return sb.toString();

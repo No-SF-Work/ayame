@@ -8,6 +8,7 @@ import ir.values.BasicBlock;
 import ir.values.Constants.ConstantArray;
 import ir.values.Function;
 import ir.values.GlobalVariable;
+import ir.values.UndefValue;
 import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
@@ -31,6 +32,12 @@ public class ArrayAliasAnalysis {
     public ArrayList<Instruction> defs;
 
     public ArrayDefUses() {
+      this.loads = new ArrayList<>();
+      this.defs = new ArrayList<>();
+    }
+
+    public ArrayDefUses(Value array) {
+      this.array = array;
       this.loads = new ArrayList<>();
       this.defs = new ArrayList<>();
     }
@@ -178,7 +185,7 @@ public class ArrayAliasAnalysis {
           }
           Value array = getArrayValue(loadInst.getOperands().get(0));
           if (arraysLookup.get(array) == null) {
-            ArrayDefUses newArray = new ArrayDefUses();
+            ArrayDefUses newArray = new ArrayDefUses(array);
             arrays.add(newArray);
             arraysLookup.put(array, arrays.size() - 1);
             defBlocks.add(new ArrayList<>());
@@ -244,7 +251,7 @@ public class ArrayAliasAnalysis {
     // variable renaming (set mem-token)
     ArrayList<Value> values = new ArrayList<>();
     for (int i = 0; i < arrays.size(); i++) {
-      values.set(i, null);
+      values.add(new UndefValue());
     }
     for (INode<BasicBlock, Function> bbNode : function.getList_()) {
       bbNode.getVal().setDirty(false);
@@ -279,7 +286,10 @@ public class ArrayAliasAnalysis {
         } else if (inst.tag == TAG_.Load) {
           // set useStore as corresponding value
           LoadInst loadInst = (LoadInst) inst;
-          int index = arraysLookup.get(loadInst.getOperands().get(0));
+          Integer index = arraysLookup.get(getArrayValue(loadInst.getPointer()));
+          if (index == null) {
+            continue;
+          }
           loadInst.setUseStore(currValues.get(index));
         } else if (inst.tag == TAG_.Store || inst.tag == TAG_.Call) {
           Integer index = null;
@@ -310,6 +320,7 @@ public class ArrayAliasAnalysis {
         if (inst instanceof MemPhi) {
           for (var i = 0; i < inst.getNumOP(); i++) {
             inst.CoSetOperand(i, null);
+            inst.removeUsesOfOPs();
           }
         } else if (inst instanceof LoadInst) {
           LoadInst loadInst = (LoadInst) inst;

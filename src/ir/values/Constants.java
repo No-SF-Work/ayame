@@ -20,6 +20,11 @@ public class Constants {
       this.val = val;
     }
 
+    @Override
+    public String toString() {
+      return "i32 " + this.getVal();
+    }
+
     public static ConstantInt CONST0() {
       return c0_;//太常用了
     }
@@ -59,7 +64,14 @@ public class Constants {
 
     @Override
     public String toString() {
-      return ArrayType.buildConstInitStr((ArrayType) this.getType(), this);
+      StringBuilder sb = new StringBuilder();
+      sb.append(this.getType().toString()).append("[");
+      for (int i = 0; i < const_arr_.size(); i++) {
+        sb.append(const_arr_.get(i).toString() + ",");
+      }
+      sb.deleteCharAt(sb.length() - 1);
+      sb.append("]");
+      return sb.toString();
     }
 
     public ArrayList<Integer> getDims() {
