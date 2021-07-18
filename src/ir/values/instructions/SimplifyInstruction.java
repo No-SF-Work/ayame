@@ -71,6 +71,8 @@ public class SimplifyInstruction {
     if (lhs instanceof ConstantInt || lhs.getType().isNoTy()) {
       inst.getOperands().set(0, rhs);
       inst.getOperands().set(1, lhs);
+      lhs = inst.getOperands().get(0);
+      rhs = inst.getOperands().get(1);
     }
 
     // lhs + Undef -> Undef
@@ -297,6 +299,8 @@ public class SimplifyInstruction {
     if (lhs instanceof ConstantInt || lhs.getType().isNoTy()) {
       inst.getOperands().set(0, rhs);
       inst.getOperands().set(1, lhs);
+      lhs = inst.getOperands().get(0);
+      rhs = inst.getOperands().get(1);
     }
 
     // lhs * Undef -> Undef
