@@ -152,7 +152,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
     ArrayList<Type> params_int_and_array = new ArrayList<>(Arrays.asList(i32Type, ptri32Type));
     // TODO what about putf(string, int, ...) ?
     ArrayList<Type> params_putf = new ArrayList<>(Collections.emptyList());
+    ArrayList<Type> param_memset = new ArrayList<>(Arrays.asList(ptri32Type, i32Type, i32Type));
 
+    //libc function
+    scope_.put("memset", f.buildFunction("memset", f.getFuncTy(voidType, param_memset), true));
+
+    //sysy Lib function
     scope_.put("getint", f.buildFunction("getint", f.getFuncTy(i32Type, params_empty), true));
     scope_.put("getarray", f.buildFunction("getarray", f.getFuncTy(i32Type, params_array), true));
     scope_.put("getch", f.buildFunction("getch", f.getFuncTy(i32Type, params_empty), true));
@@ -445,11 +450,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
               add(CONST0);
             }}, curBB_);
           }
-
+          f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
+                  Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, arr.size()))),
+              curBB_);
           for (int i = 0; i < arr.size(); i++) {
             var t = arr.get(i);
+
             if (t instanceof ConstantInt) {
               if (((ConstantInt) t).getVal() == 0) {
+//                f.buildStore(CONST0, pointer, curBB_);
                 continue;
               }
             }

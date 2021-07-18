@@ -172,7 +172,7 @@ public class MyFactoryBuilder {
    * 在bb末尾插入个binary
    */
   public BinaryInst buildBinary(TAG_ tag, Value lhs, Value rhs, BasicBlock bb) {
-    assert lhs.getType() == rhs.getType();
+//    assert lhs.getType() == rhs.getType();
     return new BinaryInst(tag, lhs.getType(), lhs, rhs, bb);
   }
 

@@ -15,11 +15,6 @@ public class VirtualReg extends Reg {
     private boolean isGlobal=false;
 
     private String name;
-    private final int idx;
-
-    public int getIdx() {
-        return idx;
-    }
 
     public void setSSA(){
         this.isSSA=true;
@@ -40,7 +35,6 @@ public class VirtualReg extends Reg {
 
     public VirtualReg(String name){
         super(state.virtual);
-        this.idx = Name;
         if(name==""){
             this.name="%%"+Integer.toString(Name++);
         }else{
@@ -50,14 +44,13 @@ public class VirtualReg extends Reg {
 
     public VirtualReg(){
         super(state.virtual);
-        this.idx = Name;
         this.name="%%"+Integer.toString(Name++);
     }
 
     public VirtualReg(String name, boolean isGlobal){
         super(state.virtual);
         this.name=name;
-        this.idx = Integer.parseInt(name.substring(2));
+//        this.idx = Integer.parseInt(name.substring(2));
         this.isGlobal=isGlobal;
     }
 
