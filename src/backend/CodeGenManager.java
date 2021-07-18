@@ -433,7 +433,7 @@ public class CodeGenManager {
             //对于a[],会有alloca b store a b load d b
             //其中a,d是一个数组首地址，b是一个二重指针，但是d和a其实是一个东西，把对d的使用转换成对a的使用
             HashMap<MemInst.LoadInst, MemInst.AllocaInst> loadToAlloca = new HashMap<>();
-            HashMap<MemInst.AllocaInst, MemInst.StoreInst> allocaToStore = new HashMap<>();
+            HashMap<MemInst.AllocaInst, Value> allocaToStore = new HashMap<>();
 
             AnalyzeValue aV = (Value v, MachineBlock mb, boolean isInsert) -> {
                 String name;
@@ -984,8 +984,8 @@ public class CodeGenManager {
                         Value ar = ir.getOperands().get(1);
                         //如果store的指针是个二重指针
                         if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
-                            allocaToStore.put((MemInst.AllocaInst) ar, (MemInst.StoreInst) ir);
-                            aV.analyzeValue(ir, mb, true);
+                            allocaToStore.put((MemInst.AllocaInst) ar,  ir.getOperands().get(0));
+                            aV.analyzeValue(ir.getOperands().get(0), mb, true);
                             continue;
                         }
                         MachineOperand arr = aV.analyzeValue(ir.getOperands().get(1), mb, true);
