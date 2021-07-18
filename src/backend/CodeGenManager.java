@@ -250,7 +250,7 @@ public class CodeGenManager {
 
     public String genARM() {
         String arm = "";
-        arm += ".arch arm7ve\n";
+        arm += ".arch armv7ve\n";
         arm += ".text\n";
         Iterator<MachineFunction> mfIte = machineFunctions.iterator();
         while (mfIte.hasNext()) {
@@ -927,7 +927,7 @@ public class CodeGenManager {
                         //TODO 如何获得到底是哪个指针
                         //如果alloca出来的指针是个二重指针
                         if (((PointerType) (ir).getType()).getContained().isPointerTy()) {
-                            aV.analyzeValue(ir, mb, true);
+//                            aV.analyzeValue(ir, mb, true);
                             continue;
                         }
                         assert (ir.getType() instanceof PointerType);
@@ -985,6 +985,7 @@ public class CodeGenManager {
                         //如果store的指针是个二重指针
                         if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
                             allocaToStore.put((MemInst.AllocaInst) ar, (MemInst.StoreInst) ir);
+                            aV.analyzeValue(ir, mb, true);
                             continue;
                         }
                         MachineOperand arr = aV.analyzeValue(ir.getOperands().get(1), mb, true);
