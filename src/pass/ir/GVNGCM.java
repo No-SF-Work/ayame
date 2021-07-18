@@ -5,8 +5,11 @@ import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.Use;
 import ir.values.BasicBlock;
+import ir.values.Constant;
+import ir.values.Constants.ConstantArray;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
+import ir.values.GlobalVariable;
 import ir.values.User;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
@@ -27,7 +30,8 @@ import util.IList;
 import util.IList.INode;
 import util.Mylogger;
 import util.Pair;
-// TODO: 对常量数组的偏移全为常数的 Load 直接取值
+
+// DOING: 对全局常量数组的偏移全为常数的 Load 直接取值
 // TODO: 高级一点：对未修改的全局变量和数组的 Load 直接取值
 public class GVNGCM implements IRPass {
 
@@ -177,7 +181,7 @@ public class GVNGCM implements IRPass {
       }
       // 保证每个常数只会出现一次
       if (val instanceof ConstantInt && pair.getFirst() instanceof ConstantInt) {
-        if (((ConstantInt)val).getVal() == ((ConstantInt) pair.getFirst()).getVal()) {
+        if (((ConstantInt) val).getVal() == ((ConstantInt) pair.getFirst()).getVal()) {
           return pair.getSecond();
         }
       }
@@ -278,11 +282,48 @@ public class GVNGCM implements IRPass {
         replace(inst, val);
       }
     } else if (inst.tag == TAG_.Load) {
-      // 没有全局 const []
-      Value val = lookupOrAdd(simpInst);
-      if (inst != val) {
-        replace(inst, val);
+      Value pointer = ((LoadInst) inst).getPointer();
+      Value array = ArrayAliasAnalysis.getArrayValue(pointer);
+
+      boolean getConst = false;
+      if (pointer instanceof GEPInst && ArrayAliasAnalysis
+          .isGlobal(array)) {
+        GlobalVariable globalArray = (GlobalVariable) array;
+        if (globalArray.isConst) {
+          boolean constIndex = true;
+          assert globalArray.fixedInit instanceof ConstantArray;
+          ConstantArray constantArray = (ConstantArray) globalArray.fixedInit;
+          Stack<Integer> indexList = new Stack<>();
+          Value tmpPtr = pointer;
+          while (tmpPtr instanceof GEPInst) {
+            Value index = ((Instruction) tmpPtr).getOperands().get(2);
+            if (!(index instanceof ConstantInt)) {
+              constIndex = false;
+              break;
+            }
+            indexList.push(((ConstantInt) index).getVal());
+            tmpPtr = ((Instruction) tmpPtr).getOperands().get(0);
+          }
+          if (constIndex) {
+            Constant c = constantArray;
+            while (!indexList.isEmpty()) {
+              int index = indexList.pop();
+              c = ((ConstantArray)c).getConst_arr_().get(index);
+            }
+            assert c instanceof ConstantInt;
+            replace(inst, c);
+            getConst = true;
+          }
+        }
       }
+
+      if (!getConst) {
+        Value val = lookupOrAdd(simpInst);
+        if (inst != val) {
+          replace(inst, val);
+        }
+      }
+
     } else if (inst.tag == TAG_.Phi) {
       // 所有 incomingVals 相同
       Phi phiInst = (Phi) simpInst;
