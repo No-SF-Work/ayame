@@ -13,6 +13,7 @@ import ir.types.Type;
 import ir.values.*;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
+import ir.values.instructions.MemInst;
 import ir.values.instructions.TerminatorInst;
 import util.IList;
 import util.IList.INode;
@@ -20,6 +21,7 @@ import ir.values.instructions.MemInst.Phi;
 import util.Mylogger;
 import backend.machinecodes.ArmAddition.CondType;
 
+import javax.swing.*;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -96,7 +98,7 @@ public class CodeGenManager {
     }
 
     interface AnalyzeValue {
-        MachineOperand analyzeValue(Value v);
+        MachineOperand analyzeValue(Value v,MachineBlock mb,boolean isinsert);
     }
 
     interface AnalyzeNoImm {
@@ -222,7 +224,7 @@ public class CodeGenManager {
         for (; mbNode.getNext() != null; mbNode = mbNode.getNext()) {
             MachineBlock mb = mbNode.getVal();
             INode<MachineCode, MachineBlock> mcNode = mb.getmclist().getEntry();
-            if(mcNode==null){
+            if (mcNode == null) {
                 continue;
             }
             for (; mcNode.getNext() != null; mcNode = mcNode.getNext()) {
@@ -322,12 +324,12 @@ public class CodeGenManager {
                     MachineCode mc = mcNode.getVal();
                     arm += mc.toString();
                 }
-                arm+="\n";
+                arm += "\n";
             }
-            arm+="\n";
+            arm += "\n";
         }
         ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
-        if(!gVs.isEmpty()){
+        if (!gVs.isEmpty()) {
             arm += "\n\n.data\n";
             arm += ".align 4\n";
         }
@@ -335,7 +337,7 @@ public class CodeGenManager {
             assert irMap.containsKey(gv);
             arm += ".global\t" + irMap.get(gv).getName() + "\n";
             arm += irMap.get(gv).getName() + ":\n";
-            PointerType p=(PointerType) gv.getType();
+            PointerType p = (PointerType) gv.getType();
             if (p.getContained() instanceof IntegerType) {
                 arm += "\t.word\t";
                 assert (gv.init != null);
@@ -432,7 +434,13 @@ public class CodeGenManager {
 
             }
 
-            AnalyzeValue aV = (Value v) -> {
+            //函数传数组指针，会出现低效问题，声明两个map解决此问题
+            //对于a[],会有alloca b store a b load d b
+            //其中a,d是一个数组首地址，b是一个二重指针，但是d和a其实是一个东西，把对d的使用转换成对a的使用
+            HashMap<MemInst.LoadInst, MemInst.AllocaInst> loadToAlloca = new HashMap<>();
+            HashMap<MemInst.AllocaInst, MemInst.StoreInst> allocaToStore = new HashMap<>();
+
+            AnalyzeValue aV = (Value v,MachineBlock mb,boolean isInsert) -> {
                 String name;
 
                 if (v instanceof Function.Arg && f.getArgList().contains(v)) {
@@ -468,7 +476,14 @@ public class CodeGenManager {
                     assert (irMap.containsKey(v));
                     return irMap.get(v);
                 } else if (v instanceof Constants.ConstantInt) {
-                    return new MachineOperand(((Constants.ConstantInt) v).getVal());
+                    if(isInsert)
+                        return genImm(((Constants.ConstantInt) v).getVal(),mb);
+                    else
+                        return new MachineOperand(((Constants.ConstantInt) v).getVal());
+                } else if (v instanceof MemInst.LoadInst && loadToAlloca.containsKey(v)) {
+                    assert (allocaToStore.containsKey(loadToAlloca.get(v)));
+                    assert (irMap.containsKey(allocaToStore.get(loadToAlloca.get(v))));
+                    return irMap.get(allocaToStore.get(loadToAlloca.get(v)));
                 } else {
                     if (!irMap.containsKey(v)) {
                         VirtualReg vr = new VirtualReg(v.getName());
@@ -490,7 +505,7 @@ public class CodeGenManager {
                     ((MCMove) mv).setRhs(new MachineOperand(((Constants.ConstantInt) v).getVal()));
                     return vr;
                 } else {
-                    return aV.analyzeValue(v);
+                    return aV.analyzeValue(v,mb,false);
                 }
             };
 
@@ -498,7 +513,7 @@ public class CodeGenManager {
                 for (INode<BasicBlock, Function> bbNode : bList) {
                     BasicBlock bb = bbNode.getVal();
                     int predNum = bb.getPredecessor_().size();
-                    if(predNum<=1){
+                    if (predNum <= 1) {
                         continue;
                     }
                     MachineBlock mbb = bMap.get(bb);
@@ -513,19 +528,20 @@ public class CodeGenManager {
                     }
                     IList<Instruction, BasicBlock> irList = bb.getList();
                     //构造phiTarget到phiSet的映射
-                    logger.info(bb.getName()+"Map phi target to phi set");
+                    logger.info(bb.getName() + "Map phi target to phi set");
                     for (INode<Instruction, BasicBlock> irNode : irList) {
                         Instruction ir = irNode.getVal();
                         if (ir.tag == Instruction.TAG_.Phi) {
-                            MachineOperand phiTarget = aV.analyzeValue(ir);
+                            //如果phi指令的参数中有字面量，那也不用调用genImm，因为字面量肯定最后放在前驱块的copy中，所以isInsert设置为false表明这一点
+                            MachineOperand phiTarget = aV.analyzeValue(ir,mbb,false);
                             assert (phiTarget instanceof VirtualReg);
                             HashSet<VirtualReg> phiSet = new HashSet<>();
                             phiSet.add((VirtualReg) phiTarget);
                             for (Value vv : (((Phi) ir).getIncomingVals())) {
-                                MachineOperand phiArg = aV.analyzeValue(vv);
-                                if (phiArg.getState() == MachineOperand.state.imm) {
-                                    continue;
-                                }
+                                MachineOperand phiArg = aV.analyzeValue(vv,mbb,false);
+//                                if (phiArg.getState() == MachineOperand.state.imm) {
+//                                    continue;
+//                                }
                                 phiSet.add((VirtualReg) phiArg);
                             }
                             phiRows.put((VirtualReg) phiTarget, new ArrayList<>());
@@ -544,9 +560,9 @@ public class CodeGenManager {
                         for (INode<Instruction, BasicBlock> irrNode : irrList) {
                             Instruction ir = irrNode.getVal();
                             if (ir.tag == Instruction.TAG_.Phi) {
-                                MachineOperand phiTarget = aV.analyzeValue(ir);
+                                MachineOperand phiTarget = aV.analyzeValue(ir,mbb,false);
                                 assert (phiTarget instanceof VirtualReg);
-                                MachineOperand phiParam = aV.analyzeValue(((Phi) ir).getIncomingVals().get(i));
+                                MachineOperand phiParam = aV.analyzeValue(((Phi) ir).getIncomingVals().get(i),mbb,false);
                                 edges.put((VirtualReg) phiTarget, (VirtualReg) phiParam);
                             } else {
                                 break;
@@ -579,11 +595,11 @@ public class CodeGenManager {
                         while (irItt.hasNext()) {
                             Instruction ir = irItt.next().getVal();
                             if (ir.tag == Instruction.TAG_.Phi) {
-                                MachineOperand phiTarget = aV.analyzeValue(ir);
+                                MachineOperand phiTarget = aV.analyzeValue(ir,mbb,false);
                                 assert (phiTarget instanceof VirtualReg);
                                 assert (phiRows.containsKey(phiTarget));
                                 if (phiRows.get(phiTarget).get(i)) {
-                                    MachineOperand phiParam = aV.analyzeValue(((Phi) ir).getIncomingVals().get(i));
+                                    MachineOperand phiParam = aV.analyzeValue(((Phi) ir).getIncomingVals().get(i),mbb,false);
                                     MachineCode mv = new MCMove();
                                     ((MCMove) mv).setRhs(phiParam);
                                     ((MCMove) mv).setDst(phiTarget);
@@ -600,17 +616,21 @@ public class CodeGenManager {
             //处理phi指令
             logger.info("HandlePhi begin");
             handlePhi.handlephi();
+
+
             //处理其余指令
             for (bIt = bList.iterator(); bIt.hasNext(); ) {
                 BasicBlock bb = bIt.next().getVal();
                 MachineBlock mb = bMap.get(bb);
+
+
                 for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
                     Instruction ir = iIt.next().getVal();
                     if (ir.tag == Instruction.TAG_.Phi) {
                         continue;
                     } else if (ir instanceof BinaryInst) {
-                        MachineOperand lhs = aV.analyzeValue(ir.getOperands().get(0));
-                        MachineOperand rhs = aV.analyzeValue(ir.getOperands().get(1));
+                        MachineOperand lhs = aV.analyzeValue(ir.getOperands().get(0),mb,true);
+                        MachineOperand rhs = aV.analyzeValue(ir.getOperands().get(1),mb,true);
                         boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                         boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
 //                        assert (!(rhsIsConst && lhsIsConst));
@@ -618,7 +638,7 @@ public class CodeGenManager {
                         if (rhsIsConst && lhsIsConst) {
                             MachineCode.TAG tag;
                             BinaryInst bi = ((BinaryInst) ir);
-                            CondType t=CondType.Any;
+                            CondType t = CondType.Any;
                             if (bi.isAdd()) {
                                 tag = MachineCode.TAG.Add;
                             } else if (bi.isSub()) {
@@ -630,12 +650,12 @@ public class CodeGenManager {
                             } else if (bi.isRsb()) {
                                 tag = MachineCode.TAG.Rsb;
                             } else {
-                                 continue;
+                                continue;
                             }
                             MachineOperand tempLhs = ani.analyzeNoImm(ir.getOperands().get(0), mb);
                             MachineOperand tempRhs = ani.analyzeNoImm(ir.getOperands().get(1), mb);
                             MCBinary binary = new MCBinary(tag, mb);
-                            MachineOperand dst = aV.analyzeValue(ir);
+                            MachineOperand dst = aV.analyzeValue(ir,mb,true);
                             binary.setLhs(tempLhs);
                             binary.setRhs(tempRhs);
                             binary.setDst(dst);
@@ -650,7 +670,7 @@ public class CodeGenManager {
                                 if ((imm & (imm - 1)) == 0) {
                                     assert (imm != 0);
                                     MCMove mv = new MCMove(mb);
-                                    MachineOperand dst = aV.analyzeValue(ir);
+                                    MachineOperand dst = aV.analyzeValue(ir,mb,true);
                                     mv.setDst(dst);
                                     mv.setRhs(lhs);
                                     mv.setShift(ArmAddition.ShiftType.Lsr, calcCTZ(imm));
@@ -692,7 +712,7 @@ public class CodeGenManager {
                                     mc3.setRhs(v1);
                                     mc3.setShift(ArmAddition.ShiftType.Asr, shift);
                                     MCBinary mc4 = new MCBinary(MachineCode.TAG.Add, mb);
-                                    MachineOperand dst = aV.analyzeValue(ir);
+                                    MachineOperand dst = aV.analyzeValue(ir,mb,true);
                                     mc4.setDst(dst);
                                     mc4.setLhs(mc3.getDst());
                                     mc4.setRhs(lhs);
@@ -703,7 +723,7 @@ public class CodeGenManager {
                             if (((BinaryInst) ir).isMul()) {
                                 int log = calcCTZ(imm);
                                 if ((imm & (imm - 1)) == 0) {
-                                    MachineOperand dst = aV.analyzeValue(ir);
+                                    MachineOperand dst = aV.analyzeValue(ir,mb,true);
                                     MCMove mc = new MCMove(mb);
                                     mc.setDst(dst);
                                     if (imm == 0) {
@@ -723,7 +743,7 @@ public class CodeGenManager {
                             if (((BinaryInst) ir).isMul()) {
                                 int log = calcCTZ(imm);
                                 if ((imm & (imm - 1)) == 0) {
-                                    MachineOperand dst = aV.analyzeValue(ir);
+                                    MachineOperand dst = aV.analyzeValue(ir,mb,true);
                                     MCMove mc = new MCMove(mb);
                                     mc.setDst(dst);
                                     if (imm == 0) {
@@ -747,7 +767,7 @@ public class CodeGenManager {
                                         MCBinary in;
                                         in = ((BinaryInst) ir).isAdd() ? new MCBinary(MachineCode.TAG.Sub, mb) : new MCBinary(MachineCode.TAG.Add, mb);
                                         imm = -imm;
-                                        MachineOperand dst = aV.analyzeValue(ir);
+                                        MachineOperand dst = aV.analyzeValue(ir,mb,true);
                                         in.setDst(dst);
                                         in.setRhs(genImm(imm, mb));
                                         in.setLhs(lhs);
@@ -761,7 +781,7 @@ public class CodeGenManager {
                                         MCBinary in;
                                         in = ((BinaryInst) ir).isAdd() ? new MCBinary(MachineCode.TAG.Rsb, mb) : new MCBinary(MachineCode.TAG.Add, mb);
                                         imm = -imm;
-                                        MachineOperand dst = aV.analyzeValue(ir);
+                                        MachineOperand dst = aV.analyzeValue(ir,mb,true);
                                         in.setDst(dst);
                                         in.setRhs(genImm(imm, mb));
                                         in.setLhs(rhs);
@@ -795,7 +815,7 @@ public class CodeGenManager {
                                 tag = MachineCode.TAG.Compare;
                             }
                             MCBinary binary = new MCBinary(tag, mb);
-                            MachineOperand dst = aV.analyzeValue(ir);
+                            MachineOperand dst = aV.analyzeValue(ir,mb,true);
                             binary.setLhs(lhs);
                             binary.setRhs(rhs);
                             binary.setDst(dst);
@@ -804,13 +824,13 @@ public class CodeGenManager {
                     } else if (ir.tag == Instruction.TAG_.Br) {
                         if (ir.getNumOP() == 3) {
                             CondType cond = getCond((BinaryInst) ir.getOperands().get(0));
-                            aV.analyzeValue(ir.getOperands().get(0));
+                            aV.analyzeValue(ir.getOperands().get(0),mb,true);
                             assert (ir.getOperands().get(0) instanceof BinaryInst);
                             assert (((BinaryInst) ir.getOperands().get(0)).isCond());
                             Instruction condi = (BinaryInst) (ir.getOperands().get(0));
                             MCCompare compare = new MCCompare(mb);
-                            compare.setRhs(aV.analyzeValue(condi.getOperands().get(0)));
-                            compare.setLhs(aV.analyzeValue(condi.getOperands().get(1)));
+                            compare.setRhs(aV.analyzeValue(condi.getOperands().get(0),mb,true));
+                            compare.setLhs(aV.analyzeValue(condi.getOperands().get(1),mb,true));
                             compare.setCond(cond);
                             MachineCode br = new MCBranch(mb);
                             ((MCBranch) br).setCond(cond);
@@ -838,12 +858,12 @@ public class CodeGenManager {
                         int argNum = ir.getOperands().size() - 1;
                         for (int i = 0; i < argNum; i++) {
                             if (i < 4) {
-                                MachineOperand rhs = aV.analyzeValue(ir.getOperands().get(i + 1));
+                                MachineOperand rhs = aV.analyzeValue(ir.getOperands().get(i + 1),mb,true);
                                 MachineCode mv = new MCMove(mb);
                                 ((MCMove) mv).setRhs(rhs);
                                 ((MCMove) mv).setDst(mf.getPhyReg(i));
                                 //防止寄存器分配消除掉这些move
-                                call.addUse(((MCMove)mv).getDst());
+                                call.addUse(((MCMove) mv).getDst());
                             } else {
                                 VirtualReg vr = (VirtualReg) ani.analyzeNoImm(ir.getOperands().get(i + 1), mb);
                                 MachineCode st = new MCStore(mb);
@@ -867,13 +887,13 @@ public class CodeGenManager {
                             ((MCBinary) add).setLhs(mf.getPhyReg("sp"));
                             ((MCBinary) add).setRhs(new MachineOperand(4 * (argNum - 4)));
                         }
-                        for(int i=0;i<4;i++){
+                        for (int i = 0; i < 4; i++) {
                             call.addDef(mf.getPhyReg(i));
                         }
                         //TODO:如果调用的函数有返回值，那么会def里应有r0，但是r1-r3不应该出现在def里，后面考虑删去
                         if (!((Function) (ir.getOperands().get(0))).getType().getRetType().isVoidTy()) {
                             MCMove mv = new MCMove(mb);
-                            mv.setDst(aV.analyzeValue(ir));
+                            mv.setDst(aV.analyzeValue(ir,mb,true));
                             mv.setRhs(mf.getPhyReg("r0"));
                         }
                         call.addDef(mf.getPhyReg("lr"));
@@ -882,7 +902,7 @@ public class CodeGenManager {
                     } else if (ir.tag == Instruction.TAG_.Ret) {
                         //如果有返回值
                         if (((TerminatorInst.RetInst) ir).getNumOP() != 0) {
-                            MachineOperand res = aV.analyzeValue(ir.getOperands().get(0));
+                            MachineOperand res = aV.analyzeValue(ir.getOperands().get(0),mb,true);
                             MCMove mv = new MCMove(mb);
                             mv.setDst(mf.getPhyReg("r0"));
                             mv.setRhs(res);
@@ -892,6 +912,11 @@ public class CodeGenManager {
                         }
                     } else if (ir.tag == Instruction.TAG_.Alloca) {
                         //TODO 如何获得到底是哪个指针
+                        //如果alloca出来的指针是个二重指针
+                        if (((PointerType) (ir).getType()).getContained().isPointerTy()) {
+                            aV.analyzeValue(ir,mb,true);
+                            continue;
+                        }
                         assert (ir.getType() instanceof PointerType);
                         Type ttype = ((PointerType) ir.getType()).getContained();
 //                        if(ttype instanceof PointerType){
@@ -909,15 +934,15 @@ public class CodeGenManager {
                         } else {
                             assert (ttype instanceof ArrayType);
                             int size = 4;
-                            Iterator<Integer> dimList = ((ArrayType) ir.getType()).getDims().iterator();
+                            Iterator<Integer> dimList = ((ArrayType) ((PointerType) ir.getType()).getContained()).getDims().iterator();
                             while (dimList.hasNext()) {
                                 size *= dimList.next();
                             }
                             offset = genImm(mf.getStackSize(), mb);
                             mf.addStackSize(size);
                         }
-                        assert (ir.getType() instanceof ArrayType);
-                        MachineOperand dst = aV.analyzeValue(ir);
+                        assert (((PointerType) ir.getType()).getContained() instanceof ArrayType);
+                        MachineOperand dst = aV.analyzeValue(ir,mb,true);
                         MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
                         add.setDst(dst);
                         add.setLhs(mf.getPhyReg("sp"));
@@ -929,15 +954,27 @@ public class CodeGenManager {
 //                            //alloca整数已被mem2reg优化
 //                        }
                     } else if (ir.tag == Instruction.TAG_.Load) {
-                        MachineOperand dst = aV.analyzeValue(ir);
-                        MachineOperand addr = aV.analyzeValue(ir.getOperands().get(0));
+                        Value ar = ir.getOperands().get(0);
+                        //如果load的地址是二重指针
+                        if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
+                            loadToAlloca.put((MemInst.LoadInst) ir, (MemInst.AllocaInst) ar);
+                            continue;
+                        }
+                        MachineOperand dst = aV.analyzeValue(ir,mb,true);
+                        MachineOperand addr = aV.analyzeValue(ir.getOperands().get(0),mb,true);
                         MachineOperand offset = new MachineOperand(0);
                         MCLoad load = new MCLoad(mb);
                         load.setDst(dst);
                         load.setOffset(offset);
                         load.setAddr(addr);
                     } else if (ir.tag == Instruction.TAG_.Store) {
-                        MachineOperand arr = aV.analyzeValue(ir.getOperands().get(1));
+                        Value ar = ir.getOperands().get(1);
+                        //如果store的指针是个二重指针
+                        if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
+                            allocaToStore.put((MemInst.AllocaInst) ar, (MemInst.StoreInst) ir);
+                            continue;
+                        }
+                        MachineOperand arr = aV.analyzeValue(ir.getOperands().get(1),mb,true);
                         MachineOperand data = ani.analyzeNoImm(ir.getOperands().get(0), mb);
                         MachineOperand offset = new MachineOperand(0);
                         MCStore store = new MCStore(mb);
@@ -948,59 +985,105 @@ public class CodeGenManager {
                     } else if (ir.tag == Instruction.TAG_.GEP) {
                         //最后一个gep应该被优化合并到load/store里
 //                        assert (!(ir.getType() instanceof IntegerType));
-
                         //基址为上一个gep
-                        MachineOperand arr = aV.analyzeValue(ir.getOperands().get(0));
-                        //获取偏移
-                        MachineOperand off = ani.analyzeNoImm(ir.getOperands().get(2), mb);
-                        boolean isOffConst = off.getState() == MachineOperand.state.imm;
-                        //获取下一维度长度，即偏移的单位
-                        int mult = 4;
-                        Iterator<Integer> dimList = ((ArrayType) ir.getType()).getDims().iterator();
-                        //跳过当前维度
-                        dimList.next();
-                        while (dimList.hasNext()) {
-                            mult *= dimList.next();
+                        assert(ir.getOperands().get(0).getType() instanceof PointerType);
+                        PointerType pt=(PointerType) ir.getOperands().get(0).getType();
+                        //获取偏移个数
+                        int offsetNum;
+                        ArrayList<Integer> dimInfo;
+                        if(pt.getContained() instanceof IntegerType){
+                            offsetNum = 1;
+                            dimInfo=new ArrayList<>();
+                        }else{
+                            //gep中的基址不能是二重指针
+                            assert(pt.getContained() instanceof ArrayType);
+                            offsetNum = ir.getOperands().size()-1;
+                            dimInfo=(((ArrayType) (pt).getContained()).getDims());
                         }
-                        if (mult == 0 || (isOffConst && off.getImm() == 0)) {
-                            MachineOperand dst = aV.analyzeValue(ir);
-                            MCMove mv = new MCMove(mb);
-                            mv.setDst(dst);
-                            mv.setRhs(arr);
-                        } else if (isOffConst) {
-                            MachineOperand dst = aV.analyzeValue(ir);
-                            int totalOff = mult * off.getImm();
-                            MachineOperand imm = genImm(totalOff, mb);
-                            MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
-                            add.setDst(dst);
-                            add.setLhs(arr);
-                            add.setRhs(imm);
-                        } else if ((mult & (mult - 1)) == 0) {
-                            MachineOperand dst = aV.analyzeValue(ir);
-                            MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
-                            add.setDst(dst);
-                            add.setLhs(arr);
-                            add.setRhs(off);
-                            add.setShift(ArmAddition.ShiftType.Lsl, calcCTZ(mult));
-                        } else {
-                            MCMove mv = new MCMove(mb);
-                            MCMove mv1 = new MCMove(mb);
-                            MCFma fma = new MCFma(mb);
-                            VirtualReg v = new VirtualReg();
-                            mf.addVirtualReg(v);
-                            mv.setDst(v);
-                            mv.setRhs(new MachineOperand(mult));
-                            VirtualReg v1 = new VirtualReg();
-                            mf.addVirtualReg(v1);
-                            mv1.setDst(v1);
-                            mv1.setRhs(arr);
-                            fma.setRhs(v);
-                            fma.setLhs(off);
-                            fma.setAcc(arr);
-                            fma.setDst(v1);
-                            fma.setAdd(true);
-                            fma.setSign(false);
+                        MachineOperand arr = aV.analyzeValue(ir.getOperands().get(0),mb,true);
+                        int lastoff = 0;
+                        for (int i = 1; i <= offsetNum; i++) {
+                            //数组基址不能是常量
+                            assert(arr.getState()!= MachineOperand.state.imm);
+                            //获取偏移
+                            MachineOperand off = ani.analyzeNoImm(ir.getOperands().get(i), mb);
+                            boolean isOffConst = off.getState() == MachineOperand.state.imm;
+                            //获取当前维度长度，即偏移的单位
+                            int mult = 4;
+                            if(pt.getContained() instanceof ArrayType){
+                                for(int j=i-1;j<dimInfo.size();j++){
+                                    mult*=dimInfo.get(j);
+                                }
+                            }
+//                            if (mult == 0 || (isOffConst && off.getImm() == 0)) {
+//                                MachineOperand dst = aV.analyzeValue(ir);
+//                                MCMove mv = new MCMove(mb);
+//                                mv.setDst(dst);
+//                                mv.setRhs(arr);
+//                                arr=dst;
+//                            } else
+                            if (isOffConst) {
+                                int totalOff = mult * off.getImm();
+                                //如果是gep中最后一个偏移
+                                if (i == offsetNum) {
+                                    MachineOperand dst = aV.analyzeValue(ir,mb,true);
+                                    totalOff += lastoff;
+                                    if (totalOff == 0) {
+                                        MCMove mv = new MCMove(mb);
+                                        mv.setDst(dst);
+                                        mv.setRhs(arr);
+                                    } else {
+                                        MachineOperand imm = genImm(totalOff, mb);
+                                        MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
+                                        add.setDst(dst);
+                                        add.setLhs(arr);
+                                        add.setRhs(imm);
+                                    }
+                                    arr = dst;
+                                } else {
+                                    lastoff += totalOff;
+                                }
+                            } else if ((mult & (mult - 1)) == 0) {
+                                MachineOperand dst = aV.analyzeValue(ir,mb,true);
+                                if(lastoff!=0){
+                                    MCBinary ladd=new MCBinary(MachineCode.TAG.Add,mb);
+                                    ladd.setDst(arr);
+                                    ladd.setRhs(arr);
+                                    ladd.setLhs(genImm(lastoff,mb));
+                                    lastoff=0;
+                                }
+                                MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
+                                add.setDst(dst);
+                                add.setLhs(arr);
+                                add.setRhs(off);
+                                add.setShift(ArmAddition.ShiftType.Lsl, calcCTZ(mult));
+                                arr = dst;
+                            } else {
+                                if(lastoff!=0){
+                                    MCBinary ladd=new MCBinary(MachineCode.TAG.Add,mb);
+                                    ladd.setDst(arr);
+                                    ladd.setLhs(arr);
+                                    ladd.setRhs(genImm(lastoff,mb));
+                                    lastoff=0;
+                                }
+                                MCMove mv = new MCMove(mb);
+                                MCFma fma = new MCFma(mb);
+                                VirtualReg v = new VirtualReg();
+                                mf.addVirtualReg(v);
+                                mv.setDst(v);
+                                mv.setRhs(new MachineOperand(mult));
+                                VirtualReg v1 = (VirtualReg) aV.analyzeValue(ir,mb,true);
+                                mf.addVirtualReg(v1);
+                                fma.setRhs(v);
+                                fma.setLhs(off);
+                                fma.setAcc(arr);
+                                fma.setDst(v1);
+                                fma.setAdd(true);
+                                fma.setSign(false);
+                                arr = v1;
+                            }
                         }
+
                     }
                 }
             }
