@@ -147,6 +147,17 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
       }
     }
 
+    public void insertAtSecondToEnd(IList<T, P> father) {
+      this.setParent(father);
+      if (father.getEntry() == null && father.getLast() == null) {
+        father.numNode++;
+        father.setEntry(this);
+        father.setLast(this);
+      } else {
+        insertBefore(father.getLast());
+      }
+    }
+
 
     //将自己从链表中移除
     public INode<T, P> removeSelf() {

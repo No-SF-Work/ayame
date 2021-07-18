@@ -7,6 +7,7 @@ import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
 import pass.ir.BBPredSucc;
+import pass.ir.BranchOptimization;
 import pass.ir.DeadCodeEmit;
 import pass.ir.EmitLLVM;
 import pass.ir.GVNGCM;
@@ -24,6 +25,7 @@ public class PassManager {
     add("typeCheck");
     add("bbPredSucc");
     add("Mem2reg");
+    add("branchOptimization");
     add("emitllvm");
     add("interproceduralAnalysis");
     add("gvngcm");
@@ -39,6 +41,7 @@ public class PassManager {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new BBPredSucc());
     irPasses.add(new Mem2reg());
+    irPasses.add(new BranchOptimization());
 //    irPasses.add(new EmitLLVM());
     irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new GVNGCM());

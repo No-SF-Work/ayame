@@ -333,7 +333,7 @@ public class GVNGCM implements IRPass {
       if (canSchedule(inst)) {
         // move instruction to the end of entry bb
         inst.node.removeSelf();
-        inst.node.insertAtEnd(entryList);
+        inst.node.insertAtSecondToEnd(entryList);
       }
 
       if (inst.isBinary() || inst.tag == TAG_.GEP || inst.tag == TAG_.Load) {
@@ -344,7 +344,7 @@ public class GVNGCM implements IRPass {
             scheduleEarly(opInst, func);
             if (opInst.getBB().getDomLevel() > inst.getBB().getDomLevel()) {
               inst.node.removeSelf();
-              inst.node.insertAtEnd(opInst.getBB().getList());
+              inst.node.insertAtSecondToEnd(opInst.getBB().getList());
             }
           }
         }
@@ -372,7 +372,7 @@ public class GVNGCM implements IRPass {
             scheduleEarly(valueInst, func);
             if (valueInst.getBB().getDomLevel() > inst.getBB().getDomLevel()) {
               inst.node.removeSelf();
-              inst.node.insertAtEnd(valueInst.getBB().getList());
+              inst.node.insertAtSecondToEnd(valueInst.getBB().getList());
             }
           }
         }
@@ -419,7 +419,7 @@ public class GVNGCM implements IRPass {
         lcabb = lcabb.getIdomer();
       }
       inst.node.removeSelf();
-      inst.node.insertAtEnd(bestbb.getList());
+      inst.node.insertAtSecondToEnd(bestbb.getList());
 
       // bestbb 是 lcabb 时，可能 use inst 的指令在 inst 前面，需要把 inst 往前稍稍
       for (INode<Instruction, BasicBlock> instNode : bestbb.getList()) {
