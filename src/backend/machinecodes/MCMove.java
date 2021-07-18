@@ -2,8 +2,6 @@ package backend.machinecodes;
 
 import backend.CodeGenManager;
 import backend.reg.MachineOperand;
-import org.jetbrains.annotations.NotNull;
-
 
 public class MCMove extends MachineCode implements Comparable<MCMove> {
 
@@ -70,7 +68,7 @@ public class MCMove extends MachineCode implements Comparable<MCMove> {
     }
 
     @Override
-    public int compareTo(@NotNull MCMove rhs) {
+    public int compareTo(MCMove rhs) {
         if (!this.cond.equals(rhs.cond)) return this.cond.compareTo(rhs.cond);
         if (!this.dst.equals(rhs.dst)) return this.dst.compareTo(rhs.dst);
         if (!this.rhs.equals(rhs.rhs)) return this.rhs.compareTo(rhs.rhs);
