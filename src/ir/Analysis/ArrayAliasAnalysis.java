@@ -324,7 +324,9 @@ public class ArrayAliasAnalysis {
           }
         } else if (inst instanceof LoadInst) {
           LoadInst loadInst = (LoadInst) inst;
-          loadInst.removeUseStore();
+          if (loadInst.getNumOP() == 2) {
+            loadInst.removeUseStore();
+          }
         }
       }
     }
