@@ -1,7 +1,5 @@
 package backend.reg;
 
-import org.jetbrains.annotations.NotNull;
-
 public class MachineOperand implements Comparable<MachineOperand> {
     public enum state{
         virtual,
@@ -43,7 +41,7 @@ public class MachineOperand implements Comparable<MachineOperand> {
     }
 
     @Override
-    public int compareTo(@NotNull MachineOperand rhs) {
+    public int compareTo(MachineOperand rhs) {
         int st1 = 0;
         if (this.isPrecolored()) st1 = 0;
         else if (this.isAllocated()) st1 = 1;
