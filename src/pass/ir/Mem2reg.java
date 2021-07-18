@@ -186,6 +186,11 @@ public class Mem2reg implements IRPass {
             instNode = tmp;
             continue;
           }
+          AllocaInst allocaInst = (AllocaInst) loadInst.getOperands().get(0);
+          if (!allocaInst.getAllocatedType().equals(factory.getI32Ty())) {
+            instNode = tmp;
+            continue;
+          }
           int allocaIndex = allocaLookup.get((AllocaInst) loadInst.getOperands().get(0));
           loadInst.COReplaceAllUseWith(currValues.get(allocaIndex));
           instNode.removeSelf();
@@ -195,6 +200,11 @@ public class Mem2reg implements IRPass {
         else if (inst.tag == TAG_.Store) {
           StoreInst storeInst = (StoreInst) inst;
           if (!(storeInst.getOperands().get(1) instanceof AllocaInst)) {
+            instNode = tmp;
+            continue;
+          }
+          AllocaInst allocaInst = (AllocaInst) storeInst.getOperands().get(1);
+          if (!allocaInst.getAllocatedType().equals(factory.getI32Ty())) {
             instNode = tmp;
             continue;
           }
