@@ -716,7 +716,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var falseBlock = ctx.ELSE_KW() == null ? nxtBlock :
         f.buildBasicBlock(parentBB.getName() + "_else", curFunc_);
 
-    nxtBlkStk_.push(nxtBlock);
     ctx.cond().falseblock = falseBlock;
     ctx.cond().trueblock = trueBlock;
     // Parse [cond]
@@ -733,7 +732,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
       f.buildBr(nxtBlock, curBB_);
     }
     curBB_ = nxtBlock;
-    nxtBlkStk_.pop();
     return null;
   }
 
@@ -766,8 +764,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
     // [Backpatch] for break & continue
     backpatch(BreakInstructionMark, trueBlock, curBB_, nxtBlock);
     backpatch(ContinueInstructionMark, trueBlock, curBB_, whileCondBlock);
-
     changeBB(nxtBlock);
+
     return null;
   }
 
@@ -779,14 +777,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
     // BFS through [BBs]
     while (!blockList.isEmpty()) {
       var curBlock = blockList.poll();
-      var firstEntry = curBlock.getList().getEntry();
-      var lastEntry = curBlock.getList().getLast();
 
       // Iterate through [Instructions] in [BB]
       // 如果某个块的名字是 KEY，则识别成功，替换成 targetBlock
       // 否则加入待替换的列表
-      for (var curEntry = firstEntry; curEntry != lastEntry; curEntry = curEntry.getNext()) {
-        var curInstr = curEntry.getVal();
+      for (var curInstrEntry : curBlock.getList()) {
+        var curInstr = curInstrEntry.getVal();
         if (curInstr.tag.equals(Instruction.TAG_.Br)) { // Instruction found, then [backpatch]
           var operandCount = curInstr.getOperands().size();
 
@@ -800,6 +796,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
             if (trueBlock.getName().equals(key)) {
               curInstr.CoSetOperand(0, targetBlock);
+              trueBlock.node_.removeSelf();
             } else if (trueBlock != endBlock) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
               blockList.add(trueBlock);
             }
@@ -811,6 +808,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
             if (trueBlock.getName().equals(key)) {
               curInstr.CoSetOperand(1, targetBlock);
+              trueBlock.node_.removeSelf();
             } else if (trueBlock != endBlock) {
               blockList.add(trueBlock);
             }
@@ -821,6 +819,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
             if (falseBlock.getName().equals(key)) {
               curInstr.CoSetOperand(2, targetBlock);
+              falseBlock.node_.removeSelf();
             } else if (falseBlock != endBlock) {
               blockList.add(falseBlock);
             }

@@ -27,7 +27,8 @@ import util.IList;
 import util.IList.INode;
 import util.Mylogger;
 import util.Pair;
-
+// TODO: 对常量数组的偏移全为常数的 Load 直接取值
+// TODO: 高级一点：对未修改的全局变量和数组的 Load 直接取值
 public class GVNGCM implements IRPass {
 
   private Logger log = Mylogger.getLogger(IRPass.class);
@@ -145,8 +146,8 @@ public class GVNGCM implements IRPass {
         var allSame = true;
         for (var argIndex = 1; argIndex < argSize; argIndex++) {
           allSame = allSame &&
-              (lookupOrAdd(callInst.getOperands().get(i)) == lookupOrAdd(
-                  keyInst.getOperands().get(i)));
+              (lookupOrAdd(callInst.getOperands().get(argIndex)) == lookupOrAdd(
+                  keyInst.getOperands().get(argIndex)));
         }
         if (allSame) {
           return valueNumber;
@@ -299,7 +300,10 @@ public class GVNGCM implements IRPass {
     } else if (inst.tag == TAG_.Store) {
       valueTable.add(new Pair<>(inst, inst));
     } else if (inst.tag == TAG_.Call && ((CallInst) inst).isPureCall()) {
-      replace(inst, lookupOrAdd(simpInst));
+      Value val = lookupOrAdd(simpInst);
+      if (inst != val) {
+        replace(inst, val);
+      }
     }
   }
 
