@@ -3,7 +3,7 @@ package backend.machinecodes;
 import backend.CodeGenManager;
 import backend.reg.MachineOperand;
 
-public class MCMove extends MachineCode implements Comparable<MCMove> {
+public class MCMove extends MachineCode {
 
     public MachineOperand getDst() {
         return dst;
@@ -65,13 +65,5 @@ public class MCMove extends MachineCode implements Comparable<MCMove> {
 
     public MCMove(MachineBlock mb,int num){
         super(TAG.Mv,mb,num);
-    }
-
-    @Override
-    public int compareTo(MCMove rhs) {
-        if (!this.cond.equals(rhs.cond)) return this.cond.compareTo(rhs.cond);
-        if (!this.dst.equals(rhs.dst)) return this.dst.compareTo(rhs.dst);
-        if (!this.rhs.equals(rhs.rhs)) return this.rhs.compareTo(rhs.rhs);
-        return 0;
     }
 }
