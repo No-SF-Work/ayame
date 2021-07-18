@@ -634,7 +634,7 @@ public class CodeGenManager {
                         MachineOperand lhs;
                         MachineOperand rhs;
                         //lhs不能是立即数
-                        if (((BinaryInst) ir).isAdd() || ((BinaryInst) ir).isMul() && lhsIsConst && !rhsIsConst) {
+                        if ((((BinaryInst) ir).isAdd() || ((BinaryInst) ir).isMul()) && lhsIsConst && !rhsIsConst) {
                             lhs = aV.analyzeValue(ir.getOperands().get(1), mb, true);
                             rhs = aV.analyzeValue(ir.getOperands().get(0), mb, true);
                         }else{
