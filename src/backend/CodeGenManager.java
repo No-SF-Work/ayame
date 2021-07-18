@@ -836,8 +836,8 @@ public class CodeGenManager {
                             assert (ir.getOperands().get(0) instanceof BinaryInst);
                             assert (((BinaryInst) ir.getOperands().get(0)).isCond());
                             Instruction condi = (BinaryInst) (ir.getOperands().get(0));
-                            MachineOperand rhs=aV.analyzeValue(condi.getOperands().get(0), mb, true);
-                            MachineOperand lhs=ani.analyzeNoImm(condi.getOperands().get(1), mb);
+                            MachineOperand rhs=aV.analyzeValue(condi.getOperands().get(1), mb, true);
+                            MachineOperand lhs=ani.analyzeNoImm(condi.getOperands().get(0), mb);
                             MCCompare compare = new MCCompare(mb);
                             compare.setRhs(rhs);
                             compare.setLhs(lhs);
