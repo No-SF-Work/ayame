@@ -339,7 +339,23 @@ public abstract class MemInst extends Instruction {
     public void setIncomingVals(int index, Value val) {
       CoSetOperand(index, val);
     }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(this.getName() + " = phi i32 ");
+      for (int i = 0; i < operands.size(); i++) {
+        sb.append("[ ")
+            .append(operands.get(i).getName())
+            .append(", ")
+            .append(this.node.getParent().getVal().getPredecessor_().get(i).getName())
+            .append(" ],");
+      }
+      sb.deleteCharAt(sb.length() - 1);
+      return sb.toString();
+    }
   }
+
 
   public static class MemPhi extends MemInst {
 
@@ -359,6 +375,7 @@ public abstract class MemInst extends Instruction {
       // operands[0] is array
       CoSetOperand(index + 1, val);
     }
+
   }
 
   public boolean isGEP() {
