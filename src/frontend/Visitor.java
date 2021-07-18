@@ -761,11 +761,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
     // Parse [loop]
     changeBB(trueBlock);
     visitStmt(ctx.stmt());
-    f.buildBr(whileCondBlock, trueBlock);
+    f.buildBr(whileCondBlock, curBB_);
 
     // [Backpatch] for break & continue
-    backpatch(BreakInstructionMark, trueBlock, nxtBlock, nxtBlock);
-    backpatch(ContinueInstructionMark, trueBlock, nxtBlock, whileCondBlock);
+    backpatch(BreakInstructionMark, trueBlock, curBB_, nxtBlock);
+    backpatch(ContinueInstructionMark, trueBlock, curBB_, whileCondBlock);
 
     changeBB(nxtBlock);
     return null;
