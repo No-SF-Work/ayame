@@ -347,7 +347,7 @@ public abstract class MemInst extends Instruction {
       for (int i = 0; i < operands.size(); i++) {
         sb.append("[ ")
             .append(operands.get(i).getName())
-            .append(", ")
+            .append(", %")
             .append(this.node.getParent().getVal().getPredecessor_().get(i).getName())
             .append(" ],");
       }
