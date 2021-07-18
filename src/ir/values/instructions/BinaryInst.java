@@ -178,7 +178,7 @@ public class BinaryInst extends Instruction {
           case Sub -> "sub nsw i32 ";
           case Rsb -> "rsb nsw i32 ";
           case Mul -> "mul nsw i32 ";
-          case Div -> "div nsw i32 ";
+          case Div -> "sdiv nsw i32 ";
           case Lt -> "icmp slt i32 ";
           case Le -> "icmp sle i32 ";
           case Ge -> "icmp sge i32 ";
