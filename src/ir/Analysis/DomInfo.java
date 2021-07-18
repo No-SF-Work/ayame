@@ -124,6 +124,10 @@ public class DomInfo {
    * dominate b do DF(x) <- DF(x) + b x <- idom(x)
    */
   public static void computeDominanceFrontier(Function function) {
+    for (var bbNode : function.getList_()) {
+      bbNode.getVal().getDominanceFrontier().clear();
+    }
+
     for (IList.INode<BasicBlock, Function> iterator : function.getList_()) {
       BasicBlock a = iterator.getVal();
       for (BasicBlock b : a.getSuccessor_()) {
@@ -141,7 +145,7 @@ public class DomInfo {
 
   public static void computeDominanceLevel(BasicBlock bb, Integer domLevel) {
     bb.setDomLevel(domLevel);
-    for (BasicBlock succ: bb.getIdoms()) {
+    for (BasicBlock succ : bb.getIdoms()) {
       computeDominanceLevel(succ, domLevel + 1);
     }
   }
