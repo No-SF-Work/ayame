@@ -1006,7 +1006,7 @@ public class CodeGenManager {
                             //数组基址不能是常量
                             assert(arr.getState()!= MachineOperand.state.imm);
                             //获取偏移
-                            MachineOperand off = ani.analyzeNoImm(ir.getOperands().get(i), mb);
+                            MachineOperand off = aV.analyzeValue(ir.getOperands().get(i), mb,true);
                             boolean isOffConst = off.getState() == MachineOperand.state.imm;
                             //获取当前维度长度，即偏移的单位
                             int mult = 4;
