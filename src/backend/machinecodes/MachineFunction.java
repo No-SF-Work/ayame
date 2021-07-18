@@ -10,6 +10,7 @@ import util.IList.INode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 
 public class MachineFunction {
 
@@ -136,16 +137,23 @@ public class MachineFunction {
         this.name=name;
     }
 
-    public HashSet<Reg> getUsedRegs() {
-        var ret = new HashSet<Reg>();
+    public HashSet<Integer> getUsedRegIdxs() {
+        var ret = new HashSet<Integer>();
         for (var blockEntry : getmbList()) {
             var block = blockEntry.getVal();
 
             for (var instrEntry : block.getmclist()) {
                 var instr = instrEntry.getVal();
-
-                ret.addAll(instr.getDef());
-                ret.addAll(instr.getUse());
+                var defs = instr.getDef();
+                var uses = instr.getUse();
+                assert defs.stream().allMatch(x -> x instanceof PhyReg);
+                assert uses.stream().allMatch(x -> x instanceof PhyReg);
+                ret.addAll(defs.stream()
+                        .map(x -> ((PhyReg) x).getIdx())
+                        .collect(Collectors.toCollection(HashSet::new)));
+                ret.addAll(uses.stream()
+                        .map(x -> ((PhyReg) x).getIdx())
+                        .collect(Collectors.toCollection(HashSet::new)));
             }
         }
         return ret;

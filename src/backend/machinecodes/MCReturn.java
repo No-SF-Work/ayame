@@ -35,20 +35,14 @@ public class MCReturn extends MachineCode{
             sb.append(phyReg.getName());
             sb.append(", ");
         });
-        if (mf.isUsedLr()) {
+
+        if (mf.isUsedLr()||!mf.getUsedSavedRegs().isEmpty()) {
+            String s=sb.toString();
+            int l=s.lastIndexOf(',');
+            s = s.substring(0,l);
             res += "\tpop\t{";
-            if (!mf.getUsedSavedRegs().isEmpty()) {
-                res += sb.toString();
-            }
-            res += "pc}\n";
-        } else {
-            if (!mf.getUsedSavedRegs().isEmpty()) {
-                //删去多余','
-                sb.deleteCharAt(sb.length() - 1);
-                res += "\tpush\t{";
-                res += sb.toString();
-                res += "}\n";
-            }
+            res += s;
+            res += "}\n";
         }
         res+="\tbx\tlr\n";
         return res;

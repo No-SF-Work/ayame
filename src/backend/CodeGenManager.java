@@ -215,27 +215,28 @@ public class CodeGenManager {
     }
 
     private void fixStack(MachineFunction mf) {
-        INode<MachineBlock, MachineFunction> mbNode = mf.getmbList().getEntry();
-        for (; mbNode.getNext() != null; mbNode = mbNode.getNext()) {
-            MachineBlock mb = mbNode.getVal();
-            INode<MachineCode, MachineBlock> mcNode = mb.getmclist().getEntry();
-            if (mcNode == null) {
-                continue;
-            }
-            for (; mcNode.getNext() != null; mcNode = mcNode.getNext()) {
-                HashSet useRegs = mf.getUsedRegs();
-                Iterator<Reg> ite = useRegs.iterator();
-                while (ite.hasNext()) {
-                    Reg r = ite.next();
-                    for (int i = 4; i <= 11; i++) {
-                        if (r == mf.getPhyReg(i)) {
-                            mf.getUsedSavedRegs().add((PhyReg) r);
-                        }
-                    }
-                    if (r == mf.getPhyReg("lr")) {
-                        mf.setUsedLr(true);
-                    }
+//        INode<MachineBlock, MachineFunction> mbNode = mf.getmbList().getEntry();
+//        for (; mbNode != null; mbNode = mbNode.getNext()) {
+//            MachineBlock mb = mbNode.getVal();
+//            INode<MachineCode, MachineBlock> mcNode = mb.getmclist().getEntry();
+//            if (mcNode == null) {
+//                continue;
+//            }
+//            for (; mcNode.getNext() != null; mcNode = mcNode.getNext()) {
+//
+//            }
+
+//        }
+        var useRegs = mf.getUsedRegIdxs();
+        for(int idx:useRegs){
+            for(int i=4;i<=12;i++){
+                if(i==idx){
+                    mf.getUsedSavedRegs().add(mf.getPhyReg(i));
                 }
+            }
+            if(idx==14){
+                mf.getUsedSavedRegs().add(mf.getPhyReg(14));
+                mf.setUsedLr(true);
             }
         }
         int regs = mf.getUsedSavedRegs().size() + (mf.isUsedLr() ? 1 : 0);
@@ -264,20 +265,13 @@ public class CodeGenManager {
                 sb.append(phyReg.getName());
                 sb.append(", ");
             });
-            if (mf.isUsedLr()) {
+            if (mf.isUsedLr()||!mf.getUsedSavedRegs().isEmpty()) {
+                String s=sb.toString();
+                int l=s.lastIndexOf(',');
+                s = s.substring(0,l);
                 arm += "\tpush\t{";
-                if (!mf.getUsedSavedRegs().isEmpty()) {
-                    arm += sb.toString();
-                }
-                arm += "pc}\n";
-            } else {
-                if (!mf.getUsedSavedRegs().isEmpty()) {
-                    //删去多余','
-                    sb.deleteCharAt(sb.length() - 1);
-                    arm += "\tpush\t{";
-                    arm += sb.toString();
-                    arm += "}\n";
-                }
+                arm += s;
+                arm += "}\n";
             }
             if (mf.getStackSize() != 0) {
                 String op = canEncodeImm(-mf.getStackSize()) ? "add" : "sub";
