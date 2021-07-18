@@ -174,11 +174,11 @@ public class BinaryInst extends Instruction {
     sb.append(this.getName() + " = ");
     sb.append(
         switch (this.tag) {
-          case Add -> "add nsw i32 ";
-          case Sub -> "sub nsw i32 ";
-          case Rsb -> "rsb nsw i32 ";
-          case Mul -> "mul nsw i32 ";
-          case Div -> "sdiv nsw i32 ";
+          case Add -> "add  i32 ";
+          case Sub -> "sub  i32 ";
+          case Rsb -> "rsb  i32 ";
+          case Mul -> "mul  i32 ";
+          case Div -> "sdiv  i32 ";
           case Lt -> "icmp slt i32 ";
           case Le -> "icmp sle i32 ";
           case Ge -> "icmp sge i32 ";
