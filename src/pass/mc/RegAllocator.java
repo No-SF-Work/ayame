@@ -202,7 +202,7 @@ public class RegAllocator implements MCPass {
                 var frozenMoves = new TreeSet<MCMove>();
 //                System.out.println(manager.genARM());
 
-                Map<MachineOperand, Integer> degree = IntStream.range(0, 15)
+                Map<MachineOperand, Integer> degree = IntStream.range(0, 16)
                         .mapToObj(func::getPhyReg)
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
@@ -416,7 +416,7 @@ public class RegAllocator implements MCPass {
                         frozenMoves.add(m);
 
                         var v = m.getDst().equals(u) ? m.getRhs() : m.getDst();
-                        if (!moveRelated.apply(v) && degree.get(v) < K) {
+                        if (!moveRelated.apply(v) && degree.getOrDefault(v, 0) < K) { // fixme: maybe a bug?
                             freezeWorklist.remove(v);
                             simplifyWorklist.add(v);
                         }

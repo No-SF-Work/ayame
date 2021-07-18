@@ -26,7 +26,7 @@ public class PassManager {
     //  add("bbPredSucc");
     //  add("Mem2reg");
     // add("branchOptimization");
-    add("emitllvm");
+//    add("emitllvm");
     //  add("interproceduralAnalysis");
     //  add("gvngcm");
     //  add("deadcodeemit");
