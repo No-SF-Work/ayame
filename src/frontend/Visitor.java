@@ -450,7 +450,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var t = arr.get(i);
             if (t instanceof ConstantInt) {
               if (((ConstantInt) t).getVal() == 0) {
-                continue;
+                f.buildStore(CONST0, pointer, curBB_);
               }
             }
             if (i != 0) {
