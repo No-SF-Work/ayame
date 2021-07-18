@@ -89,7 +89,7 @@ public class SimplifyInstruction {
     if (lhs instanceof Instruction && rhs instanceof Instruction) {
       Instruction ilhs = (Instruction) lhs;
       Instruction irhs = (Instruction) rhs;
-      if (ilhs.tag == TAG_.Sub && irhs.tag == TAG_.Sub) {
+      if (ilhs.tag == TAG_.Sub || irhs.tag == TAG_.Sub) {
         Value lhsOfIlhs = ilhs.getOperands().get(0);
         Value rhsOfIlhs = ilhs.getOperands().get(1);
         Value lhsOfIrhs = irhs.getOperands().get(0);
@@ -151,7 +151,7 @@ public class SimplifyInstruction {
         Value simpleSub = simplifySubInst(tmpInst);
         if (simpleSub != tmpInst) {
           return simplifyAddInst(
-              new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleAdd, subLhs, targetBB));
+              new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subLhs, targetBB));
         }
       }
     }
