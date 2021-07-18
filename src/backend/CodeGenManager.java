@@ -626,7 +626,7 @@ public class CodeGenManager {
 
                 for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
                     Instruction ir = iIt.next().getVal();
-//                    MCComment co=new MCComment(ir.toString(),mb);
+                    MCComment co=new MCComment(ir.toString(),mb);
                     if (ir.tag == Instruction.TAG_.Phi) {
                         continue;
                     } else if (ir instanceof BinaryInst) {
@@ -860,14 +860,16 @@ public class CodeGenManager {
                         for (int i = 0; i < argNum; i++) {
                             if (i < 4) {
                                 MachineOperand rhs = aV.analyzeValue(ir.getOperands().get(i + 1),mb,true);
-                                MachineCode mv = new MCMove(mb);
+                                MachineCode mv = new MCMove();
+                                mv.insertBeforeNode(call);
                                 ((MCMove) mv).setRhs(rhs);
                                 ((MCMove) mv).setDst(mf.getPhyReg(i));
                                 //防止寄存器分配消除掉这些move
                                 call.addUse(((MCMove) mv).getDst());
                             } else {
                                 VirtualReg vr = (VirtualReg) ani.analyzeNoImm(ir.getOperands().get(i + 1), mb);
-                                MachineCode st = new MCStore(mb);
+                                MachineCode st = new MCStore();
+                                st.insertBeforeNode(call);
                                 ((MCStore) st).setData(vr);
                                 ((MCStore) st).setAddr(mf.getPhyReg("sp"));
                                 ((MCStore) st).setOffset(new MachineOperand(-(argNum - i)));
@@ -875,7 +877,8 @@ public class CodeGenManager {
                             }
                         }
                         if (argNum > 4) {
-                            MachineCode sub = new MCBinary(MachineCode.TAG.Sub, mb);
+                            MachineCode sub = new MCBinary(MachineCode.TAG.Sub);
+                            sub.insertBeforeNode(call);
                             ((MCBinary) sub).setDst(mf.getPhyReg("sp"));
                             ((MCBinary) sub).setLhs(mf.getPhyReg("sp"));
                             ((MCBinary) sub).setRhs(new MachineOperand(4 * (argNum - 4)));
@@ -883,7 +886,7 @@ public class CodeGenManager {
                         assert (ir.getOperands().get(0) instanceof Function);
                         ((MCCall) call).setFunc(fMap.get((Function) ir.getOperands().get(0)));
                         if (argNum > 4) {
-                            MachineCode add = new MCBinary(MachineCode.TAG.Add, mb);
+                            MachineCode add = new MCBinary(MachineCode.TAG.Add,mb);
                             ((MCBinary) add).setDst(mf.getPhyReg("sp"));
                             ((MCBinary) add).setLhs(mf.getPhyReg("sp"));
                             ((MCBinary) add).setRhs(new MachineOperand(4 * (argNum - 4)));

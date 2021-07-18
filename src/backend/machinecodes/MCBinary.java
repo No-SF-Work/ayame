@@ -76,4 +76,8 @@ public class MCBinary extends MachineCode{
         super(tag,mb);
     }
 
+    public MCBinary(TAG tag){
+        super(tag);
+    }
+
 }
