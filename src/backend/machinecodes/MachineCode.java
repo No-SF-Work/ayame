@@ -80,7 +80,7 @@ public class MachineCode {
             if (isUse) {
                 regUse.remove(oldmo);
             } else {
-                regDef.remove(newmo);
+                regDef.remove(oldmo);
             }
         }
         if (isUse) {

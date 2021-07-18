@@ -1,6 +1,8 @@
 package backend.reg;
 
-public class MachineOperand {
+import org.jetbrains.annotations.NotNull;
+
+public class MachineOperand implements Comparable<MachineOperand> {
     public enum state{
         virtual,
         phy,
@@ -38,5 +40,26 @@ public class MachineOperand {
     public MachineOperand(int imme){
         this.s=state.imm;
         this.imme=imme;
+    }
+
+    @Override
+    public int compareTo(@NotNull MachineOperand rhs) {
+        int st1 = 0;
+        if (this.isPrecolored()) st1 = 0;
+        else if (this.isAllocated()) st1 = 1;
+        else if (this.s == state.virtual) st1 = 2;
+        else if (this.s == state.imm) st1 = 3;
+
+        int st2 = 0;
+        if (rhs.isPrecolored()) st2 = 0;
+        else if (rhs.isAllocated()) st2 = 1;
+        else if (rhs.s == state.virtual) st2 = 2;
+        else if (rhs.s == state.imm) st2 = 3;
+
+        if (st1 == st2) {
+            if (st1 == 0 || st1 == 1) return ((PhyReg) this).getIdx() - ((PhyReg) rhs).getIdx();
+            else if (st1 == 2) return ((VirtualReg)this).getIdx() - ((VirtualReg) rhs).getIdx();
+            else return imme - rhs.imme;
+        } else return st1 - st2;
     }
 }

@@ -54,12 +54,19 @@ public abstract class TerminatorInst extends Instruction {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
-      sb.append(this.getName() + "= call " + this.getType() + " @" + operands.get(0).getName());
+      if (((FunctionType) this.operands.get(0).getType()).getRetType().isVoidTy()) {
+        sb.append("call ").append(this.getType()).append(" @").append(operands.get(0).getName());
+      } else {
+        sb.append(this.getName()).append(" = call ").append(this.getType()).append(" @")
+            .append(operands.get(0).getName());
+      }
+
       sb.append("(");
       boolean a = false;
       for (int i = 1; i < operands.size(); i++) {
         a = true;
-        sb.append(operands.get(i).getType() + " " + operands.get(i).getName() + ",");
+        sb.append(operands.get(i).getType()).append(" ").append(operands.get(i).getName())
+            .append(",");
       }
       if (a) {
         sb.deleteCharAt(sb.length() - 1);
