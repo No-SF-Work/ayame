@@ -364,7 +364,7 @@ public class RegAllocator implements MCPass {
                         decrementDegree.accept(t);
                     });
 
-                    if (degree.get(u) >= K && freezeWorklist.contains(u)) {
+                    if (degree.getOrDefault(u, 0) >= K && freezeWorklist.contains(u)) {
                         freezeWorklist.remove(u);
                         spillWorklist.add(u);
                     }
