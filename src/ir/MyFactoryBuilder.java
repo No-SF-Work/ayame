@@ -69,8 +69,9 @@ public class MyFactoryBuilder {
     return new ConstantArray(type, arr);
   }
 
-  public GlobalVariable getGlobalvariable(String name, Type type, Constant init) {
-    return new GlobalVariable(name, type, init);
+  public GlobalVariable getGlobalvariable(String name, Type type, Constant fixedInit,
+      Constant plainInit) {
+    return new GlobalVariable(name, type, fixedInit, plainInit);
   }
 
   public ConstantInt CONST0() {
