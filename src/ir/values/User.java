@@ -121,8 +121,13 @@ public abstract class User extends Value {
    * 将自己从所有Operand的Uselist中删除
    */
   public void removeUsesOfOPs() {
+    if (operands == null) {
+      return;
+    }
     for (Value operand : operands) {
-      operand.removeUseByUser(this);
+      if (operand != null) {
+        operand.removeUseByUser(this);
+      }
     }
   }
 
