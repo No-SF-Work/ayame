@@ -116,8 +116,8 @@ public abstract class MemInst extends Instruction {
       if (numOP == 1) {
         return;
       }
-      this.numOP--;
       CoSetOperand(1, null);
+      this.numOP--;
     }
 
     public Value getPointer() {
