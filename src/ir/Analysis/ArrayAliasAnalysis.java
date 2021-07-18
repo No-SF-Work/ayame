@@ -180,8 +180,11 @@ public class ArrayAliasAnalysis {
         Instruction inst = instNode.getVal();
         if (inst.tag == TAG_.Load) {
           LoadInst loadInst = (LoadInst) inst;
-          if (loadInst.getOperands().get(0) instanceof AllocaInst) {
-            continue;
+          if (loadInst.getPointer() instanceof AllocaInst) {
+            AllocaInst allocaInst = (AllocaInst) loadInst.getPointer();
+            if (allocaInst.getAllocatedType().equals(factory.getI32Ty())) {
+              continue;
+            }
           }
           Value array = getArrayValue(loadInst.getOperands().get(0));
           if (arraysLookup.get(array) == null) {
