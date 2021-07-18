@@ -87,11 +87,10 @@ public class EmitLLVM implements IRPass {
             func.getArgList().forEach(arg -> {
               arg.setName("%" + newName());
             });
-            vnc++;
             func.getList_().forEach(bbInode -> {
-              if (!bbInode.equals(func.getList_().getEntry())) {
-                bbInode.getVal().setName(newName());
-              }
+              // if (!bbInode.equals(func.getList_().getEntry())) {
+              bbInode.getVal().setName(newName());
+              //}
               bbInode.getVal().getList().forEach(
                   instNode -> {
                     if (instNode.getVal().needname) {
