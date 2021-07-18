@@ -343,7 +343,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 Consumer<MachineOperand> addWorklist = u -> {
-                    if (!u.isPrecolored() && !moveRelated.apply(u) && degree.get(u) < K) {
+                    if (!u.isPrecolored() && !moveRelated.apply(u) && degree.getOrDefault(u,0) < K) {
                         freezeWorklist.remove(u);
                         simplifyWorklist.add(u);
                     }
