@@ -216,7 +216,7 @@ public abstract class MemInst extends Instruction {
       if (type.isArrayTy()) {
         for (int i = 1; i < indices.size(); i++) {
           type = ((ArrayType) type).getELeType();
-          assert (i < indices.size() - 1) || !type.isArrayTy();
+          assert (i < indices.size()) || !type.isArrayTy();
         }
         return type;
       } else {

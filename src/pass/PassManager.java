@@ -22,16 +22,16 @@ public class PassManager {
   private Logger mylogger = Mylogger.getLogger(PassManager.class);
   private static PassManager passManager = new PassManager();
   private ArrayList<String> openedPasses_ = new ArrayList<>() {{
-    add("typeCheck");
-    add("bbPredSucc");
-    add("Mem2reg");
-    add("branchOptimization");
+    //  add("typeCheck");
+    //  add("bbPredSucc");
+    //  add("Mem2reg");
+    // add("branchOptimization");
     add("emitllvm");
-    add("interproceduralAnalysis");
-    add("gvngcm");
-    add("deadcodeemit");
-    add("RegAlloc");
-    add("ListScheduling");
+    //  add("interproceduralAnalysis");
+    //  add("gvngcm");
+    //  add("deadcodeemit");
+      add("RegAlloc");
+    //  add("ListScheduling");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
   };
@@ -47,7 +47,7 @@ public class PassManager {
     // irPasses.add(new DeadCodeEmit());
 //    irPasses.add(new EmitLLVM());
 
-//    mcPasses.add(new RegAllocator());
+    mcPasses.add(new RegAllocator());
 
   }
 

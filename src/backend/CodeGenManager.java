@@ -934,14 +934,14 @@ public class CodeGenManager {
                         } else {
                             assert (ttype instanceof ArrayType);
                             int size = 4;
-                            Iterator<Integer> dimList = ((ArrayType) ir.getType()).getDims().iterator();
+                            Iterator<Integer> dimList = ((ArrayType) ((PointerType) ir.getType()).getContained()).getDims().iterator();
                             while (dimList.hasNext()) {
                                 size *= dimList.next();
                             }
                             offset = genImm(mf.getStackSize(), mb);
                             mf.addStackSize(size);
                         }
-                        assert (ir.getType() instanceof ArrayType);
+                        assert (((PointerType) ir.getType()).getContained() instanceof ArrayType);
                         MachineOperand dst = aV.analyzeValue(ir,mb,true);
                         MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
                         add.setDst(dst);
@@ -954,10 +954,11 @@ public class CodeGenManager {
 //                            //alloca整数已被mem2reg优化
 //                        }
                     } else if (ir.tag == Instruction.TAG_.Load) {
-                        Value ar = ir.getOperands().get(1);
+                        Value ar = ir.getOperands().get(0);
                         //如果load的地址是二重指针
                         if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
                             loadToAlloca.put((MemInst.LoadInst) ir, (MemInst.AllocaInst) ar);
+                            continue;
                         }
                         MachineOperand dst = aV.analyzeValue(ir,mb,true);
                         MachineOperand addr = aV.analyzeValue(ir.getOperands().get(0),mb,true);
@@ -985,9 +986,21 @@ public class CodeGenManager {
                         //最后一个gep应该被优化合并到load/store里
 //                        assert (!(ir.getType() instanceof IntegerType));
                         //基址为上一个gep
-                        MachineOperand arr = aV.analyzeValue(ir.getOperands().get(0),mb,true);
+                        assert(ir.getOperands().get(0).getType() instanceof PointerType);
+                        PointerType pt=(PointerType) ir.getOperands().get(0).getType();
                         //获取偏移个数
-                        int offsetNum = ir.getOperands().size();
+                        int offsetNum;
+                        ArrayList<Integer> dimInfo;
+                        if(pt.getContained() instanceof IntegerType){
+                            offsetNum = 1;
+                            dimInfo=new ArrayList<>();
+                        }else{
+                            //gep中的基址不能是二重指针
+                            assert(pt.getContained() instanceof ArrayType);
+                            offsetNum = ir.getOperands().size()-1;
+                            dimInfo=(((ArrayType) (pt).getContained()).getDims());
+                        }
+                        MachineOperand arr = aV.analyzeValue(ir.getOperands().get(0),mb,true);
                         int lastoff = 0;
                         for (int i = 1; i <= offsetNum; i++) {
                             //数组基址不能是常量
@@ -997,8 +1010,10 @@ public class CodeGenManager {
                             boolean isOffConst = off.getState() == MachineOperand.state.imm;
                             //获取当前维度长度，即偏移的单位
                             int mult = 4;
-                            for (int m : (((ArrayType) ir.getType()).getDims())) {
-                                mult *= m;
+                            if(pt.getContained() instanceof ArrayType){
+                                for(int j=i-1;j<dimInfo.size();j++){
+                                    mult*=dimInfo.get(j);
+                                }
                             }
 //                            if (mult == 0 || (isOffConst && off.getImm() == 0)) {
 //                                MachineOperand dst = aV.analyzeValue(ir);
