@@ -320,6 +320,7 @@ public class ArrayAliasAnalysis {
         if (inst instanceof MemPhi) {
           for (var i = 0; i < inst.getNumOP(); i++) {
             inst.CoSetOperand(i, null);
+            inst.removeUsesOfOPs();
           }
         } else if (inst instanceof LoadInst) {
           LoadInst loadInst = (LoadInst) inst;
