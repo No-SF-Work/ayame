@@ -25,12 +25,12 @@ public class PassManager {
     //  add("typeCheck");
     add("bbPredSucc");
     add("Mem2reg");
-    add("branchOptimization");
+    // add("branchOptimization");
+    add("emitllvm");
     //  add("interproceduralAnalysis");
     //  add("gvngcm");
     add("deadcodeemit");
-    add("emitllvm");
-    add("RegAlloc");
+//    add("RegAlloc");
     //  add("ListScheduling");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
