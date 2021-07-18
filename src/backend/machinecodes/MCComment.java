@@ -17,7 +17,7 @@ public class MCComment extends MachineCode{
 
     @Override
     public String toString(){
-        String res="@"+str;
+        String res="@"+str+"\n";
         return res;
     }
 }

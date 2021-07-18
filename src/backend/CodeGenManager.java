@@ -255,7 +255,7 @@ public class CodeGenManager {
 
     public String genARM() {
         String arm = "";
-        arm += ".arch arvm7ve\n";
+        arm += ".arch arm7ve\n";
         arm += ".text\n";
         Iterator<MachineFunction> mfIte = machineFunctions.iterator();
         while (mfIte.hasNext()) {
@@ -447,20 +447,20 @@ public class CodeGenManager {
                     VirtualReg vr;
                     if (irMap.get(v) == null) {
                         vr = new VirtualReg(v.getName());
-                        irMap.put((Instruction) v, vr);
+                        irMap.put(v, vr);
                         mf.addVirtualReg(vr);
                         for (int i = 0; i < f.getNumArgs(); i++) {
                             if (i < 4) {
-                                MachineCode mc = new MCMove(bMap.get(f.getList_().getEntry()), 0);
+                                MachineCode mc = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
                                 ((MCMove) mc).setDst(vr);
                                 ((MCMove) mc).setRhs(mf.getPhyReg(i));
                             } else {
-                                MCMove mv = new MCMove(bMap.get(f.getList_().getEntry()), 0);
+                                MCMove mv = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
                                 mv.setRhs(new MachineOperand((i - 4) * 4));
                                 VirtualReg vR = new VirtualReg();
                                 mf.addVirtualReg(vR);
                                 mv.setDst(vR);
-                                MachineCode mcLD = new MCLoad(bMap.get(f.getList_().getEntry()), 0);
+                                MachineCode mcLD = new MCLoad(bMap.get(f.getList_().getEntry().getVal()), 0);
                                 ((MCLoad) mcLD).setAddr(mf.getPhyReg("sp"));
                                 ((MCLoad) mcLD).setOffset(vR);
                                 ((MCLoad) mcLD).setDst(vr);
@@ -626,6 +626,7 @@ public class CodeGenManager {
 
                 for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
                     Instruction ir = iIt.next().getVal();
+//                    MCComment co=new MCComment(ir.toString(),mb);
                     if (ir.tag == Instruction.TAG_.Phi) {
                         continue;
                     } else if (ir instanceof BinaryInst) {
