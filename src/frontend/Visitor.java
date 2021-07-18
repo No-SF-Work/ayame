@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
@@ -772,6 +773,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private void backpatch(String key, BasicBlock startBlock, BasicBlock endBlock,
       BasicBlock targetBlock) {
     var blockList = new LinkedList<BasicBlock>();
+    var blockSet = new HashSet<BasicBlock>();
+    blockSet.add(startBlock);
     blockList.add(startBlock);
 
     // BFS through [BBs]
@@ -797,8 +800,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
             if (trueBlock.getName().equals(key)) {
               curInstr.CoSetOperand(0, targetBlock);
               trueBlock.node_.removeSelf();
-            } else if (trueBlock != endBlock) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
+            } else if (trueBlock != endBlock && !blockSet
+                .contains(trueBlock)) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
               blockList.add(trueBlock);
+              blockSet.add(trueBlock);
             }
           } else {
             // 条件跳转，则第 2, 3 个参数为目标块
@@ -809,8 +814,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
             if (trueBlock.getName().equals(key)) {
               curInstr.CoSetOperand(1, targetBlock);
               trueBlock.node_.removeSelf();
-            } else if (trueBlock != endBlock) {
+            } else if (trueBlock != endBlock && !blockSet.contains(trueBlock)) {
               blockList.add(trueBlock);
+              blockSet.add(trueBlock);
             }
 
             // Check FalseBlock
@@ -820,8 +826,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
             if (falseBlock.getName().equals(key)) {
               curInstr.CoSetOperand(2, targetBlock);
               falseBlock.node_.removeSelf();
-            } else if (falseBlock != endBlock) {
+            } else if (falseBlock != endBlock && !blockSet.contains(falseBlock)) {
               blockList.add(falseBlock);
+              blockSet.add(falseBlock);
             }
           }
         }
