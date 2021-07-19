@@ -12,6 +12,10 @@ public class VirtualReg extends Reg {
 
     private static int Name = 0;
 
+    public boolean isGlobal() {
+        return isGlobal;
+    }
+
     private boolean isGlobal=false;
 
     private String name;

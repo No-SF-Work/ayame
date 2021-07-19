@@ -51,6 +51,9 @@ public class MCLoad extends MachineCode{
 
     @Override
     public String toString(){
+        if(addr instanceof VirtualReg && ((VirtualReg)addr).isGlobal()){
+            return "\tldr\t"+dst.getName()+",\t="+addr.getName()+"\n";
+        }
         String res="\tldr"+contString(cond)+"\t"+dst.getName()+",\t["+addr.getName();
         res+=",\t"+offset.getName()+getShift().toString()+"]\n";
 //        if(offset.getState()== MachineOperand.state.imm){

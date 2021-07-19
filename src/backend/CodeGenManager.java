@@ -2,8 +2,6 @@ package backend;
 
 import backend.machinecodes.*;
 import backend.reg.MachineOperand;
-import backend.reg.PhyReg;
-import backend.reg.Reg;
 import backend.reg.VirtualReg;
 import ir.MyModule;
 import ir.types.ArrayType;
@@ -399,6 +397,7 @@ public class CodeGenManager {
                 continue;
             }
             machineFunctions.add(mf);
+            HashMap<GlobalVariable,MCLoad> globalMap=new HashMap<>();
             HashMap<BasicBlock, MachineBlock> bMap = new HashMap<>();
             IList<BasicBlock, Function> bList = f.getList_();
             Iterator<INode<BasicBlock, Function>> bIt = bList.iterator();
@@ -462,8 +461,16 @@ public class CodeGenManager {
                         return irMap.get(v);
                     }
                 } else if (myModule.__globalVariables.contains(v)) {
-                    assert (irMap.containsKey(v));
-                    return irMap.get(v);
+                    assert irMap.containsKey(v);
+                    if(globalMap.containsKey(v)){
+                        return globalMap.get(v).getDst();
+                    }else{
+                        MCLoad l=new MCLoad(mb);
+                        l.setAddr(irMap.get(v));
+                        l.setDst(new VirtualReg());
+                        return l.getDst();
+                    }
+
                 } else if (v instanceof Constants.ConstantInt) {
                     if (isInsert)
                         return genImm(((Constants.ConstantInt) v).getVal(), mb);
