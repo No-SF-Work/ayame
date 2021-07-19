@@ -1159,7 +1159,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
       for (int i = 0; i < paramsCtx.size(); i++) {
         var param = paramsCtx.get(i);
         var paramTy = paramTys.get(i);
-        buildCall = !paramTy.isIntegerTy();
+        if (paramTy.isIntegerTy()) {
+          buildCall = false;
+        } else {
+          buildCall = true;
+        }
         visit(param.exp());// 没有String
         buildCall = false;
         args.add(tmp_);
