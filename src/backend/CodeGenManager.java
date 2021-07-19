@@ -336,7 +336,7 @@ public class CodeGenManager {
                 assert (p.getContained() instanceof ArrayType);
                 if (gv.init == null) {
                     int n = 1;
-                    ArrayList<Integer> dims = ((ArrayType) gv.getType()).getDims();
+                    ArrayList<Integer> dims = ((ArrayType) p.getContained()).getDims();
                     for (Integer d : dims) {
                         n *= d;
                     }
