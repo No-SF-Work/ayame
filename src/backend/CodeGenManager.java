@@ -458,15 +458,15 @@ public class CodeGenManager {
                                     ((MCMove) mc).setDst(vr);
                                     ((MCMove) mc).setRhs(mf.getPhyReg(i));
                                 } else {
-                                    MCMove mv = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
-                                    mv.setRhs(new MachineOperand((i - 4) * 4));
                                     VirtualReg vR = new VirtualReg();
                                     mf.addVirtualReg(vR);
-                                    mv.setDst(vR);
                                     MachineCode mcLD = new MCLoad(bMap.get(f.getList_().getEntry().getVal()), 0);
                                     ((MCLoad) mcLD).setAddr(mf.getPhyReg("sp"));
                                     ((MCLoad) mcLD).setOffset(vR);
                                     ((MCLoad) mcLD).setDst(vr);
+                                    MCMove mv = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
+                                    mv.setRhs(new MachineOperand((i - 4) * 4));
+                                    mv.setDst(vR);
                                     mf.getArgMoves().add(mv);
                                 }
                                 break;
