@@ -62,9 +62,8 @@ public class CompilerDriverRaw {
       CharStream input = CharStreams.fromFileName(source);
       logger.info(input.toString());
       if (true) {
-        return;
+        throw new RuntimeException(input.toString());
       }
-
       SysYLexer lexer = new SysYLexer(input);
       CommonTokenStream tokens = new CommonTokenStream(lexer);
 
