@@ -28,7 +28,7 @@ public class PassManager {
     // add("branchOptimization");
 //    add("emitllvm");
     add("interproceduralAnalysis");
-    add("gvngcm");
+//    add("gvngcm");
     add("deadcodeemit");
     add("RegAlloc");
     //  add("ListScheduling");
