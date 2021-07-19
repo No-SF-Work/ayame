@@ -182,6 +182,7 @@ public class RegAllocator implements MCPass {
 
     public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
+            func.getVRegMap().values().forEach(x -> System.out.println(x.getName()));
             // fixme
 //            var allocatable = IntStream.range(0, 15).filter(i -> i != 13)
 //                    .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
@@ -285,15 +286,17 @@ public class RegAllocator implements MCPass {
                 Function<MachineOperand, Boolean> moveRelated = n -> !nodeMoves.apply(n).isEmpty();
 
                 Runnable makeWorklist = () ->
-                        func.getVRegMap().values().forEach(vreg -> {
-                            if (degree.getOrDefault(vreg, 0) >= K) {
-                                spillWorklist.add(vreg);
-                            } else if (moveRelated.apply(vreg)) {
-                                freezeWorklist.add(vreg);
-                            } else {
-                                simplifyWorklist.add(vreg);
-                            }
-                        });
+                        func.getVRegMap().values()
+                                .stream().filter(vreg -> !vreg.isGlobal())
+                                .forEach(vreg -> {
+                                    if (degree.getOrDefault(vreg, 0) >= K) {
+                                        spillWorklist.add(vreg);
+                                    } else if (moveRelated.apply(vreg)) {
+                                        freezeWorklist.add(vreg);
+                                    } else {
+                                        simplifyWorklist.add(vreg);
+                                    }
+                                });
 
                 Consumer<MachineOperand> enableMoves = n -> {
                     nodeMoves.apply(n).stream()
@@ -343,7 +346,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 Consumer<MachineOperand> addWorklist = u -> {
-                    if (!u.isPrecolored() && !moveRelated.apply(u) && degree.getOrDefault(u,0) < K) {
+                    if (!u.isPrecolored() && !moveRelated.apply(u) && degree.getOrDefault(u, 0) < K) {
                         freezeWorklist.remove(u);
                         simplifyWorklist.add(u);
                     }
@@ -449,6 +452,7 @@ public class RegAllocator implements MCPass {
 
                 Runnable assignColors = () -> {
                     var colored = new HashMap<MachineOperand, MachineOperand>();
+                    selectStack.removeIf(n -> n instanceof VirtualReg && ((VirtualReg) n).isGlobal());
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
                         var okColors = IntStream.range(0, 15).filter(i -> i != 13).boxed() // 15
