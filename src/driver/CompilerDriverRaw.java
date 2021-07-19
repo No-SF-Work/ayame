@@ -59,6 +59,10 @@ public class CompilerDriverRaw {
     try {
       Mylogger.init();
       CharStream input = CharStreams.fromFileName(source);
+      logger.info(input.toString());
+      if (true) {
+        return;
+      }
 
       SysYLexer lexer = new SysYLexer(input);
       CommonTokenStream tokens = new CommonTokenStream(lexer);
