@@ -451,7 +451,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             }}, curBB_);
           }
           f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
-                  Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, arr.size()))),
+                  Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, arr.size() * 4))),
               curBB_);
           for (int i = 0; i < arr.size(); i++) {
             var t = arr.get(i);
