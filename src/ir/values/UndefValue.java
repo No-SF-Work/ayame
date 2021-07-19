@@ -7,5 +7,6 @@ public class UndefValue extends Value {
 
   public UndefValue() {
     super(NoType.getType());
+    this.setName("UndefValue");
   }
 }

@@ -14,4 +14,7 @@ code_0.iml
 src/pass/PassManager.java
 ../src/pass/PassManager.java
 test.s
-
+*.out
+*.in
+*.ll
+test.sh
