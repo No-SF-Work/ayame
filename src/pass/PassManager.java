@@ -27,9 +27,9 @@ public class PassManager {
     add("Mem2reg");
     // add("branchOptimization");
 //    add("emitllvm");
-    //  add("interproceduralAnalysis");
-    //  add("gvngcm");
-//    add("deadcodeemit");
+    add("interproceduralAnalysis");
+    add("gvngcm");
+    add("deadcodeemit");
     add("RegAlloc");
     //  add("ListScheduling");
   }};
