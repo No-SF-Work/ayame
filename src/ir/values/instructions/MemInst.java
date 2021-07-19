@@ -378,6 +378,29 @@ public abstract class MemInst extends Instruction {
 
   }
 
+  public static class ZextInst extends MemInst {
+
+    private Type destTy;// only i32
+
+    public ZextInst(Value val, Type dest) {
+      super(TAG_.Zext, dest, 1);
+      destTy = dest;
+      this.CoSetOperand(0, val);
+    }
+
+    public Type getDest() {
+      return this.destTy;
+    }
+
+    public ZextInst(Value val, Type dest, BasicBlock parent) {
+      super(TAG_.Zext, dest, 1, parent);
+      destTy = dest;
+      this.CoSetOperand(0, val);
+    }
+
+
+  }
+
   public boolean isGEP() {
     return this.tag == TAG_.GEP;
   }
