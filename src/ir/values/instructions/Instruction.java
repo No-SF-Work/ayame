@@ -14,6 +14,9 @@ public abstract class Instruction extends User {
   private static int HANDLE = 0;
 
   public enum TAG_ {
+
+    //unary
+    Not,
     //binary
     Add,
     Sub,
@@ -37,6 +40,7 @@ public abstract class Instruction extends User {
     Load,
     Store,
     GEP,
+    Zext,
     Phi,
     MemPhi,
 

@@ -1,14 +1,5 @@
 package driver;
 
-import java.io.IOException;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-import net.sourceforge.argparse4j.inf.Namespace;
-import util.Mylogger;
 
 /***
  * This is the config file of the compiler
@@ -26,7 +17,6 @@ public class Config {
   public boolean isDebugMode = false;
   public boolean isIRMode = false;
   public boolean isOutPutMode = false;
-
 
 
   private Config() {
