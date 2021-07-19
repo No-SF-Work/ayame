@@ -146,12 +146,14 @@ public class MachineFunction {
                 var instr = instrEntry.getVal();
                 var defs = instr.getDef();
                 var uses = instr.getUse();
-                assert defs.stream().allMatch(x -> x instanceof PhyReg);
-                assert uses.stream().allMatch(x -> x instanceof PhyReg);
+//                assert defs.stream().allMatch(x -> x instanceof PhyReg);
+//                assert uses.stream().allMatch(x -> x instanceof PhyReg);
                 ret.addAll(defs.stream()
+                        .filter(PhyReg.class::isInstance)
                         .map(x -> ((PhyReg) x).getIdx())
                         .collect(Collectors.toCollection(HashSet::new)));
                 ret.addAll(uses.stream()
+                        .filter(PhyReg.class::isInstance)
                         .map(x -> ((PhyReg) x).getIdx())
                         .collect(Collectors.toCollection(HashSet::new)));
             }
