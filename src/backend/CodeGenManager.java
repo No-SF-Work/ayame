@@ -458,15 +458,15 @@ public class CodeGenManager {
                                     ((MCMove) mc).setDst(vr);
                                     ((MCMove) mc).setRhs(mf.getPhyReg(i));
                                 } else {
-                                    MCMove mv = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
-                                    mv.setRhs(new MachineOperand((i - 4) * 4));
                                     VirtualReg vR = new VirtualReg();
                                     mf.addVirtualReg(vR);
-                                    mv.setDst(vR);
                                     MachineCode mcLD = new MCLoad(bMap.get(f.getList_().getEntry().getVal()), 0);
                                     ((MCLoad) mcLD).setAddr(mf.getPhyReg("sp"));
                                     ((MCLoad) mcLD).setOffset(vR);
                                     ((MCLoad) mcLD).setDst(vr);
+                                    MCMove mv = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
+                                    mv.setRhs(new MachineOperand((i - 4) * 4));
+                                    mv.setDst(vR);
                                     mf.getArgMoves().add(mv);
                                 }
                                 break;
@@ -891,36 +891,34 @@ public class CodeGenManager {
 
 
                     } else if (ir.tag == Instruction.TAG_.Call) {
-                        MachineCode call = new MCCall(mb);
+                        MachineCode call = new MCCall();
                         //获取调用函数的参数数量
                         int argNum = ir.getOperands().size() - 1;
                         for (int i = 0; i < argNum; i++) {
                             if (i < 4) {
                                 MachineOperand rhs = aV.analyzeValue(ir.getOperands().get(i + 1), mb, true);
-                                MachineCode mv = new MCMove();
-                                mv.insertBeforeNode(call);
+                                MachineCode mv = new MCMove(mb);
                                 ((MCMove) mv).setRhs(rhs);
                                 ((MCMove) mv).setDst(mf.getPhyReg(i));
                                 //防止寄存器分配消除掉这些move
                                 call.addUse(((MCMove) mv).getDst());
                             } else {
                                 VirtualReg vr = (VirtualReg) ani.analyzeNoImm(ir.getOperands().get(i + 1), mb);
-                                MachineCode st = new MCStore();
-                                st.insertBeforeNode(call);
+                                MachineCode st = new MCStore(mb);
                                 ((MCStore) st).setData(vr);
                                 ((MCStore) st).setAddr(mf.getPhyReg("sp"));
                                 ((MCStore) st).setOffset(genImm((-(argNum - i)*4),mb));
                             }
                         }
                         if (argNum > 4) {
-                            MachineCode sub = new MCBinary(MachineCode.TAG.Sub);
-                            sub.insertBeforeNode(call);
+                            MachineCode sub = new MCBinary(MachineCode.TAG.Sub,mb);
                             ((MCBinary) sub).setDst(mf.getPhyReg("sp"));
                             ((MCBinary) sub).setLhs(mf.getPhyReg("sp"));
                             ((MCBinary) sub).setRhs(new MachineOperand(4 * (argNum - 4)));
                         }
                         assert (ir.getOperands().get(0) instanceof Function);
                         ((MCCall) call).setFunc(fMap.get((Function) ir.getOperands().get(0)));
+                        call.setMb(mb);
                         if (argNum > 4) {
                             MachineCode add = new MCBinary(MachineCode.TAG.Add, mb);
                             ((MCBinary) add).setDst(mf.getPhyReg("sp"));

@@ -21,4 +21,8 @@ public class MCCall extends MachineCode{
     public MCCall(MachineBlock mb){
         super(TAG.Call,mb);
     }
+
+    public MCCall(){
+        super(TAG.Call);
+    }
 }
