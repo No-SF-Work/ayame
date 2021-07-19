@@ -472,7 +472,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
               f.buildStore(t, pointer, curBB_);
             }
           }
-        } else if (ctx.initVal() != null && ctx.initVal().initVal() == null) {//int a[4]={}
+        } else if (ctx.initVal() != null && ctx.initVal().initVal().isEmpty()) {//int a[4]={}
           var size = 1;
           for (int i = 0; i < dims.size(); i++) {
             size *= dims.get(i);
