@@ -51,6 +51,7 @@ public class Mylogger {
   public static Logger getLogger(Class c) {
     Logger tmp = Logger.getLogger(c.getName());
     tmp.addHandler(fh);
+    tmp.setLevel(Level.OFF);
     return tmp;
   }
 
