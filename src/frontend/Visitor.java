@@ -450,15 +450,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
               add(CONST0);
             }}, curBB_);
           }
-          f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
+         /* f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
                   Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, arr.size() * 4))),
-              curBB_);
+              curBB_);*/
           for (int i = 0; i < arr.size(); i++) {
             var t = arr.get(i);
 
             if (t instanceof ConstantInt) {
               if (((ConstantInt) t).getVal() == 0) {
-//                f.buildStore(CONST0, pointer, curBB_);
+                f.buildStore(CONST0, pointer, curBB_);
                 continue;
               }
             }
