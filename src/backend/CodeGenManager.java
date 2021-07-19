@@ -467,7 +467,10 @@ public class CodeGenManager {
                     }else{
                         MCLoad l=new MCLoad(mb);
                         l.setAddr(irMap.get(v));
-                        l.setDst(new VirtualReg());
+                        VirtualReg r=new VirtualReg();
+                        mf.addVirtualReg(r);
+                        l.setDst(r);
+                        l.setOffset(new MachineOperand(0));
                         return l.getDst();
                     }
 
@@ -495,6 +498,7 @@ public class CodeGenManager {
             AnalyzeNoImm ani = (Value v, MachineBlock mb) -> {
                 if (v instanceof Constants.ConstantInt) {
                     VirtualReg vr = new VirtualReg();
+                    mf.addVirtualReg(vr);
                     mb.getMF().addVirtualReg(vr);
                     MachineCode mv = new MCMove(mb);
                     ((MCMove) mv).setDst(vr);

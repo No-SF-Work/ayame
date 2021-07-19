@@ -53,7 +53,12 @@ public class VirtualReg extends Reg {
 
     public VirtualReg(String name, boolean isGlobal){
         super(state.virtual);
-        this.name=name;
+        if(name.startsWith("@")){
+            int l=name.lastIndexOf('@');
+            this.name=name.substring(l+1,name.length());
+        }else{
+            this.name=name;
+        }
 //        this.idx = Integer.parseInt(name.substring(2));
         this.isGlobal=isGlobal;
     }
