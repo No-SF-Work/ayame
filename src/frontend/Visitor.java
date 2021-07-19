@@ -3,7 +3,6 @@ package frontend;
 
 import frontend.SysYParser.*;
 import ir.MyFactoryBuilder;
-import ir.MyModule;
 import ir.types.FunctionType;
 import ir.types.IntegerType;
 import ir.types.PointerType;
@@ -23,12 +22,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Stack;
 import java.util.logging.Logger;
 
 import ir.values.instructions.Instruction;
 import util.Mylogger;
-import util.Pair;
 
 /**
  * 我们并不需要用返回值传递信息，所以将类型标注为Void
@@ -47,7 +44,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
 
     //因为涉及了往上层查找参数，所以这里不用stack用arraylist
-    private ArrayList<HashMap<String, Value>> tables_;
+    private final ArrayList<HashMap<String, Value>> tables_;
 
     private HashMap<String, Value> top() {
       return tables_.get(tables_.size() - 1);
@@ -108,12 +105,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
   // translation context
-  private final MyModule m = MyModule.getInstance();
   private final MyFactoryBuilder f = MyFactoryBuilder.getInstance();
-  private Scope scope_ = new Scope(); // symbol table
+  private final Scope scope_ = new Scope(); // symbol table
   private BasicBlock curBB_; // current basicBlock
   private Function curFunc_; // current function
-  private Stack<BasicBlock> nxtBlkStk_ = new Stack<>();
   // pass values between `visit` functions
   private ArrayList<Value> tmpArr_;//只允许赋值以及被赋值，不能直接操作
   private Value tmp_;
@@ -124,8 +119,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private final ConstantInt CONST0 = ConstantInt.CONST0();
   private final Type i32Type_ = f.getI32Ty();
   private final Type voidType_ = f.getVoidTy();
-  private final Type labelType_ = f.getLabelTy();
-  private final Type ptri32Type_ = f.getPointTy(i32Type_);
   //status word
   private boolean usingInt_ = false;//常量初始化要对表达式求值，并且用的Ident也要是常量
   private boolean globalInit_ = false;
@@ -141,7 +134,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   public Void visitProgram(ProgramContext ctx) {
     log.info("Syntax begin");
     IntegerType i32Type = f.getI32Ty();
-    IntegerType i1Type = f.getI1Ty();
     VoidType voidType = f.getVoidTy();
     PointerType ptri32Type = f.getPointTy(i32Type);
 
@@ -265,9 +257,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           globalInit_ = false;
           var arr = tmpArr_;
           ArrayList<Constant> g = new ArrayList<>();
-          arr.forEach(i -> {
-            g.add(((ConstantInt) i));
-          });
+          arr.forEach(i -> g.add(((ConstantInt) i)));
           var plainInit = new ConstantArray(arrty, g);
           var foldedInit = genConstArr(dims, tmpArr_);
           var variable = f.getGlobalvariable(ctx.IDENT().getText(), arrty, foldedInit, plainInit);
@@ -296,7 +286,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
               add(CONST0);
               add(CONST0);
             }}, curBB_);
-            ;
           }
           for (int i = 0; i < arr.size(); i++) {
             if (i == 0) {
@@ -420,9 +409,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
           var arr = tmpArr_;
           ArrayList<Constant> g = new ArrayList<>();
-          arr.forEach(i -> {
-            g.add(((ConstantInt) i));
-          });
+          arr.forEach(i -> g.add(((ConstantInt) i)));
           var plainInit = new ConstantArray(arrTy, g);
           var fixedInit = genConstArr(dims, arr);
           var glo = f.getGlobalvariable(ctx.IDENT().getText(), arrTy, fixedInit, plainInit);
@@ -474,8 +461,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
           }
         } else if (ctx.initVal() != null && ctx.initVal().initVal().isEmpty()) {//int a[4]={}
           var size = 1;
-          for (int i = 0; i < dims.size(); i++) {
-            size *= dims.get(i);
+          for (Integer dim : dims) {
+            size *= dim;
           }
           var pointer = f.buildGEP(alloc, new ArrayList<>() {{
             add(CONST0);
@@ -1081,7 +1068,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
 
   /**
    * @author : ai
-   * @value: tmpInt_ -> child解析出的int intConst : DECIMAL_CONST | OCTAL_CONST | HEXADECIMAL_CONST ;
    */
 
   @Override
@@ -1173,11 +1159,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       for (int i = 0; i < paramsCtx.size(); i++) {
         var param = paramsCtx.get(i);
         var paramTy = paramTys.get(i);
-        if (paramTy.isIntegerTy()) {
-          buildCall = false;
-        } else {
-          buildCall = true;
-        }
+        buildCall = !paramTy.isIntegerTy();
         visit(param.exp());// 没有String
         buildCall = false;
         args.add(tmp_);
