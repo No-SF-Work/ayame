@@ -450,18 +450,18 @@ public class Visitor extends SysYBaseVisitor<Void> {
               add(CONST0);
             }}, curBB_);
           }
-         /* f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
+          f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
                   Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, arr.size() * 4))),
-              curBB_);*/
+              curBB_);
           for (int i = 0; i < arr.size(); i++) {
             var t = arr.get(i);
 
-//            if (t instanceof ConstantInt) {
-//              if (((ConstantInt) t).getVal() == 0) {
+            if (t instanceof ConstantInt) {
+              if (((ConstantInt) t).getVal() == 0) {
 //                f.buildStore(CONST0, pointer, curBB_);
-//                continue;
-//              }
-//            }
+                continue;
+              }
+            }
             if (i != 0) {
               int finalI = i;
               var ptr = f.buildGEP(pointer, new ArrayList<>() {{
@@ -481,8 +481,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
             add(CONST0);
             add(CONST0);
           }}, curBB_);
-
-          for (var i = 1; i < dims.size(); i++) {
+          f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
+                  Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, size * 4))),
+              curBB_);
+          /*for (var i = 1; i < dims.size(); i++) {
             pointer = f.buildGEP(pointer, new ArrayList<>() {{
               add(CONST0);
               add(CONST0);
@@ -498,7 +500,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
             } else {
               f.buildStore(CONST0, pointer, curBB_);
             }
-          }
+          */
+//        }
         }
       }
     }
