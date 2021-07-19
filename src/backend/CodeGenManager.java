@@ -69,7 +69,7 @@ public class CodeGenManager {
             mb.getMF().addVirtualReg(vr);
             MachineCode mc = new MCMove(mb);
             ((MCMove) mc).setDst(vr);
-            ((MCMove) mc).setDst(mo);
+            ((MCMove) mc).setRhs(mo);
             return vr;
         }
     }

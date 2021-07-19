@@ -12,6 +12,9 @@ public class MCMove extends MachineCode {
     public void setDst(MachineOperand dst) {
         dealReg(this.dst,dst,false);
         this.dst = dst;
+        if(dst.getState()== MachineOperand.state.imm){
+            dst=null;
+        }
     }
 
     public MachineOperand getRhs() {

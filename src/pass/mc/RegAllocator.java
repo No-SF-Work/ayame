@@ -182,7 +182,6 @@ public class RegAllocator implements MCPass {
 
     public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
-            func.getVRegMap().values().forEach(x -> System.out.println(x.getName()));
             // fixme
 //            var allocatable = IntStream.range(0, 15).filter(i -> i != 13)
 //                    .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
