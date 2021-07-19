@@ -456,12 +456,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
           for (int i = 0; i < arr.size(); i++) {
             var t = arr.get(i);
 
-            if (t instanceof ConstantInt) {
-              if (((ConstantInt) t).getVal() == 0) {
-                f.buildStore(CONST0, pointer, curBB_);
-                continue;
-              }
-            }
+//            if (t instanceof ConstantInt) {
+//              if (((ConstantInt) t).getVal() == 0) {
+//                f.buildStore(CONST0, pointer, curBB_);
+//                continue;
+//              }
+//            }
             if (i != 0) {
               int finalI = i;
               var ptr = f.buildGEP(pointer, new ArrayList<>() {{
