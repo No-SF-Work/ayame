@@ -472,6 +472,33 @@ public class Visitor extends SysYBaseVisitor<Void> {
               f.buildStore(t, pointer, curBB_);
             }
           }
+        } else if (ctx.initVal() != null && ctx.initVal().initVal() == null) {//int a[4]={}
+          var size = 1;
+          for (int i = 0; i < dims.size(); i++) {
+            size *= dims.get(i);
+          }
+          var pointer = f.buildGEP(alloc, new ArrayList<>() {{
+            add(CONST0);
+            add(CONST0);
+          }}, curBB_);
+
+          for (var i = 1; i < dims.size(); i++) {
+            pointer = f.buildGEP(pointer, new ArrayList<>() {{
+              add(CONST0);
+              add(CONST0);
+            }}, curBB_);
+          }
+          for (int i = 0; i < size; i++) {
+            if (i != 0) {
+              int finalI = i;
+              var ptr = f.buildGEP(pointer, new ArrayList<>() {{
+                add(ConstantInt.newOne(i32Type_, finalI));
+              }}, curBB_);
+              f.buildStore(CONST0, ptr, curBB_);
+            } else {
+              f.buildStore(CONST0, pointer, curBB_);
+            }
+          }
         }
       }
     }
@@ -1256,7 +1283,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
     return null;
   }
 
-
   /**
    * relExp : addExp (relOp addExp)* ;
    */
@@ -1284,7 +1310,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
     tmp_ = lhs;
     return null;
   }
-
 
   /**
    * eqExp : relExp (eqOp relExp)* ;
