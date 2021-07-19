@@ -94,7 +94,8 @@ public class LoopInfo {
 
             subloop.setParentLoop(loop);
             for (BasicBlock subHeaderPred : subloop.getHeader().getPredecessor_()) {
-              if (!bbLoopMap.get(subHeaderPred).equals(subloop)) {
+              Loop tmp  = bbLoopMap.get(subHeaderPred);
+              if (tmp == null || !tmp.equals(subloop)) {
                 backEdgeTo.push(subHeaderPred);
               }
             }
