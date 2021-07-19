@@ -226,13 +226,13 @@ public class CodeGenManager {
 
 //        }
         var useRegs = mf.getUsedRegIdxs();
-        for(int idx:useRegs){
-            for(int i=4;i<=12;i++){
-                if(i==idx){
+        for (int idx : useRegs) {
+            for (int i = 4; i <= 12; i++) {
+                if (i == idx) {
                     mf.getUsedSavedRegs().add(mf.getPhyReg(i));
                 }
             }
-            if(idx==14){
+            if (idx == 14) {
                 mf.getUsedSavedRegs().add(mf.getPhyReg(14));
                 mf.setUsedLr(true);
             }
@@ -263,10 +263,10 @@ public class CodeGenManager {
                 sb.append(phyReg.getName());
                 sb.append(", ");
             });
-            if (mf.isUsedLr()||!mf.getUsedSavedRegs().isEmpty()) {
-                String s=sb.toString();
-                int l=s.lastIndexOf(',');
-                s = s.substring(0,l);
+            if (mf.isUsedLr() || !mf.getUsedSavedRegs().isEmpty()) {
+                String s = sb.toString();
+                int l = s.lastIndexOf(',');
+                s = s.substring(0, l);
                 arm += "\tpush\t{";
                 arm += s;
                 arm += "}\n";
@@ -351,7 +351,7 @@ public class CodeGenManager {
                             if (count == 1) {
                                 arm += "\t.word\t" + lastv + "\n";
                             } else {
-                                arm += "\t.fill" + count + ",\t4,\t" + lastv + "\n";
+                                arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
                             }
                             lastv = v;
                             count = 1;
@@ -360,7 +360,7 @@ public class CodeGenManager {
                     if (count == 1) {
                         arm += "\t.word\t" + lastv + "\n";
                     } else {
-                        arm += "\t.fill" + count + ",\t4,\t" + lastv + "\n";
+                        arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
                     }
                 }
 
@@ -397,7 +397,7 @@ public class CodeGenManager {
                 continue;
             }
             machineFunctions.add(mf);
-            HashMap<GlobalVariable,MCLoad> globalMap=new HashMap<>();
+            HashMap<GlobalVariable, MCLoad> globalMap = new HashMap<>();
             HashMap<BasicBlock, MachineBlock> bMap = new HashMap<>();
             IList<BasicBlock, Function> bList = f.getList_();
             Iterator<INode<BasicBlock, Function>> bIt = bList.iterator();
@@ -438,23 +438,25 @@ public class CodeGenManager {
                         irMap.put(v, vr);
                         mf.addVirtualReg(vr);
                         for (int i = 0; i < f.getNumArgs(); i++) {
-                            if (i < 4) {
-                                MachineCode mc = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
-                                ((MCMove) mc).setDst(vr);
-                                ((MCMove) mc).setRhs(mf.getPhyReg(i));
-                            } else {
-                                MCMove mv = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
-                                mv.setRhs(new MachineOperand((i - 4) * 4));
-                                VirtualReg vR = new VirtualReg();
-                                mf.addVirtualReg(vR);
-                                mv.setDst(vR);
-                                MachineCode mcLD = new MCLoad(bMap.get(f.getList_().getEntry().getVal()), 0);
-                                ((MCLoad) mcLD).setAddr(mf.getPhyReg("sp"));
-                                ((MCLoad) mcLD).setOffset(vR);
-                                ((MCLoad) mcLD).setDst(vr);
-                                mf.getArgMoves().add(mv);
+                            if (f.getArgList().get(i) == v) {
+                                if (i < 4) {
+                                    MachineCode mc = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
+                                    ((MCMove) mc).setDst(vr);
+                                    ((MCMove) mc).setRhs(mf.getPhyReg(i));
+                                } else {
+                                    MCMove mv = new MCMove(bMap.get(f.getList_().getEntry().getVal()), 0);
+                                    mv.setRhs(new MachineOperand((i - 4) * 4));
+                                    VirtualReg vR = new VirtualReg();
+                                    mf.addVirtualReg(vR);
+                                    mv.setDst(vR);
+                                    MachineCode mcLD = new MCLoad(bMap.get(f.getList_().getEntry().getVal()), 0);
+                                    ((MCLoad) mcLD).setAddr(mf.getPhyReg("sp"));
+                                    ((MCLoad) mcLD).setOffset(vR);
+                                    ((MCLoad) mcLD).setDst(vr);
+                                    mf.getArgMoves().add(mv);
+                                }
+                                break;
                             }
-                            break;
                         }
                         return vr;
                     } else {
@@ -462,12 +464,12 @@ public class CodeGenManager {
                     }
                 } else if (myModule.__globalVariables.contains(v)) {
                     assert irMap.containsKey(v);
-                    if(globalMap.containsKey(v)){
+                    if (globalMap.containsKey(v)) {
                         return globalMap.get(v).getDst();
-                    }else{
-                        MCLoad l=new MCLoad(mb);
+                    } else {
+                        MCLoad l = new MCLoad(mb);
                         l.setAddr(irMap.get(v));
-                        VirtualReg r=new VirtualReg();
+                        VirtualReg r = new VirtualReg();
                         mf.addVirtualReg(r);
                         l.setDst(r);
                         l.setOffset(new MachineOperand(0));
@@ -532,23 +534,23 @@ public class CodeGenManager {
                     for (INode<Instruction, BasicBlock> irNode : irList) {
                         Instruction ir = irNode.getVal();
                         if (ir.tag == Instruction.TAG_.Phi) {
-                            String comment="phi target:";
+                            String comment = "phi target:";
                             //如果phi指令的参数中有字面量，那也不用调用genImm，因为字面量肯定最后放在前驱块的copy中，所以isInsert设置为false表明这一点
                             MachineOperand phiTarget = aV.analyzeValue(ir, mbb, false);
-                            comment+=phiTarget.getName()+" params:";
+                            comment += phiTarget.getName() + " params:";
                             assert (phiTarget instanceof VirtualReg);
                             HashSet<MachineOperand> phiSet = new HashSet<>();
-                            phiSet.add( phiTarget);
+                            phiSet.add(phiTarget);
                             for (Value vv : (((Phi) ir).getIncomingVals())) {
                                 MachineOperand phiArg = aV.analyzeValue(vv, mbb, false);
 //                                if (phiArg.getState() == MachineOperand.state.imm) {
 //                                    continue;
 //                                }
-                                phiSet.add( phiArg);
-                                comment+=phiArg.getName()+" ";
+                                phiSet.add(phiArg);
+                                comment += phiArg.getName() + " ";
                             }
                             phiRows.put((VirtualReg) phiTarget, new ArrayList<>());
-                            MCComment m=new MCComment(comment,bMap.get(bb));
+                            MCComment m = new MCComment(comment, bMap.get(bb));
                         } else {
                             break;
                         }
@@ -626,8 +628,6 @@ public class CodeGenManager {
             for (bIt = bList.iterator(); bIt.hasNext(); ) {
                 BasicBlock bb = bIt.next().getVal();
                 MachineBlock mb = bMap.get(bb);
-
-
                 for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
                     Instruction ir = iIt.next().getVal();
                     MCComment co = new MCComment(ir.toString(), mb);
@@ -638,13 +638,19 @@ public class CodeGenManager {
                         boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
                         MachineOperand lhs;
                         MachineOperand rhs;
+                        BinaryInst b = (BinaryInst) ir;
                         //lhs不能是立即数
-                        if ((((BinaryInst) ir).isAdd() || ((BinaryInst) ir).isMul()) && lhsIsConst && !rhsIsConst) {
-                            lhs = aV.analyzeValue(ir.getOperands().get(1), mb, true);
-                            rhs = aV.analyzeValue(ir.getOperands().get(0), mb, true);
-                        }else{
-                            lhs= ani.analyzeNoImm(ir.getOperands().get(0), mb);
-                            rhs= aV.analyzeValue(ir.getOperands().get(1), mb, true);
+                        if (b.isAdd() || b.isSub()) {
+                            if (b.isAdd() && lhsIsConst && !rhsIsConst) {
+                                lhs = aV.analyzeValue(ir.getOperands().get(1), mb, true);
+                                rhs = aV.analyzeValue(ir.getOperands().get(0), mb, true);
+                            } else {
+                                lhs = ani.analyzeNoImm(ir.getOperands().get(0), mb);
+                                rhs = aV.analyzeValue(ir.getOperands().get(1), mb, true);
+                            }
+                        } else {
+                            lhs = ani.analyzeNoImm(ir.getOperands().get(0), mb);
+                            rhs = ani.analyzeNoImm(ir.getOperands().get(1), mb);
                         }
 //                        assert (!(rhsIsConst && lhsIsConst));
                         //TODO gvn gcm之前临时搞一个两个都是立即数的情况
@@ -729,7 +735,7 @@ public class CodeGenManager {
                                     mc4.setDst(dst);
                                     mc4.setLhs(mc3.getDst());
                                     mc4.setRhs(lhs);
-                                    mc4.setShift(ArmAddition.ShiftType.Lsr, 31);
+                                    mc4.setShift(ArmAddition.ShiftType.Lsr,31);
                                 }
                                 continue;
                             }
@@ -841,8 +847,8 @@ public class CodeGenManager {
                             assert (ir.getOperands().get(0) instanceof BinaryInst);
                             assert (((BinaryInst) ir.getOperands().get(0)).isCond());
                             Instruction condi = (BinaryInst) (ir.getOperands().get(0));
-                            MachineOperand rhs=aV.analyzeValue(condi.getOperands().get(1), mb, true);
-                            MachineOperand lhs=ani.analyzeNoImm(condi.getOperands().get(0), mb);
+                            MachineOperand rhs = aV.analyzeValue(condi.getOperands().get(1), mb, true);
+                            MachineOperand lhs = ani.analyzeNoImm(condi.getOperands().get(0), mb);
                             MCCompare compare = new MCCompare(mb);
                             compare.setRhs(rhs);
                             compare.setLhs(lhs);
@@ -886,8 +892,7 @@ public class CodeGenManager {
                                 st.insertBeforeNode(call);
                                 ((MCStore) st).setData(vr);
                                 ((MCStore) st).setAddr(mf.getPhyReg("sp"));
-                                ((MCStore) st).setOffset(new MachineOperand(-(argNum - i)));
-                                st.setShift(ArmAddition.ShiftType.Lsl, 2);
+                                ((MCStore) st).setOffset(genImm((-(argNum - i)*4),mb));
                             }
                         }
                         if (argNum > 4) {
@@ -989,7 +994,7 @@ public class CodeGenManager {
                         Value ar = ir.getOperands().get(1);
                         //如果store的指针是个二重指针
                         if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
-                            allocaToStore.put((MemInst.AllocaInst) ar,  ir.getOperands().get(0));
+                            allocaToStore.put((MemInst.AllocaInst) ar, ir.getOperands().get(0));
                             aV.analyzeValue(ir.getOperands().get(0), mb, true);
                             continue;
                         }
@@ -1071,11 +1076,14 @@ public class CodeGenManager {
                                     ladd.setLhs(genImm(lastoff, mb));
                                     lastoff = 0;
                                 }
+                                ArmAddition.Shift s=ArmAddition.getAddition().getNewShiftInstance();
+                                s.setType(ArmAddition.ShiftType.Lsl,calcCTZ(mult));
+                                MachineOperand rhs=dealShiftImm(s,off,mb);
                                 MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
                                 add.setDst(dst);
                                 add.setLhs(arr);
-                                add.setRhs(off);
-                                add.setShift(ArmAddition.ShiftType.Lsl, calcCTZ(mult));
+                                add.setRhs(rhs);
+                                add.setShift(s.getType(),s.getImm());
                                 arr = dst;
                             } else {
                                 if (lastoff != 0) {
@@ -1220,6 +1228,28 @@ public class CodeGenManager {
         return result;
     }
 
+    private MachineOperand dealShiftImm(ArmAddition.Shift s,MachineOperand mo,MachineBlock mb){
+        int ss=s.getImm();
+        ArmAddition.ShiftType t=s.getType();
+        if(mo.getState()== MachineOperand.state.imm&&t!= ArmAddition.ShiftType.None){
+            int imm=mo.getImm();
+            if(t== ArmAddition.ShiftType.Asr){
+                imm=imm>>ss;
+            }else if(t== ArmAddition.ShiftType.Lsl){
+                imm=imm<<ss;
+            }else if(t== ArmAddition.ShiftType.Lsr){
+                imm=imm>>>ss;
+            }else if(t== ArmAddition.ShiftType.Ror){
+                imm=(imm>>>ss)|(imm<<(32-ss));
+            }else{
+                //TODO:Rrx
+            }
+            s.setType(ArmAddition.ShiftType.None,0);
+            return genImm(imm,mb);
+        }else{
+            return mo;
+        }
+    }
 
     //pred->(succ->MCs)
     private HashMap<MachineBlock, HashMap<MachineBlock, ArrayList<MachineCode>>> waiting = new HashMap<>();
