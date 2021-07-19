@@ -275,7 +275,7 @@ public class CodeGenManager {
             }
             if (mf.getStackSize() != 0) {
                 String op = canEncodeImm(-mf.getStackSize()) ? "add" : "sub";
-                MachineOperand v1 = canEncodeImm(-mf.getStackSize()) ? new MachineOperand(mf.getStackSize()) : new MachineOperand(-mf.getStackSize());
+                MachineOperand v1 = canEncodeImm(-mf.getStackSize()) ? new MachineOperand(-mf.getStackSize()) : new MachineOperand(mf.getStackSize());
                 if (canEncodeImm(mf.getStackSize()) || canEncodeImm(-mf.getStackSize())) {
                     arm += op;
                     arm += "\tsp, sp, " + v1.getName() + "\n";
