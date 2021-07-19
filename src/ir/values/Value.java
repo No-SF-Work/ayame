@@ -73,7 +73,7 @@ public abstract class Value {
     usesList.removeIf(use -> use.getUser() == usr && use.getOperandRank() == index);
   }
 
-  protected void removeUseByUser(User usr) {
+  public void removeUseByUser(User usr) {
     usesList.removeIf(use -> use.getUser() == (usr));
   }
 

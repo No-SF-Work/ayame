@@ -321,10 +321,8 @@ public class ArrayAliasAnalysis {
       for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
         Instruction inst = instNode.getVal();
         if (inst instanceof MemPhi) {
-          for (var i = 0; i < inst.getNumOP(); i++) {
-            inst.CoSetOperand(i, null);
-            inst.removeUsesOfOPs();
-          }
+          inst.CORemoveAllOperand();
+          inst.COReplaceAllUseWith(null);
         } else if (inst instanceof LoadInst) {
           LoadInst loadInst = (LoadInst) inst;
           if (loadInst.getNumOP() == 2) {
@@ -336,12 +334,14 @@ public class ArrayAliasAnalysis {
 
     for (INode<BasicBlock, Function> bbNode : function.getList_()) {
       BasicBlock bb = bbNode.getVal();
-      for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
+      for (var instNode = bb.getList().getEntry(); instNode != null; ) {
+        var tmp = instNode.getNext();
         Instruction inst = instNode.getVal();
         if (!(inst instanceof MemPhi)) {
           break;
         }
         instNode.removeSelf();
+        instNode = tmp;
       }
     }
   }

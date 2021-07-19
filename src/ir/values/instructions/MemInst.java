@@ -1,5 +1,6 @@
 package ir.values.instructions;
 
+import ir.Use;
 import ir.types.ArrayType;
 import ir.types.PointerType;
 import ir.types.Type;
@@ -113,9 +114,13 @@ public abstract class MemInst extends Instruction {
     }
 
     public void removeUseStore() {
-      if (numOP == 1) {
+      if (this.numOP == 1) {
+        return;
+      } else if (this.getUseStore() == null) {
+        this.numOP--;
         return;
       }
+      this.getUseStore().removeUseByUser(this);
       CoSetOperand(1, null);
       this.numOP--;
     }
@@ -367,6 +372,9 @@ public abstract class MemInst extends Instruction {
     public MemPhi(TAG_ tag, Type type, int numOP, Value array, BasicBlock parent) {
       super(tag, type, numOP);
       this.numOP = parent.getPredecessor_().size() + 1;
+      for (int i = 0; i < this.numOP; i++) {
+        this.getOperands().add(null);
+      }
       CoSetOperand(0, array); // operands[0]: array
       this.node.insertAtEntry(parent.getList());
     }

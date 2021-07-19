@@ -199,6 +199,9 @@ public class GVNGCM implements IRPass {
   }
 
   public void replace(Instruction inst, Value val) {
+    if (inst == val) {
+      return;
+    }
     valueTable.removeIf(pair -> pair.getFirst() == inst);
     inst.COReplaceAllUseWith(val);
     inst.removeUsesOfOPs();
@@ -220,6 +223,7 @@ public class GVNGCM implements IRPass {
     ArrayAliasAnalysis.run(func);
 
     runGCM(func);
+    ArrayAliasAnalysis.clear(func);
   }
 
   // TODO: use better algebraic simplification and unreachable code elimination
@@ -308,7 +312,7 @@ public class GVNGCM implements IRPass {
             Constant c = constantArray;
             while (!indexList.isEmpty()) {
               int index = indexList.pop();
-              c = ((ConstantArray)c).getConst_arr_().get(index);
+              c = ((ConstantArray) c).getConst_arr_().get(index);
             }
             assert c instanceof ConstantInt;
             replace(inst, c);
@@ -441,6 +445,7 @@ public class GVNGCM implements IRPass {
             for (Value value : ((Phi) userInst).getIncomingVals()) {
               if (value.getUsesList().contains(use)) {
                 userbb = userInst.getBB().getPredecessor_().get(idx);
+                lcabb = (lcabb == null) ? userbb : lca(lcabb, userbb);
               }
               idx++;
             }
