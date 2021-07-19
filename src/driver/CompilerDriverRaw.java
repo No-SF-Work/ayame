@@ -58,6 +58,7 @@ public class CompilerDriverRaw {
 
     try {
       Mylogger.init();
+      logger = Logger.getAnonymousLogger();
       CharStream input = CharStreams.fromFileName(source);
       logger.info(input.toString());
       if (true) {
