@@ -47,8 +47,6 @@ public class GVNGCM implements IRPass {
   }
 
   public void run(MyModule m) {
-    log.info("Running pass : GVNGCM");
-
     // TODO: usage of gvngcm
     for (INode<Function, MyModule> funcNode : m.__functions) {
       if (!funcNode.getVal().isBuiltin_()) {
@@ -213,7 +211,7 @@ public class GVNGCM implements IRPass {
   public void runGVNGCM(Function func) {
     // ArrayAliasAnalysis 几乎不可用
     ArrayAliasAnalysis.run(func);
-
+    log.info("GVMGCM: GVN for " + func.getName());
     runGVN(func);
 
     // clear MemorySSA, dead code elimination, compute MemorySSA
@@ -222,6 +220,7 @@ public class GVNGCM implements IRPass {
     dce.runDCE(func);
     ArrayAliasAnalysis.run(func);
 
+    log.info("GVMGCM: GCM for " + func.getName());
     runGCM(func);
     ArrayAliasAnalysis.clear(func);
   }
@@ -268,6 +267,8 @@ public class GVNGCM implements IRPass {
 
   public void runGVNOnInstruction(Instruction inst) {
     Value v = SimplifyInstruction.simplifyInstruction(inst);
+    // 后续通过跑多次 GVN 来找 BinaryInst 的不动点
+    // log.info("GVN optimizing instruction: " + inst.toString());
     if (!(v instanceof Instruction)) {
       replace(inst, v);
       return;
