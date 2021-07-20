@@ -139,10 +139,10 @@ public class ArrayAliasAnalysis {
         && isLocal(arr2))) {
       return arr1 == arr2;
     }
-    if (isGlobal(arr1) && isParam(arr2)) {
+    if (isGlobal(arr1) && isParam(arr2) && ((GlobalVariable) arr1).init instanceof ConstantArray) {
       return aliasGlobalParam(arr1, arr2);
     }
-    if (isParam(arr1) && isGlobal(arr2)) {
+    if (isParam(arr1) && isGlobal(arr2) && ((GlobalVariable) arr2).init instanceof ConstantArray) {
       return aliasGlobalParam(arr2, arr1);
     }
     return false;
