@@ -74,6 +74,8 @@ public abstract class TerminatorInst extends Instruction {
       sb.append(")");
       return sb.toString();
     }
+
+    public boolean hasAlias;
   }
 
   public static class BrInst extends TerminatorInst {

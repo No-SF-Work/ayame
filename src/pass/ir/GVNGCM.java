@@ -15,8 +15,10 @@ import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.LoadInst;
+import ir.values.instructions.MemInst.MemPhi;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.SimplifyInstruction;
@@ -202,7 +204,7 @@ public class GVNGCM implements IRPass {
     }
     valueTable.removeIf(pair -> pair.getFirst() == inst);
     inst.COReplaceAllUseWith(val);
-    inst.removeUsesOfOPs();
+    inst.CORemoveAllOperand();
     inst.node.removeSelf();
   }
 
@@ -440,7 +442,7 @@ public class GVNGCM implements IRPass {
         if (user instanceof Instruction) {
           Instruction userInst = (Instruction) user;
           scheduleLate(userInst, func);
-          BasicBlock userbb = null;
+          BasicBlock userbb = userInst.getBB();;
           if (userInst.tag == TAG_.Phi) {
             int idx = 0;
             for (Value value : ((Phi) userInst).getIncomingVals()) {
@@ -450,13 +452,22 @@ public class GVNGCM implements IRPass {
               }
               idx++;
             }
-          } else {
-            userbb = userInst.getBB();
           }
+          // FIXME maybe problem here
+          else if (userInst.tag == TAG_.MemPhi) {
+            int idx = 0;
+            for (Value value : ((MemPhi) userInst).getIncomingVals()) {
+              if (value.getUsesList().contains(use)) {
+                userbb = userInst.getBB().getPredecessor_().get(idx);
+                lcabb = (lcabb == null) ? userbb : lca(lcabb, userbb);
+              }
+              idx++;
+            }
+          }
+
           lcabb = (lcabb == null) ? userbb : lca(lcabb, userbb);
         }
       }
-
       // 在 schedule early 和 schedule late 找到的上下界中找到 loop depth 最小的基本块
       // 上界：指令当前位置，下界：lcabb
       BasicBlock bestbb = lcabb;
@@ -467,6 +478,7 @@ public class GVNGCM implements IRPass {
           bestbb = lcabb;
           bestbbLoopDepth = currLoopDepth;
         }
+        assert lcabb != null;
         lcabb = lcabb.getIdomer();
       }
       inst.node.removeSelf();
