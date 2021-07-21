@@ -185,8 +185,47 @@ public class BranchOptimization implements IRPass {
     return true;
   }
 
-  private boolean removeDeadBB(Function func) {
+  private boolean removePredBasicBlock(BasicBlock pred, BasicBlock succ) {
+    int[] predIndexArr = {succ.getPredecessor_().indexOf(pred)};
+    succ.getPredecessor_().remove(pred);
+
+    for (var instNode = succ.getList().getEntry(); instNode != null; ) {
+      var tmp = instNode.getNext();
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+
+      inst.CORemoveNOperand(predIndexArr);
+      // remove phi
+      if (inst.getNumOP() == 1) {
+        inst.COReplaceAllUseWith(inst.getOperands().get(0));
+        instNode.removeSelf();
+        inst.CORemoveAllOperand();
+      }
+      instNode = tmp;
+    }
     return true;
+  }
+
+  private boolean removeDeadBB(Function func) {
+    boolean completed = true;
+    for (var bbNode = func.getList_().getEntry().getNext(); bbNode != null; ) {
+      var tmp = bbNode.getNext();
+
+      var dead = bbNode.getVal();
+      if (dead.getPredecessor_() == null || dead.getPredecessor_().isEmpty()) {
+        for (var succ : bbNode.getVal().getSuccessor_()) {
+          removePredBasicBlock(dead, succ);
+        }
+        bbNode.removeSelf();
+        completed = false;
+      }
+
+      bbNode = tmp;
+    }
+
+    return completed;
   }
 
   private boolean mergeCondBr(Function func) {
@@ -214,32 +253,13 @@ public class BranchOptimization implements IRPass {
           completed = false;
         } else if (brInst.getOperands().get(0) instanceof ConstantInt) {
           var cond = (ConstantInt) (brInst.getOperands().get(0));
-          var targetBB = (BasicBlock) (brInst.getOperands().get(2 - cond.getVal()));
           var unreachBB = (BasicBlock) (brInst.getOperands().get(1 + cond.getVal()));
 
           int[] indexArr = {0, 1 + cond.getVal()};
           brInst.CORemoveNOperand(indexArr);
           bb.getSuccessor_().remove(unreachBB);
 
-          int[] unreachIndexArr = {unreachBB.getPredecessor_().indexOf(bb)};
-          unreachBB.getPredecessor_().remove(bb);
-          for (var instNode = unreachBB.getList().getEntry(); instNode != null; ) {
-            var tmp = instNode.getNext();
-            var inst = instNode.getVal();
-            if (!(inst instanceof Phi)) {
-              break;
-            }
-
-            inst.CORemoveNOperand(unreachIndexArr);
-            // remove phi
-            if (inst.getNumOP() == 1) {
-              inst.COReplaceAllUseWith(inst.getOperands().get(0));
-              instNode.removeSelf();
-              inst.CORemoveAllOperand();
-            }
-
-            instNode = tmp;
-          }
+          removePredBasicBlock(bb, unreachBB);
 
           completed = false;
         }
