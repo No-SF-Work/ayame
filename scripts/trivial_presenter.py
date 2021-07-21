@@ -10,6 +10,7 @@ class TrivialPresenter:
     def __init__(self, schemes, testcases):
         self.schemes = schemes
         self.testcases = testcases
+        self.wrong_cases = []
 
     def __diff(self, file1, file2):
         file1_lines = list(filter(lambda line: not(line == ""), map(lambda line: line.rstrip('\n'), open(file1).readlines())))
@@ -18,11 +19,11 @@ class TrivialPresenter:
 
     def present_single_testcase(self, testcase):
         Print_C.print_subheader(f"[Checking {testcase}]")
-
         for scheme in self.schemes:
             stdout = f"testcases/{testcase}.out"
             myout = f"build/output/{testcase}/{scheme}.out"
             if not self.__diff(stdout, myout):
+                self.wrong_cases.append(testcase)
                 Print_C.print_error("{testcase} WA")
                 Print_C.print_procedure("====== std ======")
                 print(list(filter(lambda line: not(line == ""), map(lambda line: line.rstrip('\n'), open(stdout).readlines()))))
@@ -39,4 +40,6 @@ class TrivialPresenter:
             self.present_single_testcase(testcase=testcase)
             print()
 
-        print()
+        Print_C.print_header(f"[[Wrong Cases ({len(self.wrong_cases)}):]]")
+        print(self.wrong_cases)
+

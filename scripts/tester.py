@@ -6,7 +6,8 @@ from pretty_print import Print_C
 
 def get_sy_testcases():
     filelist = []
-    not_file_list = ["063_sort_test3"]
+    #not_file_list = ["063_sort_test3", "10_break", "55_sort_test3", "62_long_code"]
+    not_file_list = []
     for file in os.listdir("testcases"):
         if os.path.splitext(file)[1] == ".sy" and not(os.path.splitext(file)[0] in not_file_list):
             filelist.append(os.path.splitext(file)[0])
@@ -44,8 +45,8 @@ class Tester:
 
     def test(self):
         Print_C.print_header(f"[TESTING {self.scheme}]")
-        #self.compile()
-        if (self.is_trivial):
+        self.compile()
+        if self.is_trivial:
             self.runner.run_kases = 1
         self.run()
         self.analyze()

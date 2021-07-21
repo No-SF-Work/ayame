@@ -44,6 +44,7 @@ class Runner:
             stdin_file = open(stdin, "r")
             if kase == 0:
                 p = subprocess.run(f"{bin}".split(), stdin=stdin_file, stdout=myout_file, stderr=log_file, bufsize=1)
+                subprocess.run(f"echo".split(), stdout=myout_file, bufsize=1)
                 subprocess.run(f"echo {p.returncode}".split(), stdout=myout_file, bufsize=1)
             else:
                 p = subprocess.run(f"{bin}".split(), stdin=stdin_file, stdout=null_file, stderr=null_file, bufsize=1)
@@ -51,6 +52,7 @@ class Runner:
         else:
             if kase == 0:
                 p = subprocess.run(f"{bin}".split(), stdout=myout_file, stderr=log_file, bufsize=1)
+                subprocess.run(f"echo".split(), stdout=myout_file, bufsize=1)
                 subprocess.run(f"echo {p.returncode}".split(), stdout=myout_file, bufsize=1)
             else:
                 p = subprocess.run(f"{bin}".split(), stdout=null_file, stderr=null_file, bufsize=1)

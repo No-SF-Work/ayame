@@ -42,10 +42,10 @@ public class PassManager {
     irPasses.add(new BBPredSucc());
     irPasses.add(new Mem2reg());
     //irPasses.add(new EmitLLVM());
-    irPasses.add(new BranchOptimization());
+    //irPasses.add(new BranchOptimization());
     irPasses.add(new InterproceduralAnalysis());
-    irPasses.add(new GVNGCM());
-    irPasses.add(new BranchOptimization());
+    //irPasses.add(new GVNGCM());
+    //irPasses.add(new BranchOptimization());
     irPasses.add(new DeadCodeEmit());
     irPasses.add(new EmitLLVM());
 
