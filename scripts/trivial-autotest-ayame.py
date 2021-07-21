@@ -11,7 +11,7 @@ ayame_scheme = {"scheme": "ayame_ayame", # generate ir only
                 "emit_llvm_ir": False}
 
 Print_C.print_header("[Removing old data...]\n\n")
-subprocess.run("rm -rf build/test_results/".split())
+#subprocess.run("rm -rf build/test_results/".split())
 subprocess.run("rm -rf build/output/".split())
 subprocess.run("rm -rf build/log/compile_log".split())
 subprocess.run("rm -rf build/log/run_log".split())

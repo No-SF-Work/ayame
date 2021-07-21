@@ -19,3 +19,7 @@ test.s
 *.ll
 test.sh
 !testcases/*
+*.class
+__pycache__
+.DS_Store
+build/
