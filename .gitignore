@@ -18,3 +18,4 @@ test.s
 *.in
 *.ll
 test.sh
+!testcases/*
