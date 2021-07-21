@@ -379,7 +379,7 @@ public class CodeGenManager {
         fIt = fList.iterator();
         while (fIt.hasNext()) {
             INode<Function, MyModule> fNode = fIt.next();
-            Function f = fNode.getVal();
+            f = fNode.getVal();
             mf = fMap.get(f);
             if (f.isBuiltin_()) {
                 continue;
