@@ -14,10 +14,11 @@ def get_sy_testcases():
 testcases = get_sy_testcases()
 
 class Tester:
-    def __init__(self, a_scheme):
+    def __init__(self, a_scheme, is_trivial):
         self.scheme = a_scheme["scheme"]
         self.frontend_instr = a_scheme["frontend_instr"]
         self.emit_llvm_ir = a_scheme["emit_llvm_ir"]
+        self.is_trivial = is_trivial
 
         self.compiler = Compiler(scheme=self.scheme, testcases=testcases)
         self.runner = Runner(scheme=self.scheme, testcases=testcases)
@@ -43,6 +44,8 @@ class Tester:
     def test(self):
         Print_C.print_header(f"[TESTING {self.scheme}]")
         self.compile()
+        if (self.is_trivial):
+            self.runner.run_kases = 1
         self.run()
         self.analyze()
         print()
