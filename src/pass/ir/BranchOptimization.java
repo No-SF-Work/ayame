@@ -45,7 +45,8 @@ public class BranchOptimization implements IRPass {
     while (true) {
       boolean completed = true;
 
-      completed = onlyOneUncondBr(func);
+      completed = removeUselessPhi(func);
+      completed &= onlyOneUncondBr(func);
       completed &= endWithUncondBr(func);
       completed &= removeDeadBB(func);
       completed &= mergeCondBr(func);
@@ -54,6 +55,32 @@ public class BranchOptimization implements IRPass {
         break;
       }
     }
+  }
+
+  private boolean removeUselessPhi(Function func) {
+    boolean completed = true;
+
+    for (var bbNode : func.getList_()) {
+      var bb = bbNode.getVal();
+      for (var instNode = bb.getList().getEntry(); instNode != null; ) {
+        var tmp = instNode.getNext();
+        var inst = instNode.getVal();
+        if (!(inst instanceof Phi)) {
+          break;
+        }
+
+        if (bb.getPredecessor_().size() == 1) {
+          assert inst.getNumOP() == 1;
+          inst.COReplaceAllUseWith(inst.getOperands().get(0));
+          instNode.removeSelf();
+          inst.CORemoveAllOperand();
+        }
+
+        instNode = tmp;
+      }
+    }
+
+    return completed;
   }
 
   private boolean onlyOneUncondBr(Function func) {
@@ -140,9 +167,12 @@ public class BranchOptimization implements IRPass {
         continueOptThisBB = false;
         Instruction brInst = bbNode.getVal().getList().getLast().getVal();
         if (brInst instanceof BrInst && brInst.getNumOP() == 1) {
-          continueOptThisBB = mergeBasicBlock(bb, (BasicBlock) brInst.getOperands().get(0));
-          if (continueOptThisBB) {
-            completed = false;
+          BasicBlock succ = (BasicBlock) brInst.getOperands().get(0);
+          if (!(succ.getList().getEntry().getVal() instanceof Phi)) {
+            continueOptThisBB = mergeBasicBlock(bb, (BasicBlock) brInst.getOperands().get(0));
+            if (continueOptThisBB) {
+              completed = false;
+            }
           }
         }
       }
