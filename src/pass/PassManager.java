@@ -25,10 +25,17 @@ public class PassManager {
     //  add("typeCheck");
     add("bbPredSucc");
     add("Mem2reg");
+<<<<<<< Updated upstream
     add("branchOptimization");
     add("emitllvm");
     add("interproceduralAnalysis");
     add("gvngcm");
+=======
+     add("branchOptimization");
+    add("emitllvm");
+      add("interproceduralAnalysis");
+      add("gvngcm");
+>>>>>>> Stashed changes
     add("deadcodeemit");
     add("RegAlloc");
     //  add("ListScheduling");
@@ -44,6 +51,7 @@ public class PassManager {
     //irPasses.add(new EmitLLVM());
     irPasses.add(new BranchOptimization());
     irPasses.add(new InterproceduralAnalysis());
+    irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new BranchOptimization());
     irPasses.add(new DeadCodeEmit());
