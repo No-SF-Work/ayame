@@ -386,6 +386,10 @@ public class SimplifyInstruction {
       rhs = ((GlobalVariable) rhs).init;
     }
 
+    Value c = foldConstant(inst.tag, lhs, rhs);
+    if (c != null) {
+      return c;
+    }
 
     return inst;
   }

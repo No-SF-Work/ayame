@@ -3,6 +3,7 @@ package pass.ir;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.values.BasicBlock;
+import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.Instruction;
@@ -208,6 +209,36 @@ public class BranchOptimization implements IRPass {
               targetBB.getPredecessor_().remove(i);
               break;
             }
+          }
+
+          completed = false;
+        } else if (brInst.getOperands().get(0) instanceof ConstantInt) {
+          var cond = (ConstantInt) (brInst.getOperands().get(0));
+          var targetBB = (BasicBlock) (brInst.getOperands().get(2 - cond.getVal()));
+          var unreachBB = (BasicBlock) (brInst.getOperands().get(1 + cond.getVal()));
+
+          int[] indexArr = {0, 1 + cond.getVal()};
+          brInst.CORemoveNOperand(indexArr);
+          bb.getSuccessor_().remove(unreachBB);
+
+          int[] unreachIndexArr = {unreachBB.getPredecessor_().indexOf(bb)};
+          unreachBB.getPredecessor_().remove(bb);
+          for (var instNode = unreachBB.getList().getEntry(); instNode != null; ) {
+            var tmp = instNode.getNext();
+            var inst = instNode.getVal();
+            if (!(inst instanceof Phi)) {
+              break;
+            }
+
+            inst.CORemoveNOperand(unreachIndexArr);
+            // remove phi
+            if (inst.getNumOP() == 1) {
+              inst.COReplaceAllUseWith(inst.getOperands().get(0));
+              instNode.removeSelf();
+              inst.CORemoveAllOperand();
+            }
+
+            instNode = tmp;
           }
 
           completed = false;
