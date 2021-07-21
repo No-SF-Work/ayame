@@ -1,5 +1,4 @@
 #!/bin/bash
-cd ..
 log_file="trivial-autotest-ayame.log"
 
 mkdir -p build/log
