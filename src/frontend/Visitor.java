@@ -1114,10 +1114,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }
       }
     } else {
+
       if (ctx.unaryExp() != null) {
         Value v;
         visit(ctx.unaryExp());
         var t = tmp_;
+        if (t.getType().isI1()) {
+          f.buildZext(t, curBB_);
+        }
         if (ctx.unaryOp().NOT() != null) {
           v = f.buildBinary(TAG_.Eq, t, CONST0, curBB_);
           tmp_ = v;
@@ -1211,8 +1215,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
         visit(ctx.unaryExp(i));
         var rhs = tmp_;
         //cast i1 value 2 i32
-        //llvm is a strong typed language
-
+        if (lhs.getType().isI1()) {
+          lhs = f.buildZext(lhs, curBB_);
+        }
+        if (rhs.getType().isI1()) {
+          rhs = f.buildZext(rhs, curBB_);
+        }
         if (ctx.mulOp(i - 1).MUL() != null) {
           lhs = f.buildBinary(TAG_.Mul, lhs, rhs, curBB_);
         }
@@ -1259,7 +1267,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
       for (int i = 1; i < ctx.mulExp().size(); i++) {
         visit(ctx.mulExp(i));
         var rhs = tmp_;
-
+        if (lhs.getType().isI1()) {
+          lhs = f.buildZext(lhs, curBB_);
+        }
+        if (rhs.getType().isI1()) {
+          rhs = f.buildZext(rhs, curBB_);
+        }
         if (ctx.addOp(i - 1).PLUS() != null) {
           lhs = f.buildBinary(TAG_.Add, lhs, rhs, curBB_);
         }
@@ -1283,17 +1296,18 @@ public class Visitor extends SysYBaseVisitor<Void> {
     for (int i = 1; i < ctx.addExp().size(); i++) {
       expInRel = false;
       visit(ctx.addExp(i));
+      var rhs = tmp_;
       if (ctx.relOp(i - 1).LE() != null) {
-        lhs = f.buildBinary(TAG_.Le, lhs, tmp_, curBB_);
+        lhs = f.buildBinary(TAG_.Le, lhs, rhs, curBB_);
       }
       if (ctx.relOp(i - 1).GE() != null) {
-        lhs = f.buildBinary(TAG_.Ge, lhs, tmp_, curBB_);
+        lhs = f.buildBinary(TAG_.Ge, lhs, rhs, curBB_);
       }
       if (ctx.relOp(i - 1).GT() != null) {
-        lhs = f.buildBinary(TAG_.Gt, lhs, tmp_, curBB_);
+        lhs = f.buildBinary(TAG_.Gt, lhs, rhs, curBB_);
       }
       if (ctx.relOp(i - 1).LT() != null) {
-        lhs = f.buildBinary(TAG_.Lt, lhs, tmp_, curBB_);
+        lhs = f.buildBinary(TAG_.Lt, lhs, rhs, curBB_);
       }
     }
     tmp_ = lhs;

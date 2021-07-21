@@ -424,7 +424,16 @@ public abstract class MemInst extends Instruction {
       this.CoSetOperand(0, val);
     }
 
-
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(this.getName())
+          .append(" = ")
+          .append("zext i1")
+          .append(operands.get(0).getName())
+          .append(" to i32");
+      return sb.toString();
+    }
   }
 
   public static class LoadDepInst extends MemInst {

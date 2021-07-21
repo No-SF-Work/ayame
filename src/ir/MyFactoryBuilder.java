@@ -22,6 +22,7 @@ import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.StoreInst;
+import ir.values.instructions.MemInst.ZextInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
@@ -318,4 +319,8 @@ public class MyFactoryBuilder {
     return new GEPInst(ptr, indices, next);
   }
 
+  //cast val to  i32 type (u only need i32 type)
+  public ZextInst buildZext(Value val, BasicBlock parent) {
+    return new ZextInst(val, getI32Ty(), parent);
+  }
 }
