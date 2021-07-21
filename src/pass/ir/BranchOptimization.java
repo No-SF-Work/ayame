@@ -9,9 +9,15 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst.BrInst;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.Mylogger;
+
+import javax.swing.plaf.basic.BasicCheckBoxMenuItemUI;
 
 public class BranchOptimization implements IRPass {
 
@@ -41,6 +47,7 @@ public class BranchOptimization implements IRPass {
       completed = onlyOneUncondBr(func);
       completed &= endWithUncondBr(func);
       completed &= removeDeadBB(func);
+      completed &= mergeCondBr(func);
 
       if (completed) {
         break;
@@ -179,5 +186,35 @@ public class BranchOptimization implements IRPass {
 
   private boolean removeDeadBB(Function func) {
     return true;
+  }
+
+  private boolean mergeCondBr(Function func) {
+    boolean completed = true;
+
+    for (var bbNode : func.getList_()) {
+      var bb = bbNode.getVal();
+      var brInst = bb.getList().getLast().getVal();
+      if (brInst instanceof BrInst && brInst.getNumOP() == 3) {
+        if (brInst.getOperands().get(1) == brInst.getOperands().get(2)) {
+          // targetBB 一定没有 phi
+          var targetBB = (BasicBlock) (brInst.getOperands().get(1));
+          int[] indexArr = {0, 1};
+          brInst.CORemoveNOperand(indexArr);
+
+          // successor 和 predecessor 各删一个，应该没问题
+          bb.getSuccessor_().remove(1);
+          for (int i = 0; i < targetBB.getPredecessor_().size(); i++) {
+            if (targetBB.getPredecessor_().get(i) == bb) {
+              targetBB.getPredecessor_().remove(i);
+              break;
+            }
+          }
+
+          completed = false;
+        }
+      }
+    }
+
+    return completed;
   }
 }
