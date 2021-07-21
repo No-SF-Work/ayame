@@ -7,4 +7,4 @@ A compiler for C-like language (called "SysY")  into ARMv7a asm, implemented wit
 
 
 ## Special Thank
-Special thank to  [@lynzyard](https://github.com/lynzrand) for designing the icon for Ayame.
+Special thank to  [@lynzrand](https://github.com/lynzrand) for designing the icon for Ayame.
