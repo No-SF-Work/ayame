@@ -15,8 +15,10 @@ import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.LoadInst;
+import ir.values.instructions.MemInst.MemPhi;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.SimplifyInstruction;
@@ -47,8 +49,6 @@ public class GVNGCM implements IRPass {
   }
 
   public void run(MyModule m) {
-    log.info("Running pass : GVNGCM");
-
     // TODO: usage of gvngcm
     for (INode<Function, MyModule> funcNode : m.__functions) {
       if (!funcNode.getVal().isBuiltin_()) {
@@ -204,7 +204,7 @@ public class GVNGCM implements IRPass {
     }
     valueTable.removeIf(pair -> pair.getFirst() == inst);
     inst.COReplaceAllUseWith(val);
-    inst.removeUsesOfOPs();
+    inst.CORemoveAllOperand();
     inst.node.removeSelf();
   }
 
@@ -213,7 +213,7 @@ public class GVNGCM implements IRPass {
   public void runGVNGCM(Function func) {
     // ArrayAliasAnalysis 几乎不可用
     ArrayAliasAnalysis.run(func);
-
+    log.info("GVMGCM: GVN for " + func.getName());
     runGVN(func);
 
     // clear MemorySSA, dead code elimination, compute MemorySSA
@@ -222,6 +222,7 @@ public class GVNGCM implements IRPass {
     dce.runDCE(func);
     ArrayAliasAnalysis.run(func);
 
+    log.info("GVMGCM: GCM for " + func.getName());
     runGCM(func);
     ArrayAliasAnalysis.clear(func);
   }
@@ -268,6 +269,8 @@ public class GVNGCM implements IRPass {
 
   public void runGVNOnInstruction(Instruction inst) {
     Value v = SimplifyInstruction.simplifyInstruction(inst);
+    // 后续通过跑多次 GVN 来找 BinaryInst 的不动点
+    // log.info("GVN optimizing instruction: " + inst.toString());
     if (!(v instanceof Instruction)) {
       replace(inst, v);
       return;
@@ -439,7 +442,7 @@ public class GVNGCM implements IRPass {
         if (user instanceof Instruction) {
           Instruction userInst = (Instruction) user;
           scheduleLate(userInst, func);
-          BasicBlock userbb = null;
+          BasicBlock userbb = userInst.getBB();;
           if (userInst.tag == TAG_.Phi) {
             int idx = 0;
             for (Value value : ((Phi) userInst).getIncomingVals()) {
@@ -449,13 +452,22 @@ public class GVNGCM implements IRPass {
               }
               idx++;
             }
-          } else {
-            userbb = userInst.getBB();
           }
+          // FIXME maybe problem here
+          else if (userInst.tag == TAG_.MemPhi) {
+            int idx = 0;
+            for (Value value : ((MemPhi) userInst).getIncomingVals()) {
+              if (value.getUsesList().contains(use)) {
+                userbb = userInst.getBB().getPredecessor_().get(idx);
+                lcabb = (lcabb == null) ? userbb : lca(lcabb, userbb);
+              }
+              idx++;
+            }
+          }
+
           lcabb = (lcabb == null) ? userbb : lca(lcabb, userbb);
         }
       }
-
       // 在 schedule early 和 schedule late 找到的上下界中找到 loop depth 最小的基本块
       // 上界：指令当前位置，下界：lcabb
       BasicBlock bestbb = lcabb;
@@ -466,6 +478,7 @@ public class GVNGCM implements IRPass {
           bestbb = lcabb;
           bestbbLoopDepth = currLoopDepth;
         }
+        assert lcabb != null;
         lcabb = lcabb.getIdomer();
       }
       inst.node.removeSelf();

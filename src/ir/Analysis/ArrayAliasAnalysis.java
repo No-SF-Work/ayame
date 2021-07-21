@@ -12,6 +12,7 @@ import ir.values.UndefValue;
 import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.*;
 import ir.values.instructions.TerminatorInst.CallInst;
 import java.util.ArrayList;
@@ -24,6 +25,8 @@ import util.IList.INode;
 public class ArrayAliasAnalysis {
 
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
+  private static ArrayList<ArrayDefUses> arrays = new ArrayList<>();
+  private static HashMap<Instruction, Boolean> hasAlias = new HashMap<>();
 
   private static class ArrayDefUses {
 
@@ -139,10 +142,10 @@ public class ArrayAliasAnalysis {
         && isLocal(arr2))) {
       return arr1 == arr2;
     }
-    if (isGlobal(arr1) && isParam(arr2)) {
+    if (isGlobal(arr1) && isParam(arr2) && ((GlobalVariable) arr1).init instanceof ConstantArray) {
       return aliasGlobalParam(arr1, arr2);
     }
-    if (isParam(arr1) && isGlobal(arr2)) {
+    if (isParam(arr1) && isGlobal(arr2) && ((GlobalVariable) arr2).init instanceof ConstantArray) {
       return aliasGlobalParam(arr2, arr1);
     }
     return false;
@@ -165,11 +168,7 @@ public class ArrayAliasAnalysis {
     return false;
   }
 
-  public static void run(Function function) {
-    DomInfo.computeDominanceInfo(function);
-    DomInfo.computeDominanceFrontier(function);
-
-    ArrayList<ArrayDefUses> arrays = new ArrayList<>();
+  public static void runLoadDependStore(Function function) {
     HashMap<Value, Integer> arraysLookup = new HashMap<>();
     ArrayList<ArrayList<BasicBlock>> defBlocks = new ArrayList<>();
 
@@ -211,12 +210,19 @@ public class ArrayAliasAnalysis {
             if (alias(array, getArrayValue(storeInst.getOperands().get(1)))) {
               arrayDefUse.defs.add(inst);
               defBlocks.get(index).add(bb);
+              storeInst.hasAlias = true;
+            } else {
+              storeInst.hasAlias = false;
             }
           } else if (inst.tag == TAG_.Call) {
             Function func = (Function) inst.getOperands().get(0);
-            if (func.isHasSideEffect() && callAlias(array, (CallInst) inst)) {
+            CallInst callInst = (CallInst) inst;
+            if (func.isHasSideEffect() && callAlias(array, callInst)) {
               arrayDefUse.defs.add(inst);
               defBlocks.get(index).add(bb);
+              callInst.hasAlias = true;
+            } else {
+              callInst.hasAlias = false;
             }
           }
         }
@@ -241,7 +247,8 @@ public class ArrayAliasAnalysis {
         for (BasicBlock y : bb.getDominanceFrontier()) {
           if (!y.isDirty()) {
             y.setDirty(true);
-            MemPhi memPhiInst = new MemPhi(TAG_.MemPhi, factory.getI32Ty(), 0, array, y);
+            MemPhi memPhiInst = new MemPhi(TAG_.MemPhi, factory.getVoidTy(),
+                y.getPredecessor_().size() + 1, array, y);
             phiToArrayMap.put(memPhiInst, index);
             if (!defBlocks.get(index).contains(y)) {
               W.add(y);
@@ -311,8 +318,150 @@ public class ArrayAliasAnalysis {
         renameDataStack.push(new RenameData(bb, data.bb, currValues));
       }
     }
+  }
 
-    // THU also builds `load` to `store` dependency, but I don't know if it is useful.
+  // avoid gcm breaks the dependence
+  public static void runStoreDependLoad(Function function) {
+    ArrayList<LoadInst> loads = new ArrayList<>();
+    HashMap<LoadInst, Integer> loadsLookup = new HashMap<>();
+//    ArrayList<ArrayList<BasicBlock>> defBlocks = new ArrayList<>();
+
+    // insert mem-phi-instructions
+    Queue<BasicBlock> W = new LinkedList<>();
+    HashMap<MemPhi, Integer> phiToLoadMap = new HashMap<>();
+    for (ArrayDefUses array : arrays) {
+      for (LoadInst loadInst : array.loads) {
+        loads.add(loadInst);
+        int index = loads.size() - 1;
+        loadsLookup.put(loadInst, index);
+
+        for (INode<BasicBlock, Function> bbNode : function.getList_()) {
+          bbNode.getVal().setDirty(false);
+        }
+
+        W.add(loadInst.getBB());
+
+        while (!W.isEmpty()) {
+          BasicBlock bb = W.remove();
+          for (BasicBlock y : bb.getDominanceFrontier()) {
+            if (!y.isDirty()) {
+              y.setDirty(true);
+              MemPhi memPhiInst = new MemPhi(TAG_.MemPhi, factory.getVoidTy(),
+                  y.getPredecessor_().size() + 1, new UndefValue(), y);
+              phiToLoadMap.put(memPhiInst, index);
+              W.add(y);
+            }
+          }
+        }
+      }
+    }
+
+    // variable renaming (construct LoadDepInst)
+    ArrayList<Value> values = new ArrayList<>();
+    for (int i = 0; i < loads.size(); i++) {
+      values.add(new UndefValue());
+    }
+    for (INode<BasicBlock, Function> bbNode : function.getList_()) {
+      bbNode.getVal().setDirty(false);
+    }
+
+    Stack<RenameData> renameDataStack = new Stack<>();
+    renameDataStack.push(new RenameData(function.getList_().getEntry().getVal(), null, values));
+    while (!renameDataStack.isEmpty()) {
+      RenameData data = renameDataStack.pop();
+      ArrayList<Value> currValues = new ArrayList<>(data.values);
+
+      // mem-phi update incoming values
+      for (var instNode : data.bb.getList()) {
+        var inst = instNode.getVal();
+        if (inst.tag != TAG_.MemPhi) {
+          break;
+        }
+
+        MemPhi memPhiInst = (MemPhi) inst;
+        Integer index = phiToLoadMap.get(memPhiInst);
+        if (index != null) {
+          int predIndex = data.bb.getPredecessor_().indexOf(data.pred);
+          memPhiInst.setIncomingVals(predIndex, data.values.get(index));
+        }
+      }
+
+      if (data.bb.isDirty()) {
+        continue;
+      }
+      data.bb.setDirty(true);
+
+      // construct LoadDepInst
+      for (var instNode = data.bb.getList().getEntry(); instNode != null; ) {
+        var tmp = instNode.getNext();
+        var inst = instNode.getVal();
+        switch (inst.tag) {
+          case MemPhi -> {
+            MemPhi memPhiInst = (MemPhi) inst;
+            Integer index = phiToLoadMap.get(memPhiInst);
+            if (index != null) {
+              currValues.set(index, memPhiInst);
+            }
+          }
+          case Load -> {
+            LoadInst loadInst = (LoadInst) inst;
+            currValues.set(loadsLookup.get(loadInst), loadInst);
+          }
+          case Store, Call -> {
+            if ((inst.tag == TAG_.Store && ((StoreInst) inst).hasAlias) || (inst.tag == TAG_.Call
+                && ((CallInst) inst).hasAlias)) {
+              for (var memInst : currValues) {
+                if (!memInst.getName().equals("UndefValue")) {
+                  LoadDepInst loadDepInst = new LoadDepInst(inst, TAG_.LoadDep, factory.getVoidTy(),
+                      1);
+                  loadDepInst.setLoadDep(memInst);
+                }
+              }
+            }
+          }
+        }
+        instNode = tmp;
+      }
+
+      for (BasicBlock bb : data.bb.getSuccessor_()) {
+        renameDataStack.push(new RenameData(bb, data.bb, currValues));
+      }
+    }
+
+    while (true) {
+      boolean clear = true;
+      for (var bbNode : function.getList_()) {
+        var bb = bbNode.getVal();
+        for (var instNode = bb.getList().getEntry(); instNode != null; ) {
+          var tmp = instNode.getNext();
+          var inst = instNode.getVal();
+
+          if (!(inst instanceof MemPhi)) {
+            break;
+          }
+          MemPhi memPhi = (MemPhi) inst;
+          if (memPhi.getUsesList().isEmpty() || memPhi.getUsesList().get(0) == null) {
+            memPhi.node.removeSelf();
+            memPhi.CORemoveAllOperand();
+            clear = false;
+          }
+
+          instNode = tmp;
+        }
+      }
+      if (clear) {
+        break;
+      }
+    }
+  }
+
+  public static void run(Function function) {
+    DomInfo.computeDominanceInfo(function);
+    DomInfo.computeDominanceFrontier(function);
+
+    arrays = new ArrayList<>();
+    runLoadDependStore(function);
+    runStoreDependLoad(function);
   }
 
   public static void clear(Function function) {
@@ -320,13 +469,16 @@ public class ArrayAliasAnalysis {
       BasicBlock bb = bbNode.getVal();
       for (INode<Instruction, BasicBlock> instNode : bb.getList()) {
         Instruction inst = instNode.getVal();
-        if (inst instanceof MemPhi) {
-          inst.CORemoveAllOperand();
-          inst.COReplaceAllUseWith(null);
-        } else if (inst instanceof LoadInst) {
-          LoadInst loadInst = (LoadInst) inst;
-          if (loadInst.getNumOP() == 2) {
-            loadInst.removeUseStore();
+        switch (inst.tag) {
+          case MemPhi, LoadDep -> {
+            inst.CORemoveAllOperand();
+            inst.COReplaceAllUseWith(null);
+          }
+          case Load -> {
+            LoadInst loadInst = (LoadInst) inst;
+            if (loadInst.getNumOP() == 2) {
+              loadInst.removeUseStore();
+            }
           }
         }
       }

@@ -7,8 +7,11 @@ import ir.types.Type;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.GlobalVariable;
+import ir.values.UndefValue;
 import ir.values.Value;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.stream.Collectors;
 
 public abstract class MemInst extends Instruction {
 
@@ -103,9 +106,14 @@ public abstract class MemInst extends Instruction {
 
     public void setUseStore(Value store) {
       if (this.numOP == 1) {
-        COaddOperand(store);
+        if (this.operands.size() == 1) {
+          this.COaddOperand(store);
+        } else {
+          this.numOP++;
+          this.CoSetOperand(1, store);
+        }
       } else {
-        CoSetOperand(1, store);
+        this.CoSetOperand(1, store);
       }
     }
 
@@ -122,6 +130,7 @@ public abstract class MemInst extends Instruction {
       }
       this.getUseStore().removeUseByUser(this);
       CoSetOperand(1, null);
+      this.operands.remove(1);
       this.numOP--;
     }
 
@@ -192,6 +201,8 @@ public abstract class MemInst extends Instruction {
     public Value getPointer() {
       return this.getOperands().get(1);
     }
+
+    public boolean hasAlias;
   }
 
   public static class GEPInst extends MemInst {
@@ -371,11 +382,10 @@ public abstract class MemInst extends Instruction {
     // MemPhi 指令需要放在基本块最前面
     public MemPhi(TAG_ tag, Type type, int numOP, Value array, BasicBlock parent) {
       super(tag, type, numOP);
-      this.numOP = parent.getPredecessor_().size() + 1;
-      for (int i = 0; i < this.numOP; i++) {
-        this.getOperands().add(null);
-      }
       CoSetOperand(0, array); // operands[0]: array
+      for (int i = 1; i < this.numOP; i++) {
+        this.getOperands().add(new UndefValue());
+      }
       this.node.insertAtEntry(parent.getList());
     }
 
@@ -384,6 +394,9 @@ public abstract class MemInst extends Instruction {
       CoSetOperand(index + 1, val);
     }
 
+    public ArrayList<Value> getIncomingVals() {
+      return this.operands.stream().skip(1).collect(Collectors.toCollection(ArrayList::new));
+    }
   }
 
   public static class ZextInst extends MemInst {
@@ -407,6 +420,23 @@ public abstract class MemInst extends Instruction {
     }
 
 
+  }
+
+  public static class LoadDepInst extends MemInst {
+
+    public LoadDepInst(Instruction next, TAG_ tag, Type type, int numOP) {
+      super(next, tag, type, numOP);
+    }
+
+    public void setLoadDep(Value val) {
+      this.numOP = 1;
+      this.CoSetOperand(0, val);
+    }
+
+    public void removeLoadDep() {
+      this.CORemoveAllOperand();
+      this.COReplaceAllUseWith(null);
+    }
   }
 
   public boolean isGEP() {
