@@ -634,7 +634,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             dimList.add(CONST0);//第一个置空
             for (int j = 0; j < p.exp().size(); j++) {
               usingInt_ = true;
-              visit(p.exp(i));
+              visit(p.exp(j));
               usingInt_ = false;
               dimList.add(tmp_);
               type = f.getArrayTy(type, tmpInt_);
