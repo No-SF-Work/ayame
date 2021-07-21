@@ -429,7 +429,7 @@ public abstract class MemInst extends Instruction {
       StringBuilder sb = new StringBuilder();
       sb.append(this.getName())
           .append(" = ")
-          .append("zext i1")
+          .append("zext i1 ")
           .append(operands.get(0).getName())
           .append(" to i32");
       return sb.toString();

@@ -1123,6 +1123,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           f.buildZext(t, curBB_);
         }
         if (ctx.unaryOp().NOT() != null) {
+
           v = f.buildBinary(TAG_.Eq, t, CONST0, curBB_);
           tmp_ = v;
         }
@@ -1130,6 +1131,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
           //do nothing
         }
         if (ctx.unaryOp().MINUS() != null) {
+          if (t.getType().isI1()) {
+            t = f.buildZext(t, curBB_);
+          }
           v = f.buildBinary(TAG_.Sub, CONST0, t, curBB_);
           tmp_ = v;
         }
