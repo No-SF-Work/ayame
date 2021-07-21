@@ -643,6 +643,7 @@ public class CodeGenManager {
                         MCBinary mul = new MCBinary(MachineCode.TAG.Mul, mb);
                         mul.setLhs(lhs);
                         mul.setRhs(rhs);
+                        mul.setDst(analyzeValue(ir,mb,true));
                     } else if (ir instanceof BinaryInst && (((BinaryInst) ir).isSub() || ((BinaryInst) ir).isAdd())) {
                         boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                         boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
