@@ -18,6 +18,12 @@ public class SimplifyInstruction {
       case Sub -> simplifySubInst(instruction, true);
       case Mul -> simplifyMulInst(instruction, true);
       case Div -> simplifyDivInst(instruction, true);
+      case Lt -> simplifyLtInst(instruction, true);
+      case Le -> simplifyLeInst(instruction, true);
+      case Ge -> simplifyGeInst(instruction, true);
+      case Gt -> simplifyGtInst(instruction, true);
+      case Eq -> simplifyEqInst(instruction, true);
+      case Ne -> simplifyNeInst(instruction, true);
       case And -> simplifyAndInst(instruction, true);
       case Or -> simplifyOrInst(instruction, true);
       case GEP -> simplifyGEPInst(instruction, true);
@@ -365,6 +371,120 @@ public class SimplifyInstruction {
 
     if (!canRecur) {
       return inst;
+    }
+
+    return inst;
+  }
+
+  public static Value simplifyLtInst(Instruction inst, boolean canRecur) {
+    Value lhs = inst.getOperands().get(0);
+    Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
+
+
+    return inst;
+  }
+
+  public static Value simplifyLeInst(Instruction inst, boolean canRecur) {
+    Value lhs = inst.getOperands().get(0);
+    Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
+
+    Value c = foldConstant(inst.tag, lhs, rhs);
+    if (c != null) {
+      return c;
+    }
+
+    return inst;
+  }
+
+  public static Value simplifyGeInst(Instruction inst, boolean canRecur) {
+    Value lhs = inst.getOperands().get(0);
+    Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
+
+    Value c = foldConstant(inst.tag, lhs, rhs);
+    if (c != null) {
+      return c;
+    }
+
+    return inst;
+  }
+
+  public static Value simplifyGtInst(Instruction inst, boolean canRecur) {
+    Value lhs = inst.getOperands().get(0);
+    Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
+
+    Value c = foldConstant(inst.tag, lhs, rhs);
+    if (c != null) {
+      return c;
+    }
+
+    return inst;
+  }
+
+  public static Value simplifyEqInst(Instruction inst, boolean canRecur) {
+    Value lhs = inst.getOperands().get(0);
+    Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
+
+    Value c = foldConstant(inst.tag, lhs, rhs);
+    if (c != null) {
+      return c;
+    }
+
+    // lhs == rhs -> 1
+    if (lhs.equals(rhs)) {
+      return ConstantInt.newOne(factory.getI1Ty(), 1);
+    }
+
+    return inst;
+  }
+
+  public static Value simplifyNeInst(Instruction inst, boolean canRecur) {
+    Value lhs = inst.getOperands().get(0);
+    Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
+
+    Value c = foldConstant(inst.tag, lhs, rhs);
+    if (c != null) {
+      return c;
+    }
+
+    // lhs == rhs -> 0
+    if (lhs.equals(rhs)) {
+      return ConstantInt.newOne(factory.getI1Ty(), 0);
     }
 
     return inst;
