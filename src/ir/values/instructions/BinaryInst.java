@@ -179,12 +179,12 @@ public class BinaryInst extends Instruction {
           case Rsb -> "rsb  i32 ";
           case Mul -> "mul  i32 ";
           case Div -> "sdiv  i32 ";
-          case Lt -> "icmp slt i32 ";
-          case Le -> "icmp sle i32 ";
-          case Ge -> "icmp sge i32 ";
-          case Gt -> "icmp sgt i32 ";
-          case Eq -> "icmp eq i32 ";
-          case Ne -> "icmp ne i32 ";
+          case Lt -> "icmp slt " + this.getOperands().get(0).getType() + " ";
+          case Le -> "icmp sle " + this.getOperands().get(0).getType() + " ";
+          case Ge -> "icmp sge " + this.getOperands().get(0).getType() + " ";
+          case Gt -> "icmp sgt " + this.getOperands().get(0).getType() + " ";
+          case Eq -> "icmp eq " + this.getOperands().get(0).getType() + " ";
+          case Ne -> "icmp ne  " + this.getOperands().get(0).getType() + " ";
           case And -> "";
           case Or -> "";//todo and and or
           default -> "";
