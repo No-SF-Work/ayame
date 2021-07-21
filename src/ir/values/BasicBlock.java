@@ -57,6 +57,10 @@ public class BasicBlock extends Value {
     return successor_;
   }
 
+  public void setSuccessor_(ArrayList<BasicBlock> successor_) {
+    this.successor_ = successor_;
+  }
+
   public IList<Instruction, BasicBlock> getList() {
     return list_;
   }

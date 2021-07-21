@@ -356,6 +356,11 @@ public abstract class MemInst extends Instruction {
       CoSetOperand(index, val);
     }
 
+    public void removeIncomingVals(int index) {
+      int[] indexArr = {index};
+      this.CORemoveNOperand(indexArr);
+    }
+
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
