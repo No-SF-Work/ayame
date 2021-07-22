@@ -37,15 +37,11 @@ public class CompilerDriver {
   private static Logger logger;
 
   public static void setConfig(Config config, Namespace res) throws IOException {
-    config.isIRMode = res.get("ir");
+    config.isIRMode = res.get("emit");
     config.isDebugMode = res.get("debug");
     config.isOutPutMode = res.get("output");
     //only severe level msg will be recorded in console if not in debug mode
-    ConsoleHandler ch = new ConsoleHandler();
-    FileHandler fh = new FileHandler("record.log");
-    config.isDebugMode = true;//todo 默认打开方便debug记得release后删除
     Mylogger.loadLogConfig(config.isDebugMode);
-
   }
 
   public static void run(String[] args) {
@@ -58,7 +54,7 @@ public class CompilerDriver {
     argParser.addArgument("-S", "--source").required(true).action(Arguments.storeTrue());
     argParser.addArgument("-o", "--output").action(Arguments.storeTrue())
         .help("write asm to output-file");
-    argParser.addArgument("-f", "--ir").action(Arguments.storeTrue())
+    argParser.addArgument("-e", "--emit").action(Arguments.storeTrue())
         .help("write llvm ir to debug_{$source file name}.ll");
     argParser.addArgument("-d", "--debug").action(Arguments.storeTrue())
         .help("use debug mode,which will record actions in current path");
@@ -75,7 +71,7 @@ public class CompilerDriver {
       String target = res.get("target");
       CharStream input = CharStreams.fromFileName(source);
 
-      logger.info("Lex begin");
+      logger.info("Lexing");
       SysYLexer lexer = new SysYLexer(input);
       lexer.addErrorListener(new BaseErrorListener() {
         @Override
@@ -85,35 +81,31 @@ public class CompilerDriver {
         }
       });
       CommonTokenStream tokens = new CommonTokenStream(lexer);
-      logger.info("Lex finished");
 
-      logger.info("parse begin");
       SysYParser parser = new SysYParser(tokens);
       parser.setErrorHandler(new BailErrorStrategy());
       ParseTree tree = parser.program();
-      logger.info("parse finished");
-      logger.info("IR program generating");
       MyModule.getInstance().init();
+      logger.info("generating MIR");
       Visitor visitor = new Visitor(/* OptionsTable table */);
       visitor.visit(tree);
-      logger.info("IR program generated");
-
-      //todo convert to ssa
+      logger.info("running MIR passes");
       pm.runIRPasses(MyModule.getInstance());
-      //todo convert to LIR
-      if (config.isIRMode) {//做到可以同时使用 -o -f 指令，-o的文件进行底层的优化，-f的文件只进行中高层的优化
-        //   pm.addpass(/* llvm ir generate */);
+      if (config.isIRMode) {
+        return;
       }
       CodeGenManager cgm = CodeGenManager.getInstance();
       cgm.load(MyModule.getInstance());
+      logger.info("generating MachineCode");
       cgm.MachineCodeGeneration();
+      logger.info("running MC passes");
       pm.runMCPasses(CodeGenManager.getInstance());
-      //todo output
-
-      File f = new File(target);
-      FileWriter fw = new FileWriter(f);
-      fw.append(cgm.genARM());
-      fw.close();
+      if (config.isOutPutMode) {
+        File f = new File(target);
+        FileWriter fw = new FileWriter(f);
+        fw.append(cgm.genARM());
+        fw.close();
+      }
     } catch (HelpScreenException e) {
       //当使用 -h指令时抛出该异常，catch后直接退出。
     } catch (ArgumentParserException e) {
