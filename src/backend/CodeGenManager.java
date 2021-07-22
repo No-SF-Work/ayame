@@ -528,6 +528,7 @@ public class CodeGenManager {
             for (bIt = bList.iterator(); bIt.hasNext(); ) {
                 BasicBlock bb = bIt.next().getVal();
                 MachineBlock mb = bMap.get(bb);
+                MCComment bc=new MCComment("bb:"+bb.getName(),mb);
                 for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
                     Instruction ir = iIt.next().getVal();
                     MCComment co = new MCComment(ir.toString(), mb);
@@ -684,10 +685,16 @@ public class CodeGenManager {
                             CondType cond =dealCond((BinaryInst) (ir.getOperands().get(0)),mb,false);
                             MachineCode br = new MCBranch(mb);
                             ((MCBranch) br).setCond(cond);
+                            int trueT=1;
+                            int falseT=2;
+                            if(cond!=getCond((BinaryInst) (ir.getOperands().get(0)))){
+                                trueT=2;
+                                falseT=1;
+                            }
                             //set trueblock to branch target
-                            ((MCBranch) br).setTarget(bMap.get(ir.getOperands().get(1)));
-                            mb.setFalseSucc(bMap.get(ir.getOperands().get(2)));
-                            mb.setTrueSucc(bMap.get(ir.getOperands().get(1)));
+                            ((MCBranch) br).setTarget(bMap.get(ir.getOperands().get(trueT)));
+                            mb.setFalseSucc(bMap.get(ir.getOperands().get(falseT)));
+                            mb.setTrueSucc(bMap.get(ir.getOperands().get(trueT)));
                         } else {
                             assert (ir.getNumOP() == 1);
                             //如果只有一个后继块，那么此跳转指令就是废的

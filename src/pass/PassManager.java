@@ -2,8 +2,10 @@ package pass;
 
 import backend.CodeGenManager;
 import ir.MyModule;
+
 import java.util.ArrayList;
 import java.util.logging.Logger;
+
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
 import pass.ir.BBPredSucc;
