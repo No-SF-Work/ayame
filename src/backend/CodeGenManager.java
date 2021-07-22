@@ -136,6 +136,9 @@ public class CodeGenManager {
                 CondType cond = mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
                 ((MCBranch) mb.getmclist().getLast().getVal()).setTarget(mb.getTrueSucc());
+                Pair<MachineBlock,MachineBlock> pair=truePair;
+                truePair=falsePair;
+                falsePair=pair;
             }
             //处理True后继
             if (waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()) {
