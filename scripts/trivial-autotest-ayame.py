@@ -25,7 +25,7 @@ all_schemes = [ayame_ayame_scheme, ayame_llvm_scheme]
 testers = []
 
 for scheme in all_schemes:
-    tester = Tester(scheme)
+    tester = Tester(scheme, is_trivial=True)
     testers.append(tester)
     tester.test()
 
