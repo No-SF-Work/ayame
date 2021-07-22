@@ -957,7 +957,9 @@ public class CodeGenManager {
                     }else if(ir instanceof MemInst.ZextInst){
                         MachineOperand dst=analyzeValue(ir,mb,true);
                         MachineOperand rhs=analyzeValue(ir.getOperands().get(0),mb,true);
-                        dealCond((BinaryInst) ir.getOperands().get(0),mb,true);
+                        if(!(ir.getOperands().get(0) instanceof Constants.ConstantInt)){
+                            dealCond((BinaryInst) (ir.getOperands().get(0)),mb,true);
+                        }
                         MCMove mv=new MCMove(mb);
                         mv.setRhs(rhs);
                         mv.setDst(dst);
