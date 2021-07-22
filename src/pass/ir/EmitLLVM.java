@@ -74,8 +74,7 @@ public class EmitLLVM implements IRPass {
       System.out.println(sb);
       fw.append(sb);
       fw.close();
-      log.info("successfully export out.ll, system exit");
-      System.exit(0);
+      log.info("successfully export out.ll");
     } catch (Exception e) {
       e.printStackTrace();
     }
