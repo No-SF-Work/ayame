@@ -5,8 +5,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.logging.Logger;
 import javax.swing.text.Style;
 import pass.Pass.IRPass;
+import util.Mylogger;
 
 public class EmitLLVM implements IRPass {
 
@@ -17,6 +19,7 @@ public class EmitLLVM implements IRPass {
 
   StringBuilder sb;
   private int vnc = 0;//value name counter
+  Logger log = Mylogger.getLogger(EmitLLVM.class);
 
   private String newName() {
     var v = String.valueOf(vnc);
@@ -68,8 +71,11 @@ public class EmitLLVM implements IRPass {
     });
     try {
       FileWriter fw = new FileWriter(new File("out.ll"));
+      System.out.println(sb);
       fw.append(sb);
       fw.close();
+      log.info("successfully export out.ll, system exit");
+      System.exit(0);
     } catch (Exception e) {
       e.printStackTrace();
     }
