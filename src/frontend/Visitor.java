@@ -137,7 +137,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
     VoidType voidType = f.getVoidTy();
     PointerType ptri32Type = f.getPointTy(i32Type);
 
-    log.warning("begin to build builtin functions");
     ArrayList<Type> params_empty = new ArrayList<>(Collections.emptyList());
     ArrayList<Type> params_int = new ArrayList<>(Collections.singletonList(i32Type));
     ArrayList<Type> params_array = new ArrayList<>(Collections.singletonList(ptri32Type));
@@ -361,7 +360,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitVarDef(VarDefContext ctx) {
     var varName = ctx.IDENT().getText();
-    log.info("visiting VarDef name:" + varName);
     if (scope_.top().get(varName) != null) {
       throw new SyntaxException("name already exists in cur scope");
     }
@@ -915,7 +913,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
     }
     //const value
     if (t.getType().isIntegerTy()) {
-      log.info("Lval inttype :" + name);
       tmp_ = t;
       return null;
     }
@@ -1062,7 +1059,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
     if (!usingInt_) {
       tmp_ = f.getConstantInt(tmpInt_);
     }//using int 会在visitConst里面处理
-    log.info("syntax constant num: " + tmpInt_);
     return null;
   }
 
