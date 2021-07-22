@@ -136,6 +136,9 @@ public class CodeGenManager {
                 CondType cond = mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
                 ((MCBranch) mb.getmclist().getLast().getVal()).setTarget(mb.getTrueSucc());
+                Pair<MachineBlock,MachineBlock> pair=truePair;
+                truePair=falsePair;
+                falsePair=pair;
             }
             //处理True后继
             if (waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()) {
@@ -957,7 +960,9 @@ public class CodeGenManager {
                     }else if(ir instanceof MemInst.ZextInst){
                         MachineOperand dst=analyzeValue(ir,mb,true);
                         MachineOperand rhs=analyzeValue(ir.getOperands().get(0),mb,true);
-                        dealCond((BinaryInst) ir.getOperands().get(0),mb,true);
+                        if(!(ir.getOperands().get(0) instanceof Constants.ConstantInt)){
+                            dealCond((BinaryInst) (ir.getOperands().get(0)),mb,true);
+                        }
                         MCMove mv=new MCMove(mb);
                         mv.setRhs(rhs);
                         mv.setDst(dst);
