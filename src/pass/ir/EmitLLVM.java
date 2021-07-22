@@ -67,6 +67,10 @@ public class EmitLLVM implements IRPass {
             }
         );
         sb.append("}\n");
+      }else {
+        sb.append("declare ")
+            .append(val)
+            .append("\n");
       }
     });
     try {
