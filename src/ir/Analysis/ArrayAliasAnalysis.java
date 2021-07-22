@@ -26,7 +26,6 @@ public class ArrayAliasAnalysis {
 
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
   private static ArrayList<ArrayDefUses> arrays = new ArrayList<>();
-  private static HashMap<Instruction, Boolean> hasAlias = new HashMap<>();
 
   private static class ArrayDefUses {
 
@@ -61,8 +60,12 @@ public class ArrayAliasAnalysis {
 
   // Use array as memory unit
   public static Value getArrayValue(Value pointer) {
-    while (pointer instanceof GEPInst) {
-      pointer = ((Instruction) pointer).getOperands().get(0);
+    while (pointer instanceof GEPInst || pointer instanceof LoadInst) {
+      if (pointer instanceof GEPInst) {
+        pointer = ((Instruction) pointer).getOperands().get(0);
+      } else {
+        pointer = ((LoadInst) pointer).getOperands().get(0);
+      }
     }
     // pointer should be an AllocaInst or GlobalVariable
     if (pointer instanceof AllocaInst || pointer instanceof GlobalVariable) {
