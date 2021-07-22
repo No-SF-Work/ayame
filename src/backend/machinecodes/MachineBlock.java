@@ -61,7 +61,7 @@ public class MachineBlock {
         this.mf=mf;
         node=new INode<>(this);
         node.setParent(mf.getmbList());
-        this.name=".__BB__"+((Integer)index).toString();
+        this.name=".__MB__"+((Integer)index).toString();
         index++;
     }
 
