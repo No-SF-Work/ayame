@@ -158,9 +158,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
         f.buildFunction("putarray", f.getFuncTy(voidType, params_int_and_array), true));
     scope_.put("putf", f.buildFunction("putf", f.getFuncTy(voidType, params_putf), true));
     scope_.put("starttime",
-        f.buildFunction("starttime", f.getFuncTy(voidType, params_empty), true));
+        f.buildFunction("_sysy_starttime", f.getFuncTy(voidType, params_empty), true));
     scope_
-        .put("stoptime", f.buildFunction("stoptime", f.getFuncTy(voidType, params_empty), true));
+        .put("stoptime", f.buildFunction("_sysy_stoptime", f.getFuncTy(voidType, params_empty), true));
 
     return super.visitProgram(ctx);
   }
