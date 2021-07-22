@@ -346,7 +346,11 @@ public class GVNGCM implements IRPass {
       }
       // TODO LLVM NewGVN 的额外优化：可以识别 phi(a + b, c + d) = phi(a, c) + phi(b, d)
     } else if (inst.tag == TAG_.Store) {
-      valueTable.add(new Pair<>(inst, inst));
+      // 避免替换掉 store pointer to pointer(pointer)
+      var val = inst.getOperands().get(0);
+      if (!val.getType().isPointerTy()) {
+        valueTable.add(new Pair<>(inst, inst));
+      }
     } else if (inst.tag == TAG_.Call && ((CallInst) inst).isPureCall()) {
       Value val = lookupOrAdd(simpInst);
       if (inst != val) {
@@ -442,7 +446,8 @@ public class GVNGCM implements IRPass {
         if (user instanceof Instruction) {
           Instruction userInst = (Instruction) user;
           scheduleLate(userInst, func);
-          BasicBlock userbb = userInst.getBB();;
+          BasicBlock userbb = userInst.getBB();
+          ;
           if (userInst.tag == TAG_.Phi) {
             int idx = 0;
             for (Value value : ((Phi) userInst).getIncomingVals()) {
