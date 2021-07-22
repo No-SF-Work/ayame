@@ -228,7 +228,7 @@ public class CodeGenManager {
                 mf.setUsedLr(true);
             }
         }
-        int regs = mf.getUsedSavedRegs().size() + (mf.isUsedLr() ? 1 : 0);
+        int regs = mf.getUsedSavedRegs().size() ;
         mf.getArgMoves().forEach(mv -> {
             assert (mv instanceof MCMove);
             assert (mv.getRhs().getState() == MachineOperand.state.imm);
