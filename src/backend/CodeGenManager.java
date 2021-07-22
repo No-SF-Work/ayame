@@ -605,6 +605,7 @@ public class CodeGenManager {
                         boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                         boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
                         MachineOperand lhs;
+                        MachineOperand rhs;
                         if (lhsIsConst || rhsIsConst) {
                             int imm;
                             if (lhsIsConst) {
@@ -637,10 +638,15 @@ public class CodeGenManager {
                                 add.setShift(ArmAddition.ShiftType.Lsl, log);
                                 continue;
                             }
+                            if (lhsIsConst) {
+                                rhs = analyzeNoImm(ir.getOperands().get(0), mb);
+                            } else {
+                                rhs = analyzeNoImm(ir.getOperands().get(1), mb);
+                            }
                         } else {
                             lhs = analyzeNoImm(ir.getOperands().get(0), mb);
+                            rhs = analyzeNoImm(ir.getOperands().get(1), mb);
                         }
-                        MachineOperand rhs = analyzeNoImm(ir.getOperands().get(0), mb);
                         MCBinary mul = new MCBinary(MachineCode.TAG.Mul, mb);
                         mul.setLhs(lhs);
                         mul.setRhs(rhs);
