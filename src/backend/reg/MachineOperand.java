@@ -1,6 +1,8 @@
 package backend.reg;
 
 public class MachineOperand {
+    public static MachineOperand zeroImm = new MachineOperand(0);
+
     public enum state{
         virtual,
         phy,

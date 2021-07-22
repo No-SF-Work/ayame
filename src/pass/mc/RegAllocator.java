@@ -182,10 +182,6 @@ public class RegAllocator implements MCPass {
 
     public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
-            // fixme
-//            var allocatable = IntStream.range(0, 15).filter(i -> i != 13)
-//                    .mapToObj(func::getPhyReg).collect(Collectors.toCollection(HashSet::new));
-
             var done = false;
 
             while (!done) {
@@ -207,7 +203,6 @@ public class RegAllocator implements MCPass {
                 var coalescedMoves = new HashSet<MCMove>();
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
-//                System.out.println(manager.genARM());
 
                 Map<MachineOperand, Integer> degree = IntStream.range(0, 16)
                         .mapToObj(func::getPhyReg)
@@ -328,10 +323,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable simplify = () -> {
-                    // todo: for debug
-//                    var tree = new ArrayList<>(simplifyWorklist);
                     var n = simplifyWorklist.iterator().next();
-//                    System.out.println(n.getName());
                     simplifyWorklist.remove(n);
                     selectStack.push(n);
                     getAdjacent.apply(n).forEach(decrementDegree);
@@ -386,7 +378,6 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable coalesce = () -> {
-                    // todo: debug
                     var m = worklistMoves.iterator().next();
                     var u = getAlias.apply(m.getDst());
                     var v = getAlias.apply(m.getRhs());
@@ -395,7 +386,6 @@ public class RegAllocator implements MCPass {
                         u = v;
                         v = temp;
                     }
-//                    System.out.println("coalesce: " + u.getName() + ", " + v.getName());
                     worklistMoves.remove(m);
                     if (u.equals(v)) {
                         coalescedMoves.add(m);
@@ -425,7 +415,7 @@ public class RegAllocator implements MCPass {
                         frozenMoves.add(m);
 
                         var v = m.getDst().equals(u) ? m.getRhs() : m.getDst();
-                        if (!moveRelated.apply(v) && degree.getOrDefault(v, 0) < K) { // fixme: maybe a bug?
+                        if (!moveRelated.apply(v) && degree.getOrDefault(v, 0) < K) {
                             freezeWorklist.remove(v);
                             simplifyWorklist.add(v);
                         }
@@ -433,7 +423,6 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable freeze = () -> {
-                    // todo: debug
                     var u = freezeWorklist.iterator().next();
                     freezeWorklist.remove(u);
                     simplifyWorklist.add(u);
@@ -442,7 +431,6 @@ public class RegAllocator implements MCPass {
 
                 Runnable selectSpill = () -> {
                     // todo: heuristic
-                    // todo: debug
                     var m = spillWorklist.iterator().next();
                     simplifyWorklist.add(m);
                     freezeMoves.accept(m);
@@ -474,7 +462,6 @@ public class RegAllocator implements MCPass {
                         if (okColors.isEmpty()) {
                             spilledNodes.add(n);
                         } else {
-                            // todo: debug
                             var color = okColors.iterator().next();
                             colored.put(n, func.getAllocatedReg(color));
                         }
