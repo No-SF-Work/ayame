@@ -1,6 +1,6 @@
 package backend.machinecodes;
 
-import backend.reg.VirtualReg;
+import backend.CodeGenManager;
 
 /**
  * Branch
@@ -9,7 +9,8 @@ public class MCBranch extends MachineCode{
 
     private MachineBlock target;
 
-    private ArmAddition.CondType cond = ArmAddition.CondType.Any;
+    private ArmAddition.CondType cond = ArmAddition.CondType.Any
+            ;
 
     public void setCond(ArmAddition.CondType cond){
         this.cond=cond;
@@ -21,7 +22,8 @@ public class MCBranch extends MachineCode{
 
     @Override
     public String toString(){
-        String res="\tb"+contString(cond)+"\t"+target.getName()+"\n";
+        String res="\tb"+ condString(cond)+"\t"+target.getName()+"\n";
+        CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
 

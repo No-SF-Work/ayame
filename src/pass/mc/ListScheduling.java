@@ -113,8 +113,8 @@ public class ListScheduling implements Pass.MCPass {
                 continue;
             }
 
-            var defs = instr.getDef();
-            var uses = instr.getUse();
+            var defs = instr.getMCDef();
+            var uses = instr.getMCUse();
             assert defs.stream().allMatch(def -> def instanceof PhyReg);
             assert uses.stream().allMatch(use -> use instanceof PhyReg);
             var curNode = new Node(instr);

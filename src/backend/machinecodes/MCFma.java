@@ -1,6 +1,6 @@
 package backend.machinecodes;
 
-import backend.reg.VirtualReg;
+import backend.CodeGenManager;
 import backend.reg.MachineOperand;
 
 /**
@@ -42,7 +42,8 @@ public class MCFma extends MachineCode {
     public String toString() {
         String res = sign ? "\tsm" : "\t";
         res += add ? "mla" : "mls";
-        res += contString(cond) + "\t" + dst.getName() + ",\t" + lhs.getName() + ",\t" + rhs.getName() + ",\t" + acc.getName() + "\n";
+        res += condString(cond) + "\t" + dst.getName() + ",\t" + lhs.getName() + ",\t" + rhs.getName() + ",\t" + acc.getName() + "\n";
+        CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
 

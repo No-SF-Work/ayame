@@ -27,14 +27,15 @@ public class PassManager {
     //  add("typeCheck");
     add("bbPredSucc");
     add("Mem2reg");
-    add("branchOptimization");
+//    add("branchOptimization");
     add("emitllvm");
     add("interproceduralAnalysis");
     add("gvngcm");
     add("deadcodeemit");
     add("functioninline");
-    //    add("RegAlloc");
+    add("RegAlloc");
     //  add("ListScheduling");
+    // add("Peephole");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
   };
@@ -53,7 +54,7 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());
-
+    mcPasses.add(new PeepholeOptimization());
   }
 
   public static PassManager getPassManager() {

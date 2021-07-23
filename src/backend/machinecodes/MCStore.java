@@ -1,8 +1,7 @@
 package backend.machinecodes;
 
+import backend.CodeGenManager;
 import backend.reg.MachineOperand;
-import backend.reg.PhyReg;
-import backend.reg.VirtualReg;
 
 public class MCStore extends MachineCode{
 
@@ -60,17 +59,9 @@ public class MCStore extends MachineCode{
 
     @Override
     public String toString(){
-        String res="\tstr"+contString(cond)+"\t"+data.getName()+",\t["+addr.getName();
+        String res="\tstr"+ condString(cond)+"\t"+data.getName()+",\t["+addr.getName();
         res+=",\t"+offset.getName()+getShift().toString()+"]\n";
-//        if(offset.getState()== MachineOperand.state.imm){
-//            if(offset.getImm()==0){
-//                res+="]\n";
-//            }else{
-//                res+=",\t#"+offset.getImm()+"]\n";
-//            }
-//        }else{
-//            res+=",\t"+offset.getName()+getShift().toString()+"]\n";
-//        }
+        CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
 

@@ -27,8 +27,7 @@ import java.util.logging.Logger;
 // TODO: 高级一点：对未修改的全局变量和数组的 Load 直接取值
 
 /**
- * GVN: 尽可能地消除冗余的变量，同时会做常量合并、代数化简
- * GCM：把指令调度到支配深度尽可能深的地方
+ * GVN: 尽可能地消除冗余的变量，同时会做常量合并、代数化简 GCM：把指令调度到支配深度尽可能深的地方
  */
 public class GVNGCM implements IRPass {
 
@@ -107,15 +106,17 @@ public class GVNGCM implements IRPass {
     for (var i = 0; i < sz; i++) {
       var key = valueTable.get(i).getFirst();
       var valueNumber = valueTable.get(i).getSecond();
-      if (key instanceof LoadInst && !loadInst.equals(key)) {
-        LoadInst keyInst = (LoadInst) key;
-        var allSame =
-            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
-        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
-        if (allSame) {
-          return valueNumber;
-        }
-      } else if (key instanceof StoreInst) {
+      // FIXME: side_effect WA here!
+//      if (key instanceof LoadInst && !loadInst.equals(key)) {
+//        LoadInst keyInst = (LoadInst) key;
+//        var allSame =
+//            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
+//        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
+//        if (allSame) {
+//          return valueNumber;
+//        }
+//      } else
+      if (key instanceof StoreInst) {
         StoreInst keyInst = (StoreInst) key;
         var allSame =
             lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());

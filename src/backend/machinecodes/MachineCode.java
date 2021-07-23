@@ -123,6 +123,24 @@ public class MachineCode {
         return regDef;
     }
 
+    public ArrayList<Reg> getMCDef() {
+        var defs = this.getDef();
+        var cond = new PhyReg(16);
+        if (this instanceof MCCompare || this instanceof MCCall) {
+            defs.add(cond);
+        }
+        return defs;
+    }
+
+    public ArrayList<Reg> getMCUse() {
+        var uses = this.getUse();
+        var cond = new PhyReg(16);
+        if (this.getCond() != ArmAddition.CondType.Any) {
+            uses.add(cond);
+        }
+        return uses;
+    }
+
 
 //    public void removeReg(VirtualReg vr){
 //        if(virtualUses.contains(vr)){
@@ -184,7 +202,7 @@ public class MachineCode {
         mb.addAtEndMC(node);
     }
 
-    public String contString(ArmAddition.CondType t) {
+    public String condString(ArmAddition.CondType t) {
         if (t == ArmAddition.CondType.Gt) {
             return "gt";
         } else if (t == ArmAddition.CondType.Ge) {

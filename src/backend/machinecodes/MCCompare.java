@@ -1,5 +1,6 @@
 package backend.machinecodes;
 
+import backend.CodeGenManager;
 import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 
@@ -41,6 +42,7 @@ public class MCCompare extends MachineCode{
     @Override
     public String toString(){
         String res="\tcmp\t"+lhs.getName()+",\t"+rhs.getName()+"\n";
+        CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
 
