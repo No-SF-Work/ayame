@@ -1,14 +1,14 @@
 package ir.values.instructions;
 
+import ir.Analysis.ArrayAliasAnalysis;
 import ir.types.FunctionType;
 import ir.types.Type;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Function;
 import ir.values.Value;
-import ir.values.instructions.MemInst.GEPInst;
+
 import java.util.ArrayList;
-import util.Pair;
 
 public abstract class TerminatorInst extends Instruction {
 
@@ -34,13 +34,13 @@ public abstract class TerminatorInst extends Instruction {
     }
 
     public boolean isPureCall() {
-      boolean ans;
       Function func = (Function) this.getOperands().get(0);
       if (func.isHasSideEffect() || func.isUsedGlobalVariable()) {
         return false;
       }
       for (Value val : this.getOperands()) {
-        if (val instanceof GEPInst) {
+        if (ArrayAliasAnalysis.getArrayValue(val) != null) {
+//        if (val instanceof MemInst.GEPInst) {
           return false;
         }
       }
