@@ -21,7 +21,7 @@ subprocess.run("rm -rf build/log/compile_log".split())
 subprocess.run("rm -rf build/log/run_log".split())
 subprocess.run("rm -rf build/log/test_result.log".split())
 
-all_schemes = [ayame_ayame_scheme, ayame_llvm_scheme]
+all_schemes = [ayame_ayame_scheme]#, ayame_llvm_scheme]
 testers = []
 
 for scheme in all_schemes:
