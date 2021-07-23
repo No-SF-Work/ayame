@@ -29,6 +29,7 @@ public class PhyReg extends Reg{
         nameMap.put(13,"sp");
         nameMap.put(14,"lr");
         nameMap.put(15,"r15");
+        nameMap.put(16,"cspr");
     }
 
     public void setAllocated() {
