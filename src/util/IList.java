@@ -142,6 +142,8 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
         father.numNode++;
         father.setEntry(this);
         father.setLast(this);
+        this.prev = null;
+        this.next = null;
       } else {
         insertAfter(father.getLast());
       }
