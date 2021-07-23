@@ -32,7 +32,7 @@ public class PassManager {
     add("interproceduralAnalysis");
     add("gvngcm");
     add("deadcodeemit");
-    add("RegAlloc");
+//    add("RegAlloc");
     //  add("ListScheduling");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
