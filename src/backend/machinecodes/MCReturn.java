@@ -16,19 +16,23 @@ public class MCReturn extends MachineCode{
         String res="";
         int stackSize=getMb().getMF().getStackSize();
         MachineFunction mf=getMb().getMF();
+        int mcNum=0;
         if(stackSize>0){
             String op = canEncodeImm(-stackSize) ? "sub" : "add";
             MachineOperand v1 = canEncodeImm(-stackSize) ? new MachineOperand(-stackSize) : new MachineOperand(stackSize);
             if(canEncodeImm(stackSize)||canEncodeImm(-stackSize)){
                 res+="\t"+op;
                 res+="\tsp, sp, "+v1.getName()+"\n";
+                mcNum+=1;
             }else{
                 MCMove mv=new MCMove();
                 mv.setRhs(v1);
                 mv.setDst(mf.getPhyReg("r5"));
                 res+=mv.toString();
                 res+=op+"\tsp,\tsp,\t"+mf.getPhyReg(5).getName()+"\n";
+                mcNum+=2;
             }
+
         }
         StringBuilder sb = new StringBuilder();
         mf.getUsedSavedRegs().forEach(phyReg -> {
@@ -43,8 +47,11 @@ public class MCReturn extends MachineCode{
             res += "\tpop\t{";
             res += s;
             res += "}\n";
+            mcNum+=1;
         }
         res+="\tbx\tlr\n";
+        mcNum+=1;
+        CodeGenManager.getInstance().addOffset(mcNum,res.length());
         return res;
     }
 

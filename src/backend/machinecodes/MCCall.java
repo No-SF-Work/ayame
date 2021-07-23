@@ -1,5 +1,7 @@
 package backend.machinecodes;
 
+import backend.CodeGenManager;
+
 public class MCCall extends MachineCode{
 
     public MachineFunction getFunc() {
@@ -15,6 +17,7 @@ public class MCCall extends MachineCode{
     @Override
     public String toString(){
         String res="\tbl\t"+func.getName()+"\n";
+        CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
 

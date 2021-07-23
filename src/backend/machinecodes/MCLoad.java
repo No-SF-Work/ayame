@@ -1,5 +1,6 @@
 package backend.machinecodes;
 
+import backend.CodeGenManager;
 import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 
@@ -52,19 +53,13 @@ public class MCLoad extends MachineCode{
     @Override
     public String toString(){
         if(addr instanceof VirtualReg && ((VirtualReg)addr).isGlobal()){
-            return "\tldr\t"+dst.getName()+",\t="+addr.getName()+"\n";
+            CodeGenManager.getInstance().setGlobalInfo(this);
+            return "";
+//            "\tldr\t"+dst.getName()+",\t="+addr.getName()+"\n"
         }
-        String res="\tldr"+contString(cond)+"\t"+dst.getName()+",\t["+addr.getName();
+        String res="\tldr"+ condString(cond)+"\t"+dst.getName()+",\t["+addr.getName();
         res+=",\t"+offset.getName()+getShift().toString()+"]\n";
-//        if(offset.getState()== MachineOperand.state.imm){
-//            if(offset.getImm()==0){
-//                res+="]\n";
-//            }else{
-//                res+=",\t#"+offset.getImm()+"]\n";
-//            }
-//        }else{
-//            res+=",\t"+offset.getName()+getShift().toString()+"]\n";
-//        }
+        CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
 

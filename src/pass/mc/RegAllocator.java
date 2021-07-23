@@ -130,12 +130,7 @@ public class RegAllocator implements MCPass {
             if (fmaInstr.getAcc().equals(origin)) {
                 fmaInstr.setAcc(target);
             }
-        } else if (instr instanceof MCGlobal) {
-            var globalInstr = (MCGlobal) instr;
-            if (globalInstr.getDst().equals(origin)) {
-                globalInstr.setDst(target);
-            }
-        } else if (instr instanceof MCJump) {
+        } else if  (instr instanceof MCJump) {
         } else if (instr instanceof MCLoad) {
             var loadInstr = (MCLoad) instr;
             if (loadInstr.getAddr().equals(origin)) {

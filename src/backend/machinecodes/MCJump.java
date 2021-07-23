@@ -1,5 +1,7 @@
 package backend.machinecodes;
 
+import backend.CodeGenManager;
+
 /**
  * Branch
  */
@@ -18,6 +20,7 @@ public class MCJump extends MachineCode{
     @Override
     public String toString(){
         String res="\tb\t"+target.getName()+"\n";
+        CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
 

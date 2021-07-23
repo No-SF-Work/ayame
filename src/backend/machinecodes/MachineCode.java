@@ -202,7 +202,7 @@ public class MachineCode {
         mb.addAtEndMC(node);
     }
 
-    public String contString(ArmAddition.CondType t) {
+    public String condString(ArmAddition.CondType t) {
         if (t == ArmAddition.CondType.Gt) {
             return "gt";
         } else if (t == ArmAddition.CondType.Ge) {

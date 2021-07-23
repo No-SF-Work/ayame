@@ -28,8 +28,12 @@ public class PhyReg extends Reg{
         nameMap.put(12,"r12");
         nameMap.put(13,"sp");
         nameMap.put(14,"lr");
+<<<<<<< Updated upstream
         nameMap.put(15,"r15");
         nameMap.put(16,"cspr");
+=======
+        nameMap.put(15,"pc");
+>>>>>>> Stashed changes
     }
 
     public void setAllocated() {

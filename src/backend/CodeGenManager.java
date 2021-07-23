@@ -20,7 +20,6 @@ import util.Mylogger;
 import backend.machinecodes.ArmAddition.CondType;
 import util.Pair;
 
-import javax.swing.*;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -136,9 +135,9 @@ public class CodeGenManager {
                 CondType cond = mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
                 ((MCBranch) mb.getmclist().getLast().getVal()).setTarget(mb.getTrueSucc());
-                Pair<MachineBlock,MachineBlock> pair=truePair;
-                truePair=falsePair;
-                falsePair=pair;
+                Pair<MachineBlock, MachineBlock> pair = truePair;
+                truePair = falsePair;
+                falsePair = pair;
             }
             //处理True后继
             if (waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()) {
@@ -228,7 +227,7 @@ public class CodeGenManager {
                 mf.setUsedLr(true);
             }
         }
-        int regs = mf.getUsedSavedRegs().size() ;
+        int regs = mf.getUsedSavedRegs().size();
         mf.getArgMoves().forEach(mv -> {
             assert (mv instanceof MCMove);
             assert (mv.getRhs().getState() == MachineOperand.state.imm);
@@ -237,18 +236,21 @@ public class CodeGenManager {
 
     }
 
-    int mcOffset=0;
-    int strOffset=0;
+    int mcOffset = 0;
+    int strOffset = 0;
 
-    public void addOffset(int off,int strLen){
-        mcOffset+=off*4;
-        strOffset+=strLen;
+    public void addOffset(int off, int strLen) {
+        this.mcOffset += off * 4;
     }
-    HashMap<MCLoad,Pair<Integer,Integer>> accessGlobalOffset=new HashMap<>();
-    public void setGlobalInfo(MCLoad load){
-        assert(load.getAddr() instanceof VirtualReg && ((VirtualReg)(load.getAddr())).isGlobal());
 
+    ArrayList<MCLoad> globalLoad = new ArrayList<>();
+    HashMap<MCLoad, Pair<Integer, Integer>> accessGlobalOffset = new HashMap<>();
+    HashMap<VirtualReg, Integer> globalOffsetMap = new HashMap<>();
 
+    public void setGlobalInfo(MCLoad load) {
+        assert (load.getAddr() instanceof VirtualReg && ((VirtualReg) (load.getAddr())).isGlobal());
+        globalLoad.add(load);
+        accessGlobalOffset.put(load, new Pair<>(mcOffset, strOffset));
     }
 
 
@@ -258,6 +260,8 @@ public class CodeGenManager {
         arm += ".text\n";
         Iterator<MachineFunction> mfIte = machineFunctions.iterator();
         while (mfIte.hasNext()) {
+            this.mcOffset=0;
+            globalLoad.clear();
             MachineFunction mf = mfIte.next();
             fixStack(mf);
             arm += "\n.global\t";
@@ -275,6 +279,7 @@ public class CodeGenManager {
                 arm += "\tpush\t{";
                 arm += s;
                 arm += "}\n";
+                mcOffset+=4;
             }
             if (mf.getStackSize() != 0) {
                 String op = canEncodeImm(-mf.getStackSize()) ? "add" : "sub";
@@ -289,6 +294,7 @@ public class CodeGenManager {
                     arm += mv.toString();
                     arm += op + "\tsp,\tsp,\t" + mf.getPhyReg(5).getName() + "\n";
                 }
+                mcOffset+=4;
             }
             Iterator<INode<MachineBlock, MachineFunction>> mbIte = mf.getmbList().iterator();
             while (mbIte.hasNext()) {
@@ -310,13 +316,50 @@ public class CodeGenManager {
                 if (mb.getFalseSucc() != null) {
                     arm += "@falseSucc: " + mb.getFalseSucc().getName() + "\n";
                 }
+                strOffset = arm.length();
                 Iterator<INode<MachineCode, MachineBlock>> mcIte = mb.getmclist().iterator();
                 while (mcIte.hasNext()) {
                     INode<MachineCode, MachineBlock> mcNode = mcIte.next();
                     MachineCode mc = mcNode.getVal();
-                    arm += mc.toString();
+                    String str=mc.toString();
+                    arm += str;
+                    strOffset+=str.length();
                 }
                 arm += "\n";
+            }
+            StringBuffer sbf=new StringBuffer(arm);
+            ArrayList<VirtualReg> globalAddress=new ArrayList<>();
+            for(int i=globalLoad.size()-1;i>=0;i--){
+                MCLoad load=globalLoad.get(i);
+                int strOffset=accessGlobalOffset.get(load).getSecond();
+                int thisOffset=accessGlobalOffset.get(load).getFirst();
+                int absOffset=this.mcOffset-thisOffset;
+                MachineOperand addr=load.getAddr();
+                MachineOperand dst=load.getDst();
+                CondType cond=load.getCond();
+                String access;
+                int idx=globalAddress.indexOf(addr);
+                if(idx<0){
+                    globalAddress.add((VirtualReg) addr);
+                    idx=globalAddress.size()-1;
+                }
+                if(absOffset<4000){
+                    access="\tldr\t"+dst.getName()+",\t"+addr.getName()+"_"+mf.getName()+"\n";
+                }else {
+                    MCMove mv=new MCMove();
+                    mv.setRhs(new MachineOperand(absOffset+idx*4));
+                    mv.setDst(load.getDst());
+                    mv.setCond(load.getCond());
+                    access=mv.toString();
+                    access+="\tldr"+load.condString(cond)+"\t"+dst.getName()+",\t["+mf.getPhyReg("pc").getName();
+                    access+=",\t"+dst.getName()+"]\n";
+                }
+                sbf.insert(strOffset,access);
+                this.mcOffset+=4;
+            }
+            arm=sbf.toString();
+            for(VirtualReg gv:globalAddress){
+                arm+=gv.getName()+"_"+mf.getName()+":\t.word\t"+gv.getName()+"\n";
             }
             arm += "\n";
         }
@@ -325,12 +368,15 @@ public class CodeGenManager {
             arm += "\n\n.data\n";
             arm += ".align 4\n";
         }
+        int globalOffset = 0;
         for (GlobalVariable gv : gVs) {
             assert irMap.containsKey(gv);
+            globalOffsetMap.put(irMap.get(gv), globalOffset);
             arm += ".global\t" + irMap.get(gv).getName() + "\n";
             arm += irMap.get(gv).getName() + ":\n";
             PointerType p = (PointerType) gv.getType();
             if (p.getContained() instanceof IntegerType) {
+                globalOffset += 4;
                 arm += "\t.word\t";
                 assert (gv.init != null);
                 arm += ((Constants.ConstantInt) gv.init).getVal();
@@ -343,9 +389,11 @@ public class CodeGenManager {
                     for (Integer d : dims) {
                         n *= d;
                     }
+                    globalOffset += 4 * n;
                     arm += "\t.fill\t" + n + ",\t4,\t0\n";
                 } else {
                     ArrayList<Constant> initValues = ((Constants.ConstantArray) gv.init).getConst_arr_();
+                    globalOffset += 4 * initValues.size();
                     int lastv = ((Constants.ConstantInt) initValues.get(0)).getVal();
                     int count = 0;
                     for (Constant c : initValues) {
@@ -371,6 +419,7 @@ public class CodeGenManager {
 
             }
         }
+
         return arm;
     }
 
@@ -424,8 +473,6 @@ public class CodeGenManager {
 //                }
 
             }
-
-            
 
 
             HandlePhi handlePhi = () -> {
@@ -545,7 +592,7 @@ public class CodeGenManager {
             for (bIt = bList.iterator(); bIt.hasNext(); ) {
                 BasicBlock bb = bIt.next().getVal();
                 MachineBlock mb = bMap.get(bb);
-                MCComment bc=new MCComment("bb:"+bb.getName(),mb);
+                MCComment bc = new MCComment("bb:" + bb.getName(), mb);
                 for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
                     Instruction ir = iIt.next().getVal();
                     MCComment co = new MCComment(ir.toString(), mb);
@@ -567,48 +614,48 @@ public class CodeGenManager {
 //                                mv.setRhs(lhs);
 //                                mv.setShift(ArmAddition.ShiftType.Lsr, calcCTZ(imm));
 //                            } else {
-                                long nc = ((long) 1 << 31) - (((long) 1 << 31) % imm) - 1;
-                                long p = 32;
-                                while (((long) 1 << p) <= nc * (imm - ((long) 1 << p) % imm)) {
-                                    p++;
-                                }
-                                long m = ((((long) 1 << p) + (long) imm - ((long) 1 << p) % imm) / (long) imm);
-                                int n = (int) ((m << 32) >>> 32);
-                                int shift = (int) (p - 32);
-                                MCMove mc0 = new MCMove(mb);
-                                VirtualReg v = new VirtualReg();
-                                mf.addVirtualReg(v);
-                                mc0.setDst(v);
-                                mc0.setRhs(new MachineOperand(n));
-                                VirtualReg v1 = new VirtualReg();
-                                mf.addVirtualReg(v1);
-                                //2147483648L=0x80000000
-                                if (m >= 2147483648L) {
-                                    MCFma mc2 = new MCFma(mb);
-                                    mc2.setAdd(true);
-                                    mc2.setSign(true);
-                                    mc2.setDst(v1);
-                                    mc2.setLhs(lhs);
-                                    mc2.setRhs(v);
-                                    mc2.setAcc(lhs);
-                                } else {
-                                    MCLongMul mc1 = new MCLongMul(mb);
-                                    mc1.setDst(v1);
-                                    mc1.setRhs(v);
-                                    mc1.setLhs(lhs);
-                                }
-                                MCMove mc3 = new MCMove(mb);
-                                VirtualReg v3 = new VirtualReg();
-                                mf.addVirtualReg(v3);
-                                mc3.setDst(v3);
-                                mc3.setRhs(v1);
-                                mc3.setShift(ArmAddition.ShiftType.Asr, shift);
-                                MachineOperand dst = analyzeValue(ir, mb, true);
-                                MCBinary mc4 = new MCBinary(MachineCode.TAG.Add, mb);
-                                mc4.setDst(dst);
-                                mc4.setLhs(mc3.getDst());
-                                mc4.setRhs(lhs);
-                                mc4.setShift(ArmAddition.ShiftType.Lsr, 31);
+                            long nc = ((long) 1 << 31) - (((long) 1 << 31) % imm) - 1;
+                            long p = 32;
+                            while (((long) 1 << p) <= nc * (imm - ((long) 1 << p) % imm)) {
+                                p++;
+                            }
+                            long m = ((((long) 1 << p) + (long) imm - ((long) 1 << p) % imm) / (long) imm);
+                            int n = (int) ((m << 32) >>> 32);
+                            int shift = (int) (p - 32);
+                            MCMove mc0 = new MCMove(mb);
+                            VirtualReg v = new VirtualReg();
+                            mf.addVirtualReg(v);
+                            mc0.setDst(v);
+                            mc0.setRhs(new MachineOperand(n));
+                            VirtualReg v1 = new VirtualReg();
+                            mf.addVirtualReg(v1);
+                            //2147483648L=0x80000000
+                            if (m >= 2147483648L) {
+                                MCFma mc2 = new MCFma(mb);
+                                mc2.setAdd(true);
+                                mc2.setSign(true);
+                                mc2.setDst(v1);
+                                mc2.setLhs(lhs);
+                                mc2.setRhs(v);
+                                mc2.setAcc(lhs);
+                            } else {
+                                MCLongMul mc1 = new MCLongMul(mb);
+                                mc1.setDst(v1);
+                                mc1.setRhs(v);
+                                mc1.setLhs(lhs);
+                            }
+                            MCMove mc3 = new MCMove(mb);
+                            VirtualReg v3 = new VirtualReg();
+                            mf.addVirtualReg(v3);
+                            mc3.setDst(v3);
+                            mc3.setRhs(v1);
+                            mc3.setShift(ArmAddition.ShiftType.Asr, shift);
+                            MachineOperand dst = analyzeValue(ir, mb, true);
+                            MCBinary mc4 = new MCBinary(MachineCode.TAG.Add, mb);
+                            mc4.setDst(dst);
+                            mc4.setLhs(mc3.getDst());
+                            mc4.setRhs(lhs);
+                            mc4.setShift(ArmAddition.ShiftType.Lsr, 31);
 //                            }
                         } else {
                             rhs = analyzeNoImm(ir.getOperands().get(1), mb);
@@ -667,7 +714,7 @@ public class CodeGenManager {
                         MCBinary mul = new MCBinary(MachineCode.TAG.Mul, mb);
                         mul.setLhs(lhs);
                         mul.setRhs(rhs);
-                        mul.setDst(analyzeValue(ir,mb,true));
+                        mul.setDst(analyzeValue(ir, mb, true));
                     } else if (ir instanceof BinaryInst && (((BinaryInst) ir).isSub() || ((BinaryInst) ir).isAdd())) {
                         boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                         boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
@@ -703,30 +750,30 @@ public class CodeGenManager {
                         binary.setDst(dst);
                     } else if (ir instanceof BinaryInst && ((BinaryInst) ir).isCond()) {
                         continue;
-                    }  else if (ir.tag == Instruction.TAG_.Br) {
+                    } else if (ir.tag == Instruction.TAG_.Br) {
                         if (ir.getNumOP() == 3) {
                             //如果条件被前端优化成了只有一个常数
-                            if((ir.getOperands().get(0) instanceof Constants.ConstantInt)){
-                                int c=((Constants.ConstantInt) ir.getOperands().get(0)).getVal();
+                            if ((ir.getOperands().get(0) instanceof Constants.ConstantInt)) {
+                                int c = ((Constants.ConstantInt) ir.getOperands().get(0)).getVal();
                                 MachineCode j = new MCJump(mb);
                                 //只跳false块
-                                if(c==0){
+                                if (c == 0) {
                                     ((MCJump) j).setTarget(bMap.get(ir.getOperands().get(2)));
                                     mb.setTrueSucc(bMap.get(ir.getOperands().get(2)));
-                                }else{
+                                } else {
                                     ((MCJump) j).setTarget(bMap.get(ir.getOperands().get(1)));
                                     mb.setTrueSucc(bMap.get(ir.getOperands().get(1)));
                                 }
                                 continue;
                             }
-                            CondType cond =dealCond((BinaryInst) (ir.getOperands().get(0)),mb,false);
+                            CondType cond = dealCond((BinaryInst) (ir.getOperands().get(0)), mb, false);
                             MachineCode br = new MCBranch(mb);
                             ((MCBranch) br).setCond(cond);
-                            int trueT=1;
-                            int falseT=2;
-                            if(cond!=getCond((BinaryInst) (ir.getOperands().get(0)))){
-                                trueT=2;
-                                falseT=1;
+                            int trueT = 1;
+                            int falseT = 2;
+                            if (cond != getCond((BinaryInst) (ir.getOperands().get(0)))) {
+                                trueT = 2;
+                                falseT = 1;
                             }
                             //set trueblock to branch target
                             ((MCBranch) br).setTarget(bMap.get(ir.getOperands().get(trueT)));
@@ -985,13 +1032,13 @@ public class CodeGenManager {
                             }
                         }
 
-                    }else if(ir instanceof MemInst.ZextInst){
-                        MachineOperand dst=analyzeValue(ir,mb,true);
-                        MachineOperand rhs=analyzeValue(ir.getOperands().get(0),mb,true);
-                        if(!(ir.getOperands().get(0) instanceof Constants.ConstantInt)){
-                            dealCond((BinaryInst) (ir.getOperands().get(0)),mb,true);
+                    } else if (ir instanceof MemInst.ZextInst) {
+                        MachineOperand dst = analyzeValue(ir, mb, true);
+                        MachineOperand rhs = analyzeValue(ir.getOperands().get(0), mb, true);
+                        if (!(ir.getOperands().get(0) instanceof Constants.ConstantInt)) {
+                            dealCond((BinaryInst) (ir.getOperands().get(0)), mb, true);
                         }
-                        MCMove mv=new MCMove(mb);
+                        MCMove mv = new MCMove(mb);
                         mv.setRhs(rhs);
                         mv.setDst(dst);
                     }
@@ -1212,8 +1259,8 @@ public class CodeGenManager {
             }
         }
     }
-    
-    private MachineOperand analyzeNoImm(Value v,MachineBlock mb){
+
+    private MachineOperand analyzeNoImm(Value v, MachineBlock mb) {
         if (v instanceof Constants.ConstantInt) {
             VirtualReg vr = new VirtualReg();
             mf.addVirtualReg(vr);
@@ -1228,7 +1275,7 @@ public class CodeGenManager {
     }
 
     //处理Cond，addMove为是否生成move指令
-    private CondType dealCond(BinaryInst ir, MachineBlock mb,boolean addMove) {
+    private CondType dealCond(BinaryInst ir, MachineBlock mb, boolean addMove) {
         boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
         boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
         MachineOperand lhs;
@@ -1237,18 +1284,18 @@ public class CodeGenManager {
         Value r;
         CondType cond = getCond(ir);
         if (lhsIsConst && !rhsIsConst) {
-            l=ir.getOperands().get(1);
-            r=ir.getOperands().get(0);
+            l = ir.getOperands().get(1);
+            r = ir.getOperands().get(0);
             cond = getOppoCond(cond);
         } else {
-            l=ir.getOperands().get(0);
-            r=ir.getOperands().get(1);
+            l = ir.getOperands().get(0);
+            r = ir.getOperands().get(1);
         }
-        if(l instanceof BinaryInst && ((BinaryInst)l).isCond()){
-            dealCond((BinaryInst) l,mb,true);
+        if (l instanceof BinaryInst && ((BinaryInst) l).isCond()) {
+            dealCond((BinaryInst) l, mb, true);
         }
-        if(r instanceof BinaryInst && ((BinaryInst)r).isCond()){
-            dealCond((BinaryInst) r,mb,true);
+        if (r instanceof BinaryInst && ((BinaryInst) r).isCond()) {
+            dealCond((BinaryInst) r, mb, true);
         }
         lhs = analyzeNoImm(l, mb);
         rhs = analyzeValue(r, mb, true);
@@ -1256,13 +1303,13 @@ public class CodeGenManager {
         compare.setRhs(rhs);
         compare.setLhs(lhs);
         compare.setCond(cond);
-        MachineOperand dst=analyzeValue(ir,mb,true);
-        if(addMove){
-            MCMove pMv=new MCMove(mb);
+        MachineOperand dst = analyzeValue(ir, mb, true);
+        if (addMove) {
+            MCMove pMv = new MCMove(mb);
             pMv.setRhs(new MachineOperand(1));
             pMv.setDst(dst);
             pMv.setCond(cond);
-            MCMove nMv=new MCMove(mb);
+            MCMove nMv = new MCMove(mb);
             nMv.setRhs(new MachineOperand(0));
             nMv.setDst(dst);
             nMv.setCond(getOppoCond(cond));
