@@ -133,6 +133,14 @@ public class Function extends Value {
     return sb.toString();
   }
 
+  public INode<Function, MyModule> getNode() {
+    return node;
+  }
+
+  public ArrayList<Arg> getArgList_() {
+    return argList_;
+  }
+
   private boolean isBuiltin_ = false;//lib function
   private IList<BasicBlock, Function> list_;
   private INode<Function, MyModule> node;
