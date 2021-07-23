@@ -7,19 +7,21 @@ import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.Instruction;
-import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst.BrInst;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.Mylogger;
 
-import javax.swing.plaf.basic.BasicCheckBoxMenuItemUI;
+import java.util.logging.Logger;
 
+/**
+ * 完成的优化：
+ *   removeUselessPhi：如果基本块只剩一个前驱，phi指令可以替换掉
+ *   onlyOneUncondBr：基本块内只有一个无条件跳转，且去掉该基本块不会导致后继中的 phi 歧义，则可以去掉该基本块
+ *   endWithUncondBr：基本块结尾只有一个无条件跳转，且目标基本块只有一个前驱，两个基本块可以合并
+ *   removeDeadBB：去掉除了 entry 之外的没有前驱的基本块
+ *   mergeCondBr：有条件跳转的条件为常量，或者两个目标基本块相同，可替换成无条件跳转
+ */
 public class BranchOptimization implements IRPass {
 
   private Logger log = Mylogger.getLogger(IRPass.class);

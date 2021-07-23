@@ -3,12 +3,16 @@ package pass.ir;
 import ir.MyModule;
 import ir.values.Function;
 import ir.values.instructions.Instruction;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.Mylogger;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.logging.Logger;
+
+/**
+ * 根据 Br, Ret, Store, 有副作用函数的 Call 及其操作数求出一个闭包，删掉闭包外的指令
+ */
 public class DeadCodeEmit implements IRPass {
 
   Logger log = Mylogger.getLogger(IRPass.class);
