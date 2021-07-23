@@ -15,6 +15,7 @@ import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.Instruction.TAG_;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1069,15 +1070,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
   @Override
   public Void visitIntConst(IntConstContext ctx) {
     if (ctx.DECIMAL_CONST() != null) {
-      tmpInt_ = Integer.parseInt(ctx.DECIMAL_CONST().getText(), 10);
+      tmpInt_ = (new BigInteger(ctx.DECIMAL_CONST().getText(), 10).intValue());
       return null;
     }
     if (ctx.HEXADECIMAL_CONST() != null) {
-      tmpInt_ = Integer.parseInt(ctx.HEXADECIMAL_CONST().getText().substring(2), 16);
+      tmpInt_ = (new BigInteger(ctx.HEXADECIMAL_CONST().getText().substring(2), 16).intValue());
       return null;
     }
     if (ctx.OCTAL_CONST() != null) {
-      tmpInt_ = Integer.parseInt(ctx.OCTAL_CONST().getText(), 8);
+      tmpInt_ = (new BigInteger(ctx.OCTAL_CONST().getText(), 8)).intValue();
       return null;
     }
     throw new SyntaxException("Unreachable");
