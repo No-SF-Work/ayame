@@ -237,6 +237,20 @@ public class CodeGenManager {
 
     }
 
+    int mcOffset=0;
+    int strOffset=0;
+
+    public void addOffset(int off,int strLen){
+        mcOffset+=off*4;
+        strOffset+=strLen;
+    }
+    HashMap<MCLoad,Pair<Integer,Integer>> accessGlobalOffset=new HashMap<>();
+    public void setGlobalInfo(MCLoad load){
+        assert(load.getAddr() instanceof VirtualReg && ((VirtualReg)(load.getAddr())).isGlobal());
+
+
+    }
+
 
     public String genARM() {
         String arm = "";
@@ -691,6 +705,20 @@ public class CodeGenManager {
                         continue;
                     }  else if (ir.tag == Instruction.TAG_.Br) {
                         if (ir.getNumOP() == 3) {
+                            //如果条件被前端优化成了只有一个常数
+                            if((ir.getOperands().get(0) instanceof Constants.ConstantInt)){
+                                int c=((Constants.ConstantInt) ir.getOperands().get(0)).getVal();
+                                MachineCode j = new MCJump(mb);
+                                //只跳false块
+                                if(c==0){
+                                    ((MCJump) j).setTarget(bMap.get(ir.getOperands().get(2)));
+                                    mb.setTrueSucc(bMap.get(ir.getOperands().get(2)));
+                                }else{
+                                    ((MCJump) j).setTarget(bMap.get(ir.getOperands().get(1)));
+                                    mb.setTrueSucc(bMap.get(ir.getOperands().get(1)));
+                                }
+                                continue;
+                            }
                             CondType cond =dealCond((BinaryInst) (ir.getOperands().get(0)),mb,false);
                             MachineCode br = new MCBranch(mb);
                             ((MCBranch) br).setCond(cond);
