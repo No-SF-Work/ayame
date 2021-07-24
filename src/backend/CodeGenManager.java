@@ -407,11 +407,11 @@ public class CodeGenManager {
                             if (count == 1) {
                                 arm += "\t.word\t" + lastv + "\n";
                             } else {
-//                                if(lastv==0){
+                                if(lastv==0){
                                     arm+="\t.zero\t"+(count*4)+"\n";
-//                                }else {
-//                                    arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
-//                                }
+                                }else {
+                                    arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
+                                }
                             }
                             lastv = v;
                             count = 1;
@@ -420,11 +420,11 @@ public class CodeGenManager {
                     if (count == 1) {
                         arm += "\t.word\t" + lastv + "\n";
                     } else {
-//                        if(lastv==0){
+                        if(lastv==0){
                             arm+="\t.zero\t"+(count*4)+"\n";
-//                        }else {
-//                            arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
-//                        }
+                        }else {
+                            arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
+                        }
                     }
                 }
 
