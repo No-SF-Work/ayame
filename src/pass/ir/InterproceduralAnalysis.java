@@ -23,8 +23,9 @@ public class InterproceduralAnalysis implements IRPass {
       var func = funcNode.getVal();
       func.getCallerList().clear();
       func.getCalleeList().clear();
+//      func.setHasSideEffect(true); // for debug
       func.setHasSideEffect(func.isBuiltin_()); // builtin 的全部都有副作用
-      func.setUsedGlobalVariable(false);
+      func.setUsedGlobalVariable(func.isBuiltin_());
     }
 
     for (var funcNode : m.__functions) {

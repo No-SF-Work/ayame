@@ -1,5 +1,6 @@
 package backend.machinecodes;
 
+import backend.CodeGenManager;
 import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
 
@@ -20,6 +21,7 @@ public class MCLongMul extends MachineCode{
 
     public String toString(){
         String res="\tsmmul\t"+dst.getName()+",\t"+lhs.getName()+",\t"+rhs.getName()+"\n";
+        CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
 

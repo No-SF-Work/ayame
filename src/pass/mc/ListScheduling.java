@@ -2,16 +2,10 @@ package pass.mc;
 
 import backend.CodeGenManager;
 import backend.machinecodes.*;
-import backend.reg.MachineOperand;
-import backend.reg.PhyReg;
+import backend.reg.*;
 import pass.Pass;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class ListScheduling implements Pass.MCPass {
@@ -24,7 +18,7 @@ public class ListScheduling implements Pass.MCPass {
         Branch, Integer, Multiple, Load, Store, FP
     }
 
-    private class A72Unit {
+    private static class A72Unit {
         A72FUType type;
         Node curNode;
         int completeCycles;
@@ -51,8 +45,8 @@ public class ListScheduling implements Pass.MCPass {
         private final MachineCode instr;
         private final int latency;
         private final ArrayList<A72FUType> needFU = new ArrayList<>();
-        private final ArrayList<Node> outSet = new ArrayList<>();
-        private final ArrayList<Node> inSet = new ArrayList<>();
+        private final HashSet<Node> outSet = new HashSet<>();
+        private final HashSet<Node> inSet = new HashSet<>();
         private int outDegree;
         private int inDegree;
         private int criticalLatency;
@@ -104,85 +98,6 @@ public class ListScheduling implements Pass.MCPass {
         }
     }
 
-    private void scheduling(MachineBlock block, ArrayList<Node> nodes) {
-        var units = List.of(
-                new A72Unit(A72FUType.Branch),
-                new A72Unit(A72FUType.Integer),
-                new A72Unit(A72FUType.Integer),
-                new A72Unit(A72FUType.Multiple),
-                new A72Unit(A72FUType.Load),
-                new A72Unit(A72FUType.Store)
-        );
-
-        var freeUnits = units.stream()
-                .collect(Collectors.toMap(unit -> unit.type, unit -> 1, Integer::sum));
-
-        block.getmclist().clear();
-
-        nodes.forEach(node -> node.inDegree = node.inSet.size());
-        var readyNodeList = nodes.stream()
-                .filter(n -> n.inDegree == 0)
-                .collect(Collectors.toCollection(PriorityQueue::new));
-
-        int cntInflight = 0;
-        int cycle = 0;
-        while (!readyNodeList.isEmpty() || cntInflight > 0) {
-            // Simulate Frontend Firing
-            for (var iter = readyNodeList.iterator(); iter.hasNext();) {
-                var curNode = iter.next();
-
-                var needUnitMap = curNode.needFU.stream()
-                        .collect(Collectors.toMap(type -> type, type -> 1, Integer::sum));
-                boolean canFire = needUnitMap.entrySet().stream()
-                        .allMatch(entry -> freeUnits.get(entry.getKey()) >= entry.getValue());
-                if (!canFire) continue;
-
-                for (var needUnit: curNode.needFU) {
-                    for (var unit: units) {
-                        if (unit.type.equals(needUnit) && unit.curNode == null) {
-                            block.addAtEndMC(curNode.instr.getNode());
-                            unit.runTask(curNode, cycle + curNode.latency, freeUnits);
-                            iter.remove();
-                            ++cntInflight;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Simulate Backend Execution
-            ++cycle;
-            for (A72Unit unit : units) {
-                if (unit.curNode != null && unit.completeCycles == cycle) {
-                    unit.curNode.outSet.forEach(outNode -> --outNode.inDegree);
-                    unit.curNode.outSet.stream().filter(outNode -> outNode.inDegree == 0).forEach(readyNodeList::add);
-                    unit.freeTask(freeUnits);
-                    --cntInflight;
-                }
-            }
-        }
-    }
-
-    private void calculateCriticalLatency(ArrayList<Node> nodes) {
-        var toVisit = new LinkedList<Node>();
-        nodes.forEach(node -> node.outDegree = node.outSet.size());
-        nodes.stream().filter(n -> n.outDegree != 0).forEach(n -> {
-            toVisit.add(n);
-            n.criticalLatency = n.latency;
-        });
-
-        while (!toVisit.isEmpty()) {
-            var n = toVisit.pollLast();
-            n.inSet.forEach(inNode -> {
-                inNode.criticalLatency = Math.max(inNode.criticalLatency, inNode.latency + n.criticalLatency);
-                --inNode.outDegree;
-                if (inNode.outDegree == 0) {
-                    toVisit.add(inNode);
-                }
-            });
-        }
-    }
-
     private ArrayList<Node> buildConflictGraph(MachineBlock block) {
         var nodes = new ArrayList<Node>();
         
@@ -197,8 +112,8 @@ public class ListScheduling implements Pass.MCPass {
                 continue;
             }
 
-            var defs = instr.getDef();
-            var uses = instr.getUse();
+            var defs = instr.getMCDef();
+            var uses = instr.getMCUse();
             assert defs.stream().allMatch(def -> def instanceof PhyReg);
             assert uses.stream().allMatch(use -> use instanceof PhyReg);
             var curNode = new Node(instr);
@@ -249,6 +164,86 @@ public class ListScheduling implements Pass.MCPass {
         }
         
         return nodes;
+    }
+
+    private void calculateCriticalLatency(ArrayList<Node> nodes) {
+        var toVisit = new LinkedList<Node>();
+        nodes.forEach(node -> node.outDegree = node.outSet.size());
+        nodes.stream().filter(n -> n.outDegree != 0).forEach(n -> {
+            toVisit.add(n);
+            n.criticalLatency = n.latency;
+        });
+
+        while (!toVisit.isEmpty()) {
+            var n = toVisit.pollLast();
+            n.inSet.forEach(inNode -> {
+                inNode.criticalLatency = Math.max(inNode.criticalLatency, inNode.latency + n.criticalLatency);
+                --inNode.outDegree;
+                if (inNode.outDegree == 0) {
+                    toVisit.add(inNode);
+                }
+            });
+        }
+    }
+
+    private void scheduling(MachineBlock block, ArrayList<Node> nodes) {
+        var units = List.of(
+                new A72Unit(A72FUType.Branch),
+                new A72Unit(A72FUType.Integer),
+                new A72Unit(A72FUType.Integer),
+                new A72Unit(A72FUType.Multiple),
+                new A72Unit(A72FUType.Load),
+                new A72Unit(A72FUType.Store)
+        );
+
+        var freeUnits = units.stream()
+                .collect(Collectors.toMap(unit -> unit.type, unit -> 1, Integer::sum));
+
+        block.getmclist().clear();
+
+        nodes.forEach(node -> node.inDegree = node.inSet.size());
+        var readyNodeList = nodes.stream()
+                .filter(n -> n.inDegree == 0)
+                .collect(Collectors.toCollection(PriorityQueue::new));
+
+        int cntInflight = 0;
+        int cycle = 0;
+        while (!readyNodeList.isEmpty() || cntInflight > 0) {
+            // Simulate Frontend Firing
+            for (var iter = readyNodeList.iterator(); iter.hasNext();) {
+                var curNode = iter.next();
+
+                var needUnitMap = curNode.needFU.stream()
+                        .collect(Collectors.toMap(type -> type, type -> 1, Integer::sum));
+                boolean canFire = needUnitMap.entrySet().stream()
+                        .allMatch(entry -> freeUnits.get(entry.getKey()) >= entry.getValue());
+                if (!canFire) continue;
+
+                for (var needUnit: curNode.needFU) {
+                    for (var unit: units) {
+                        if (unit.type.equals(needUnit) && unit.curNode == null) {
+                            block.addAtEndMC(curNode.instr.getNode());
+                            unit.runTask(curNode, cycle + curNode.latency, freeUnits);
+                            iter.remove();
+                            ++cntInflight;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            ++cycle;
+
+            // Simulate Backend Execution
+            for (A72Unit unit : units) {
+                if (unit.curNode != null && unit.completeCycles == cycle) {
+                    unit.curNode.outSet.forEach(outNode -> --outNode.inDegree);
+                    unit.curNode.outSet.stream().filter(outNode -> outNode.inDegree == 0).forEach(readyNodeList::add);
+                    unit.freeTask(freeUnits);
+                    --cntInflight;
+                }
+            }
+        }
     }
 
     public void run(CodeGenManager manager) {

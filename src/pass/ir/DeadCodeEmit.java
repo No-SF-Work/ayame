@@ -3,12 +3,18 @@ package pass.ir;
 import ir.MyModule;
 import ir.values.Function;
 import ir.values.instructions.Instruction;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.logging.Logger;
+import java.util.ArrayList;
+import java.util.Arrays;
 import pass.Pass.IRPass;
 import util.Mylogger;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.logging.Logger;
+
+/**
+ * 根据 Br, Ret, Store, 有副作用函数的 Call 及其操作数求出一个闭包，删掉闭包外的指令
+ */
 public class DeadCodeEmit implements IRPass {
 
   Logger log = Mylogger.getLogger(IRPass.class);
@@ -32,7 +38,7 @@ public class DeadCodeEmit implements IRPass {
       return;
     }
     usefulInstSet.add(instruction);
-    for (var op: instruction.getOperands()) {
+    for (var op : instruction.getOperands()) {
       if (op instanceof Instruction) {
         findUsefulClosure((Instruction) op);
       }
@@ -41,10 +47,18 @@ public class DeadCodeEmit implements IRPass {
 
   public void run(MyModule m) {
     log.info("Running pass : DeadCodeEmit");
+    ArrayList<Function> uselessFuncs = new ArrayList<>();
     for (var funcNode : m.__functions) {
       if (!funcNode.getVal().isBuiltin_()) {
         runDCE(funcNode.getVal());
       }
+      if (funcNode.getVal().getCallerList().isEmpty() && !funcNode.getVal().getName()
+          .equals("main")) {
+        uselessFuncs.add(funcNode.getVal());
+      }
+    }
+    for (Function uselessFunc : uselessFuncs) {
+      uselessFunc.getNode().removeSelf();
     }
   }
 
@@ -60,7 +74,7 @@ public class DeadCodeEmit implements IRPass {
       }
     }
 
-    for (var bbNode: func.getList_()) {
+    for (var bbNode : func.getList_()) {
       var bb = bbNode.getVal();
       for (var instNode = bb.getList().getEntry(); instNode != null; ) {
         var tmp = instNode.getNext();

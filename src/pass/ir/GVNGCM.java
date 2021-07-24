@@ -4,37 +4,31 @@ import ir.Analysis.ArrayAliasAnalysis;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.Use;
-import ir.values.BasicBlock;
-import ir.values.Constant;
+import ir.values.*;
 import ir.values.Constants.ConstantArray;
 import ir.values.Constants.ConstantInt;
-import ir.values.Function;
-import ir.values.GlobalVariable;
-import ir.values.User;
-import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
-import ir.values.instructions.MemInst;
-import ir.values.instructions.MemInst.GEPInst;
-import ir.values.instructions.MemInst.LoadInst;
-import ir.values.instructions.MemInst.MemPhi;
-import ir.values.instructions.MemInst.Phi;
-import ir.values.instructions.MemInst.StoreInst;
+import ir.values.instructions.MemInst.*;
 import ir.values.instructions.SimplifyInstruction;
 import ir.values.instructions.TerminatorInst.CallInst;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Stack;
-import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.IList;
 import util.IList.INode;
 import util.Mylogger;
 import util.Pair;
 
-// DOING: 对全局常量数组的偏移全为常数的 Load 直接取值
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Stack;
+import java.util.logging.Logger;
+
 // TODO: 高级一点：对未修改的全局变量和数组的 Load 直接取值
+
+/**
+ * GVN: 尽可能地消除冗余的变量，同时会做常量合并、代数化简 GCM：把指令调度到支配深度尽可能深的地方
+ */
 public class GVNGCM implements IRPass {
 
   private Logger log = Mylogger.getLogger(IRPass.class);
@@ -112,15 +106,17 @@ public class GVNGCM implements IRPass {
     for (var i = 0; i < sz; i++) {
       var key = valueTable.get(i).getFirst();
       var valueNumber = valueTable.get(i).getSecond();
-      if (key instanceof LoadInst && !loadInst.equals(key)) {
-        LoadInst keyInst = (LoadInst) key;
-        var allSame =
-            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
-        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
-        if (allSame) {
-          return valueNumber;
-        }
-      } else if (key instanceof StoreInst) {
+      // FIXME: side_effect WA here!
+//      if (key instanceof LoadInst && !loadInst.equals(key)) {
+//        LoadInst keyInst = (LoadInst) key;
+//        var allSame =
+//            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
+//        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
+//        if (allSame) {
+//          return valueNumber;
+//        }
+//      } else
+      if (key instanceof StoreInst) {
         StoreInst keyInst = (StoreInst) key;
         var allSame =
             lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());

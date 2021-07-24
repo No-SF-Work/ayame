@@ -3,31 +3,22 @@ package ir.Analysis;
 import ir.MyFactoryBuilder;
 import ir.types.ArrayType;
 import ir.types.PointerType;
-import ir.types.Type;
-import ir.values.BasicBlock;
+import ir.values.*;
 import ir.values.Constants.ConstantArray;
-import ir.values.Function;
-import ir.values.GlobalVariable;
-import ir.values.UndefValue;
-import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
-import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.*;
 import ir.values.instructions.TerminatorInst.CallInst;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Stack;
 import util.IList.INode;
+
+import java.util.*;
 
 public class ArrayAliasAnalysis {
 
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
-  private static ArrayList<ArrayDefUses> arrays = new ArrayList<>();
+  public static ArrayList<ArrayDefUses> arrays = new ArrayList<>();
 
-  private static class ArrayDefUses {
+  public static class ArrayDefUses {
 
     public Value array;
     public ArrayList<LoadInst> loads;
@@ -211,21 +202,17 @@ public class ArrayAliasAnalysis {
           if (inst.tag == TAG_.Store) {
             StoreInst storeInst = (StoreInst) inst;
             if (alias(array, getArrayValue(storeInst.getOperands().get(1)))) {
-              arrayDefUse.defs.add(inst);
-              defBlocks.get(index).add(bb);
               storeInst.hasAlias = true;
-            } else {
-              storeInst.hasAlias = false;
+              arrayDefUse.defs.add(storeInst);
+              defBlocks.get(index).add(bb);
             }
           } else if (inst.tag == TAG_.Call) {
             Function func = (Function) inst.getOperands().get(0);
             CallInst callInst = (CallInst) inst;
             if (func.isHasSideEffect() && callAlias(array, callInst)) {
-              arrayDefUse.defs.add(inst);
-              defBlocks.get(index).add(bb);
               callInst.hasAlias = true;
-            } else {
-              callInst.hasAlias = false;
+              arrayDefUse.defs.add(callInst);
+              defBlocks.get(index).add(bb);
             }
           }
         }
@@ -482,6 +469,14 @@ public class ArrayAliasAnalysis {
             if (loadInst.getNumOP() == 2) {
               loadInst.removeUseStore();
             }
+          }
+          case Store -> {
+            StoreInst storeInst = (StoreInst) inst;
+            storeInst.hasAlias = false;
+          }
+          case Call -> {
+            CallInst callInst = (CallInst) inst;
+            callInst.hasAlias = false;
           }
         }
       }
