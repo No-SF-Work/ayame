@@ -12,8 +12,20 @@ import java.util.ArrayList;
 
 public abstract class TerminatorInst extends Instruction {
 
+  public TerminatorInst(TAG_ tag, Type type, int numOP) {
+    super(tag, type, numOP);
+  }
+
   public TerminatorInst(TAG_ tag, Type type, int numOP, BasicBlock parent) {//这些指令只会出现在bb的结尾
     super(tag, type, numOP, parent);
+  }
+
+  public TerminatorInst(TAG_ tag, Type type, int numOP, Instruction prev) {
+    super(tag, type, numOP, prev);
+  }
+
+  public TerminatorInst(Instruction next, TAG_ tag, Type type, int numOP) {
+    super(next, tag, type, numOP);
   }
 
   public static class CallInst extends TerminatorInst {
@@ -92,6 +104,14 @@ public abstract class TerminatorInst extends Instruction {
       needname = false;
     }
 
+    public BrInst(Value cond, BasicBlock trueBlock, BasicBlock falseBlock) {
+      super(TAG_.Br, VoidType.getType(), 3);
+      this.CoSetOperand(0, cond);
+      this.CoSetOperand(1, trueBlock);
+      this.CoSetOperand(2, falseBlock);
+      needname = false;
+    }
+
     /**
      * 无条件转移
      */
@@ -99,6 +119,12 @@ public abstract class TerminatorInst extends Instruction {
       super(TAG_.Br, Type.VoidType.getType(), 1, parent);
       needname = false;
       this.CoSetOperand(0, trueBlock);
+    }
+
+    public BrInst(BasicBlock trueblock) {
+      super(TAG_.Br, Type.VoidType.getType(), 1);
+      this.CoSetOperand(0, trueblock);
+      needname = false;
     }
 
     @Override
@@ -131,6 +157,11 @@ public abstract class TerminatorInst extends Instruction {
       this.CoSetOperand(0, val);
       needname = false;
     }
+    public RetInst(Value val){
+      super(TAG_.Ret, VoidType.getType(), 1);
+      this.CoSetOperand(0, val);
+      needname = false;
+    }
 
     /**
      * ret void 插在bb末尾
@@ -138,8 +169,12 @@ public abstract class TerminatorInst extends Instruction {
     public RetInst(BasicBlock parent) {
       super(TAG_.Ret, VoidType.getType(), 0, parent);
       needname = false;
-
     }
+    public RetInst() {
+      super(TAG_.Ret, VoidType.getType(), 0);
+      needname = false;
+    }
+
 
     @Override
     public String toString() {

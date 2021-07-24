@@ -15,8 +15,6 @@ public abstract class Instruction extends User {
 
   public enum TAG_ {
 
-    //unary
-    Not,
     //binary
     Add,
     Sub,

@@ -33,7 +33,6 @@ public abstract class MemInst extends Instruction {
 
   public static class AllocaInst extends MemInst {
 
-    //todo typecheck
     public AllocaInst(Type allocatedType_) {
       super(TAG_.Alloca, new PointerType(allocatedType_), 0);
       this.allocatedType_ = allocatedType_;
