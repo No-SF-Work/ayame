@@ -1,5 +1,4 @@
 import os
-from compiler import Compiler
 from runner import Runner
 from analyzer import Analyzer
 from pretty_print import Print_C
@@ -21,17 +20,12 @@ class Tester:
         self.emit_llvm_ir = a_scheme["emit_llvm_ir"]
         self.is_trivial = is_trivial
 
-        self.compiler = Compiler(scheme=self.scheme, testcases=testcases)
         self.runner = Runner(scheme=self.scheme, testcases=testcases)
         self.analyzer = Analyzer(scheme=self.scheme, emit_llvm_ir=self.emit_llvm_ir, testcases=testcases)
 
 
     def generate_ir(self):
         for testcase in testcases: self.compiler.sy_to_ir(frontend_instr=self.frontend_instr, testcase=testcase)
-
-
-    def compile(self):
-        self.compiler.compile_all_tests(frontend_instr=self.frontend_instr, emit_llvm_ir=self.emit_llvm_ir)
 
 
     def run(self):
@@ -44,7 +38,7 @@ class Tester:
 
     def test(self):
         Print_C.print_header(f"[TESTING {self.scheme}]")
-        self.compile()
+        #self.compile()
         self.run()
         self.analyze()
         print()
