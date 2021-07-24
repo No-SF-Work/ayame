@@ -50,7 +50,7 @@ public class FunctionInline implements IRPass {
           tobeProcessed.add(val);
         }
       });
-      tobeProcessed.forEach(this::inlineMe);
+//      tobeProcessed.forEach(this::inlineMe);
     }
   }
 
@@ -67,31 +67,31 @@ public class FunctionInline implements IRPass {
    *   2.统一出口（新建个基本块，让被内联函数的所有ret出口都变成这个块，并且把这个块加一个无条件跳转到原本的下一条指令，相当于把一个块拆成三个）
    *   3.
    *   */
-  public void inlineMe(Function f) {
+  /*public void inlineMe(Function f) {
     if (f.getCalleeList().isEmpty()) {
       return;
     }
     changed = true;
     f.getCallerList().forEach(caller -> {
       caller.getList_().forEach(bbnode -> {
-        bbnode.getVal().getList().forEach(instNode -> {
+
+
           var inst = instNode.getVal();
           if (inst instanceof CallInst) {
             if (((CallInst) inst).getFunc().getName().equals(f.getName())) {
+              var leave = factory.buildBasicBlock("", caller);
+              var ret = factory.buildBasicBlock("", caller);
+              // TODO: 2021/7/24
+//                 TODO: 2021/7/24 alloca并且replace ret with store
               if (inst.getType().isI32()) {
-                // TODO: 2021/7/24 alloca并且replace ret with store
                 factory.buildAlloca(caller.getList_().getEntry().getVal(), IntegerType.getI32());
 
               }
-              var leave = factory.buildBasicBlock("", caller);
-              var ret = factory.buildBasicBlock("", caller);
-// TODO: 2021/7/24  
             }
           }
-        });
       });
     });
 
 
-  }
+  }*/
 }
