@@ -9,6 +9,7 @@ import java.util.HashMap;
 
 import static backend.machinecodes.ArmAddition.CondType.*;
 import static backend.machinecodes.ArmAddition.ShiftType.*;
+import static backend.reg.MachineOperand.state.*;
 
 public class PeepholeOptimization implements Pass.MCPass {
     @Override
@@ -17,7 +18,7 @@ public class PeepholeOptimization implements Pass.MCPass {
     }
 
     private boolean isSameOperand(MachineOperand a, MachineOperand b) {
-        return a.getState().equals(MachineOperand.state.imm) ?
+        return a.getState().equals(imm) ?
                 a.equals(b) :
                 a.getState().equals(b.getState()) && a.getName().equals(b.getName());
     }
@@ -154,7 +155,7 @@ public class PeepholeOptimization implements Pass.MCPass {
         return lastNeedInstrMap;
     }
 
-    private void removeUnusedInstr(CodeGenManager manager) {
+    private void peepholeWithDefUse(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
             var liveRanges = getLiveRange(func);
 
@@ -165,8 +166,19 @@ public class PeepholeOptimization implements Pass.MCPass {
                     var instrEntry = instrEntryIter.next();
                     var instr = instrEntry.getVal();
 
-                    if (liveRanges.get(instr) == null) {
+                    // Remove unused instr
+                    var lastUseInstr = liveRanges.get(instr);
+                    if (lastUseInstr == null) {
                         instrEntryIter.remove();
+                    } else {
+                        var nxtInstrEntry = instrEntry.getNext();
+
+                        // todo
+                        // add a a #i
+                        // ldr b [a, #0]
+                        // =>
+                        // ldr b [a, #i]
+
                     }
                 }
             }
@@ -175,6 +187,6 @@ public class PeepholeOptimization implements Pass.MCPass {
 
     public void run(CodeGenManager manager) {
         trivialPeephole(manager);
-        removeUnusedInstr(manager);
+        peepholeWithDefUse(manager);
     }
 }
