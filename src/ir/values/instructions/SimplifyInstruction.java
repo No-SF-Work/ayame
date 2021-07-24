@@ -1,13 +1,13 @@
 package ir.values.instructions;
 
 import ir.MyFactoryBuilder;
-import ir.values.BasicBlock;
 import ir.values.Constants.ConstantInt;
 import ir.values.GlobalVariable;
 import ir.values.UndefValue;
 import ir.values.Value;
 import ir.values.instructions.Instruction.TAG_;
 
+// 参考：LLVM InstructionSimplify
 public class SimplifyInstruction {
 
   public static MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
