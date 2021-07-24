@@ -115,6 +115,10 @@ public class MyFactoryBuilder {
     return new ArrayType(containedTy, numElem);
   }
 
+  public CallInst getFuncCall(Function func, ArrayList<Value> args) {
+    return new CallInst(func, args);
+  }
+
   public CallInst buildFuncCall(Function func, ArrayList<Value> args, BasicBlock bb) {
     return new CallInst(func, args, bb);
   }
@@ -245,7 +249,7 @@ public class MyFactoryBuilder {
     return new RetInst(val);
   }
 
-  public RetInst gerRet() {
+  public RetInst getRet() {
     return new RetInst();
   }
 
