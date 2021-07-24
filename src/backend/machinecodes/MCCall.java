@@ -14,7 +14,7 @@ public class MCCall extends MachineCode{
 
     private MachineFunction func;
 
-    private int chi=0;
+    private static  int chi=0;
 
     @Override
     public String toString(){

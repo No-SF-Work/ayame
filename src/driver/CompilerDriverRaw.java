@@ -50,7 +50,9 @@ public class CompilerDriverRaw {
         continue;
       }
 
-      source = cmd;
+      if (cmd.endsWith(".sy")) {
+        source = cmd;
+      }
     }
 
     assert source != null;

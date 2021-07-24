@@ -62,6 +62,7 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
   class IIterator implements Iterator<INode<T, P>> {
 
     INode<T, P> tmp = new INode<>(null);
+    INode<T, P> nxt = null;
 
     IIterator(INode<T, P> head) {
       tmp.next = head;
@@ -69,12 +70,17 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
 
     @Override
     public boolean hasNext() {
-      return tmp.next != null;
+      return nxt != null || tmp.next != null;
     }
 
     @Override
     public INode<T, P> next() {
-      tmp = tmp.next;
+      if (nxt == null) {
+        tmp = tmp.next;
+      } else {
+        tmp = nxt;
+      }
+      nxt = null;
       return tmp;
     }
 
@@ -96,6 +102,7 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
       }
       --parent.numNode;
 
+      nxt = next;
       tmp.next = tmp.prev = null;
       tmp.val = null;
     }
