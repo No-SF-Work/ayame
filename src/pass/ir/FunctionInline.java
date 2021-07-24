@@ -4,8 +4,10 @@ import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.types.IntegerType;
 import ir.values.Function;
+import ir.values.instructions.Instruction;
 import ir.values.instructions.TerminatorInst.CallInst;
 import java.util.ArrayList;
+import java.util.Arrays;
 import pass.Pass;
 import pass.Pass.IRPass;
 import util.Mylogger;
@@ -72,20 +74,15 @@ public class FunctionInline implements IRPass {
       return;
     }
     changed = true;
+    ArrayList<Instruction> toBeReplaced = new ArrayList<>();
+    //dfs找到需要替换的call指令，不原地替换了
     f.getCallerList().forEach(caller -> {
       caller.getList_().forEach(bbnode -> {
         bbnode.getVal().getList().forEach(instNode -> {
           var inst = instNode.getVal();
           if (inst instanceof CallInst) {
             if (((CallInst) inst).getFunc().getName().equals(f.getName())) {
-              if (inst.getType().isI32()) {
-                // TODO: 2021/7/24 alloca并且replace ret with store
-                factory.buildAlloca(caller.getList_().getEntry().getVal(), IntegerType.getI32());
-
-              }
-              var leave = factory.buildBasicBlock("", caller);
-              var ret = factory.buildBasicBlock("", caller);
-// TODO: 2021/7/24  
+              toBeReplaced.add(inst);
             }
           }
         });

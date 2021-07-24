@@ -16,6 +16,7 @@ import pass.ir.GVNGCM;
 import pass.ir.InterproceduralAnalysis;
 
 import pass.ir.Mem2reg;
+import pass.mc.PeepholeOptimization;
 import pass.mc.RegAllocator;
 import util.Mylogger;
 
@@ -54,7 +55,7 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());
-    mcPasses.add(new PeepholeOptimization());
+//    mcPasses.add(new PeepholeOptimization());
   }
 
   public static PassManager getPassManager() {
