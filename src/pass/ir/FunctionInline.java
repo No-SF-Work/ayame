@@ -111,9 +111,8 @@ public class FunctionInline implements IRPass {
   }
 
   private void inlineOneCall(CallInst call) {
-
     var arrive = factory.buildBasicBlock("", call.getBB().getParent());
-    factory.buildBasicBlock("", call.getBB().getParent());
+    getFunctionCopy((Function)call.getOperands().get(0));
 
   }
 
@@ -126,7 +125,6 @@ public class FunctionInline implements IRPass {
     m.__globalVariables.forEach(gv -> {
       valueMap.put(gv, gv);
     });
-
     var copy = factory.getFunction("", source.getType());//只要body,不要function的head
     //初始化所有的bb,并且放到valueMap里面（由于Br指令的存在，basicBlock的对象需要在初始化之前就存在）
     var sourceArgs = source.getArgList();
