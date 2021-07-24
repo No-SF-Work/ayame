@@ -1,6 +1,5 @@
 import subprocess
 from tester import Tester
-from presenter import Presenter
 from tester import get_sy_testcases
 from pretty_print import Print_C
 
@@ -59,5 +58,5 @@ for scheme in all_schemes:
 
 # Tester(ustc_llvm_scheme).test_ir()
 
-presenter = Presenter(schemes=[scheme["scheme"] for scheme in all_schemes], testcases=get_sy_testcases())
-presenter.present_all_testcases()
+# presenter = Presenter(schemes=[scheme["scheme"] for scheme in all_schemes], testcases=get_sy_testcases())
+# presenter.present_all_testcases()

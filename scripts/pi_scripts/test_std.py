@@ -46,7 +46,7 @@ all_schemes = [clang_llvm_scheme, thu_llvm_scheme, thu_thu_scheme, ayame_ayame_s
 testers = []
 
 Print_C.print_header("[Removing old data...]\n\n")
-subprocess.run("rm -rf build/test_results/".split())
+# subprocess.run("rm -rf build/test_results/".split())
 subprocess.run("rm -rf build/output/".split())
 subprocess.run("rm -rf build/log/compile_log".split())
 subprocess.run("rm -rf build/log/run_log".split())
