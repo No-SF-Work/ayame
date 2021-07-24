@@ -4,8 +4,10 @@ import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.types.IntegerType;
 import ir.values.Function;
+import ir.values.instructions.Instruction;
 import ir.values.instructions.TerminatorInst.CallInst;
 import java.util.ArrayList;
+import java.util.Arrays;
 import pass.Pass;
 import pass.Pass.IRPass;
 import util.Mylogger;
@@ -50,7 +52,7 @@ public class FunctionInline implements IRPass {
           tobeProcessed.add(val);
         }
       });
-//      tobeProcessed.forEach(this::inlineMe);
+      tobeProcessed.forEach(this::inlineMe);
     }
   }
 
@@ -67,31 +69,26 @@ public class FunctionInline implements IRPass {
    *   2.统一出口（新建个基本块，让被内联函数的所有ret出口都变成这个块，并且把这个块加一个无条件跳转到原本的下一条指令，相当于把一个块拆成三个）
    *   3.
    *   */
-  /*public void inlineMe(Function f) {
+  public void inlineMe(Function f) {
     if (f.getCalleeList().isEmpty()) {
       return;
     }
     changed = true;
+    ArrayList<Instruction> toBeReplaced = new ArrayList<>();
+    //dfs找到需要替换的call指令，不原地替换了
     f.getCallerList().forEach(caller -> {
       caller.getList_().forEach(bbnode -> {
-
-
+        bbnode.getVal().getList().forEach(instNode -> {
           var inst = instNode.getVal();
           if (inst instanceof CallInst) {
             if (((CallInst) inst).getFunc().getName().equals(f.getName())) {
-              var leave = factory.buildBasicBlock("", caller);
-              var ret = factory.buildBasicBlock("", caller);
-              // TODO: 2021/7/24
-//                 TODO: 2021/7/24 alloca并且replace ret with store
-              if (inst.getType().isI32()) {
-                factory.buildAlloca(caller.getList_().getEntry().getVal(), IntegerType.getI32());
-
-              }
+              toBeReplaced.add(inst);
             }
           }
+        });
       });
     });
 
 
-  }*/
+  }
 }
