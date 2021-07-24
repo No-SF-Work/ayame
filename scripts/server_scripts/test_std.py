@@ -7,6 +7,7 @@ from pretty_print import Print_C
 thu_compiler = "build/bin/thu_compiler "
 ustc_compiler = "build/bin/ustc_compiler "
 ustc_compiler_no_vec = "build/bin/ustc_compiler_no_vec "
+ayame_compiler = "java -classpath src:lib/antlr4-runtime-4.8.jar:lib/argparse4j-0.9.0.jar Compiler "
 
 clang_llvm_scheme = {"scheme": "clang_llvm",
                      "frontend_instr": "clang -x c -c -Ofast -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -emit-llvm -include {header} {sy} -o {ir}",
@@ -58,5 +59,5 @@ for scheme in all_schemes:
 
 # Tester(ustc_llvm_scheme).test_ir()
 
-# presenter = Presenter(schemes=[scheme["scheme"] for scheme in all_schemes], testcases=get_sy_testcases())
-# presenter.present_all_testcases()
+presenter = Presenter(schemes=[scheme["scheme"] for scheme in all_schemes], testcases=get_sy_testcases())
+presenter.present_all_testcases()
