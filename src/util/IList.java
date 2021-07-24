@@ -1,8 +1,8 @@
 package util;
 
-import java.util.Iterator;
-
 import util.IList.INode;
+
+import java.util.Iterator;
 
 /**
  * LinkedList,猫猫都不用
@@ -62,21 +62,19 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
   class IIterator implements Iterator<INode<T, P>> {
 
     INode<T, P> tmp = new INode<>(null);
-    INode<T, P> nxt = new INode<>(null);
 
     IIterator(INode<T, P> head) {
-      nxt = head;
+      tmp.next = head;
     }
 
     @Override
     public boolean hasNext() {
-      return nxt != null;
+      return tmp.next != null;
     }
 
     @Override
     public INode<T, P> next() {
-      tmp = nxt;
-      nxt = tmp == null ? null : tmp.next;
+      tmp = tmp.next;
       return tmp;
     }
 
@@ -98,11 +96,11 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
       }
       --parent.numNode;
 
-      nxt = next;
       tmp.next = tmp.prev = null;
       tmp.val = null;
     }
   }
+
 
   public static class INode<T, P> {
 
