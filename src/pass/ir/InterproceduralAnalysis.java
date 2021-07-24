@@ -1,16 +1,20 @@
 package pass.ir;
 
 import ir.Analysis.ArrayAliasAnalysis;
+import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.values.Function;
 import ir.values.GlobalVariable;
 import ir.values.Value;
+import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import pass.Pass.IRPass;
 
 public class InterproceduralAnalysis implements IRPass {
+
+  MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
 
   @Override
   public String getName() {
@@ -41,15 +45,25 @@ public class InterproceduralAnalysis implements IRPass {
               calleeFunc.getCallerList().add(func);
             }
             case Load -> {
-              Value pointer = ArrayAliasAnalysis
-                  .getArrayValue(((LoadInst) instruction).getPointer());
+              var loadInst = (LoadInst) instruction;
+              var addr = loadInst.getPointer();
+              if (addr instanceof MemInst.AllocaInst && ((MemInst.AllocaInst) addr)
+                  .getAllocatedType().equals(factory.getI32Ty())) {
+                continue;
+              }
+              Value pointer = ArrayAliasAnalysis.getArrayValue(addr);
               if (pointer instanceof GlobalVariable) {
                 func.setUsedGlobalVariable(true);
               }
             }
             case Store -> {
-              Value pointer = ArrayAliasAnalysis
-                  .getArrayValue(((StoreInst) instruction).getPointer());
+              var storeInst = (StoreInst) instruction;
+              var addr = storeInst.getPointer();
+              if (addr instanceof MemInst.AllocaInst && ((MemInst.AllocaInst) addr)
+                  .getAllocatedType().equals(factory.getI32Ty())) {
+                continue;
+              }
+              Value pointer = ArrayAliasAnalysis.getArrayValue(addr);
               if (ArrayAliasAnalysis.isGlobal(pointer) || ArrayAliasAnalysis.isParam(pointer)) {
                 func.setHasSideEffect(true);
               }
