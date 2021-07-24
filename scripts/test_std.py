@@ -48,7 +48,7 @@ subprocess.run("rm -rf build/log/run_log".split())
 subprocess.run("rm -rf build/log/test_result.log".split())
 
 for scheme in all_schemes:
-    tester = Tester(scheme)
+    tester = Tester(scheme, is_trivial=True)
     testers.append(tester)
     tester.test()
 
