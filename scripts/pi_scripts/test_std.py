@@ -42,7 +42,7 @@ ayame_ayame_scheme = {"scheme": "ayame_ayame",
 #                     "frontend_instr": ustc_compiler + "-emit -o {ir} {sy}",
 #                     "emit_llvm_ir": True}
 
-all_schemes = [clang_llvm_scheme, thu_llvm_scheme, thu_thu_scheme, ayame_ayame_scheme] # gcc_gcc_scheme, ustc_ustc_scheme, ustc_ustc_no_vec_scheme]
+all_schemes = [clang_llvm_scheme, thu_thu_scheme, ayame_ayame_scheme] # gcc_gcc_scheme, ustc_ustc_scheme, ustc_ustc_no_vec_scheme]
 testers = []
 
 Print_C.print_header("[Removing old data...]\n\n")
