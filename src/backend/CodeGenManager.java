@@ -393,7 +393,7 @@ public class CodeGenManager {
                     }
                     globalOffset += 4 * n;
 //                    arm += "\t.fill\t" + n + ",\t4,\t0\n";
-                    arm+="\t.zero\t"+n+"\n";
+                    arm+="\t.zero\t"+n*4+"\n";
                 } else {
                     ArrayList<Constant> initValues = ((Constants.ConstantArray) gv.init).getConst_arr_();
                     globalOffset += 4 * initValues.size();
@@ -408,7 +408,7 @@ public class CodeGenManager {
                                 arm += "\t.word\t" + lastv + "\n";
                             } else {
 //                                if(lastv==0){
-                                    arm+="\t.zero\t"+count+"\n";
+                                    arm+="\t.zero\t"+(count*4)+"\n";
 //                                }else {
 //                                    arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
 //                                }
@@ -421,7 +421,7 @@ public class CodeGenManager {
                         arm += "\t.word\t" + lastv + "\n";
                     } else {
 //                        if(lastv==0){
-                            arm+="\t.zero\t"+count+"\n";
+                            arm+="\t.zero\t"+(count*4)+"\n";
 //                        }else {
 //                            arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
 //                        }
