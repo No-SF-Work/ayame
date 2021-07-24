@@ -36,7 +36,7 @@ public class PassManager {
     add("functioninline");
     add("RegAlloc");
     //  add("ListScheduling");
-    // add("Peephole");
+     add("Peephole");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
   };
@@ -55,7 +55,7 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());
-//    mcPasses.add(new PeepholeOptimization());
+    mcPasses.add(new PeepholeOptimization());
   }
 
   public static PassManager getPassManager() {

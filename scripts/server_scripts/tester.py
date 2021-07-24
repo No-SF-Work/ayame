@@ -1,7 +1,5 @@
 import os
 from compiler import Compiler
-from runner import Runner
-from analyzer import Analyzer
 from pretty_print import Print_C
 
 def get_sy_testcases():
@@ -22,8 +20,6 @@ class Tester:
         self.is_trivial = is_trivial
 
         self.compiler = Compiler(scheme=self.scheme, testcases=testcases)
-        self.runner = Runner(scheme=self.scheme, testcases=testcases)
-        self.analyzer = Analyzer(scheme=self.scheme, emit_llvm_ir=self.emit_llvm_ir, testcases=testcases)
 
 
     def generate_ir(self):
@@ -34,19 +30,9 @@ class Tester:
         self.compiler.compile_all_tests(frontend_instr=self.frontend_instr, emit_llvm_ir=self.emit_llvm_ir)
 
 
-    def run(self):
-        self.runner.run_all_tests()
-
-
-    def analyze(self):
-        self.analyzer.analyze()
-
-
     def test(self):
         Print_C.print_header(f"[TESTING {self.scheme}]")
         self.compile()
-        self.run()
-        self.analyze()
         print()
         print()
 
