@@ -38,7 +38,11 @@ public class MCMove extends MachineCode {
     @Override
     public String toString() {
         String res = "\t";
-        if (rhs.getState() == MachineOperand.state.imm && !CodeGenManager.canEncodeImm(rhs.getImm())) {
+        if (rhs.getState() == MachineOperand.state.imm && CodeGenManager.canEncodeImm(~(rhs.getImm()))) {
+            int imm = ~rhs.getImm();
+            res += "mvn" + condString(cond) + "\t" + dst.getName() + ",\t#" + imm + "\n";
+            CodeGenManager.getInstance().addOffset(1, res.length());
+        } else if (rhs.getState() == MachineOperand.state.imm && !CodeGenManager.canEncodeImm(rhs.getImm())) {
             int imm = rhs.getImm();
             int immH = imm >>> 16;
             int immL = (imm << 16) >>> 16;
