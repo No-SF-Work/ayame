@@ -1,14 +1,14 @@
 package ir.Analysis;
 
-import ir.Analysis.DomInfo;
 import ir.Loop;
 import ir.values.BasicBlock;
 import ir.values.Function;
+import util.IList.INode;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Stack;
-import util.IList.INode;
 
 public class LoopInfo {
 
@@ -51,6 +51,8 @@ public class LoopInfo {
     Stack<BasicBlock> postOrderStack = new Stack<>();
     Stack<BasicBlock> backEdgeTo = new Stack<>();
     ArrayList<BasicBlock> postOrder = new ArrayList<>();
+    this.bbLoopMap = new HashMap<>();
+    this.topLevelLoops = new ArrayList<>();
 
     postOrderStack.push(entry);
     BasicBlock curr;
