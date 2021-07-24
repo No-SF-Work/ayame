@@ -338,16 +338,17 @@ public class CodeGenManager {
                 MachineOperand dst=load.getDst();
                 CondType cond=load.getCond();
                 String access;
-                int idx=globalAddress.indexOf(addr);
-                if(idx<0){
+                int idx=globalAddress.indexOf(addr)+1;
+                if(idx==0){
                     globalAddress.add((VirtualReg) addr);
-                    idx=globalAddress.size()-1;
+                    idx=globalAddress.size();
                 }
                 if(absOffset<4000){
                     access="\tldr\t"+dst.getName()+",\t"+addr.getName()+"_"+mf.getName()+"\n";
                 }else {
                     MCMove mv=new MCMove();
-                    mv.setRhs(new MachineOperand(absOffset+idx*4));
+                    //减8是因为arm中真实的pc比当前指令的pc值大8，详见https://azeria-labs.com/arm-data-types-and-registers-part-2/
+                    mv.setRhs(new MachineOperand(absOffset+idx*4-8));
                     mv.setDst(load.getDst());
                     mv.setCond(load.getCond());
                     access=mv.toString();
@@ -355,6 +356,7 @@ public class CodeGenManager {
                     access+=",\t"+dst.getName()+"]\n";
                 }
                 sbf.insert(strOffset,access);
+                //absoffset>4000时由于move的偏移在toString方法中计算了，所以只用算ldr的偏移，所以两种情况下偏移都只+4
                 this.mcOffset+=4;
             }
             arm=sbf.toString();

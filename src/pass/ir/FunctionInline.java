@@ -1,8 +1,14 @@
 package pass.ir;
 
+import ir.MyFactoryBuilder;
 import ir.MyModule;
+import ir.types.IntegerType;
+import ir.values.Function;
+import ir.values.instructions.TerminatorInst.CallInst;
+import java.util.ArrayList;
 import pass.Pass;
 import pass.Pass.IRPass;
+import util.Mylogger;
 
 public class FunctionInline implements IRPass {
 
@@ -19,10 +25,73 @@ public class FunctionInline implements IRPass {
    *  4.构建新基本块(函数的多个出口)
    *
    * */
+  private MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
+  private MyModule m;
+  private boolean changed = false;
+
   @Override
   public void run(MyModule m) {
+    this.m = m;
+    simpleInline();
 
   }
 
+  /**
+   * 在simpleInline 运行结束后，调用图中应该只剩下了main函数以及各个强联通分量
+   */
+  public void simpleInline() {
+    ArrayList<Function> tobeProcessed = new ArrayList<>();
+    while (changed) {
+      changed = false;
+      tobeProcessed.clear();
+      m.__functions.forEach(funcNode -> {
+        var val = funcNode.getVal();
+        if (!val.isBuiltin_() && val.getCalleeList().isEmpty()) {
+          tobeProcessed.add(val);
+        }
+      });
+      tobeProcessed.forEach(this::inlineMe);
+    }
+  }
 
+  /*todo:
+   *   1.
+   *   2.
+   * */
+  public void hardInline() {
+
+  }
+
+  /*todo :
+   *   1.参数替换（IntegerType直接新建个Alloca,PointerType 替换成对应指针的GEP）
+   *   2.统一出口（新建个基本块，让被内联函数的所有ret出口都变成这个块，并且把这个块加一个无条件跳转到原本的下一条指令，相当于把一个块拆成三个）
+   *   3.
+   *   */
+  public void inlineMe(Function f) {
+    if (f.getCalleeList().isEmpty()) {
+      return;
+    }
+    changed = true;
+    f.getCallerList().forEach(caller -> {
+      caller.getList_().forEach(bbnode -> {
+        bbnode.getVal().getList().forEach(instNode -> {
+          var inst = instNode.getVal();
+          if (inst instanceof CallInst) {
+            if (((CallInst) inst).getFunc().getName().equals(f.getName())) {
+              if (inst.getType().isI32()) {
+                // TODO: 2021/7/24 alloca并且replace ret with store
+                factory.buildAlloca(caller.getList_().getEntry().getVal(), IntegerType.getI32());
+
+              }
+              var leave = factory.buildBasicBlock("", caller);
+              var ret = factory.buildBasicBlock("", caller);
+// TODO: 2021/7/24  
+            }
+          }
+        });
+      });
+    });
+
+
+  }
 }

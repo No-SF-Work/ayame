@@ -42,11 +42,13 @@ public class MCMove extends MachineCode {
             int imm=rhs.getImm();
             int immH=imm>>>16;
             int immL=(imm<<16)>>>16;
+            int offnum=1;
             res+="movw"+ condString(cond)+"\t"+dst.getName()+",\t#"+immL+"\n";
             if(immH!=0) {
                 res+="\tmovt"+ condString(cond)+"\t"+dst.getName()+",\t#"+immH+"\n";
+                offnum++;
             }
-            CodeGenManager.getInstance().addOffset(2,res.length());
+            CodeGenManager.getInstance().addOffset(offnum,res.length());
         }else{
             res+="mov"+ condString(cond)+"\t"+dst.getName()+",\t"+rhs.getName()+getShift().toString()+"\n";
             CodeGenManager.getInstance().addOffset(1,res.length());
