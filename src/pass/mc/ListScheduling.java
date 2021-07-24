@@ -2,8 +2,7 @@ package pass.mc;
 
 import backend.CodeGenManager;
 import backend.machinecodes.*;
-import backend.reg.MachineOperand;
-import backend.reg.PhyReg;
+import backend.reg.*;
 import pass.Pass;
 
 import java.util.*;
@@ -19,7 +18,7 @@ public class ListScheduling implements Pass.MCPass {
         Branch, Integer, Multiple, Load, Store, FP
     }
 
-    private class A72Unit {
+    private static class A72Unit {
         A72FUType type;
         Node curNode;
         int completeCycles;

@@ -3,7 +3,6 @@ package pass.mc;
 import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.*;
-import pass.Pass;
 import util.Pair;
 
 import java.util.*;
@@ -27,14 +26,12 @@ public class RegAllocator implements MCPass {
     }
 
     private static class BlockLiveInfo {
-        private final MachineBlock block;
-        private HashSet<MachineOperand> liveUse = new HashSet<>();
-        private HashSet<MachineOperand> liveDef = new HashSet<>();
+        private final HashSet<MachineOperand> liveUse = new HashSet<>();
+        private final HashSet<MachineOperand> liveDef = new HashSet<>();
         private HashSet<MachineOperand> liveIn = new HashSet<>();
         private HashSet<MachineOperand> liveOut = new HashSet<>();
 
         BlockLiveInfo(MachineBlock block) {
-            this.block = block;
         }
     }
 
@@ -105,9 +102,6 @@ public class RegAllocator implements MCPass {
             if (binaryInstr.getRhs().equals(origin)) {
                 binaryInstr.setRhs(target);
             }
-        } else if (instr instanceof MCBranch) {
-        } else if (instr instanceof MCCall) {
-        } else if (instr instanceof MCComment) {
         } else if (instr instanceof MCCompare) {
             var compareInstr = (MCCompare) instr;
             if (compareInstr.getLhs().equals(origin)) {
@@ -130,7 +124,6 @@ public class RegAllocator implements MCPass {
             if (fmaInstr.getAcc().equals(origin)) {
                 fmaInstr.setAcc(target);
             }
-        } else if  (instr instanceof MCJump) {
         } else if (instr instanceof MCLoad) {
             var loadInstr = (MCLoad) instr;
             if (loadInstr.getAddr().equals(origin)) {
@@ -199,7 +192,7 @@ public class RegAllocator implements MCPass {
                 var constrainedMoves = new HashSet<MCMove>();
                 var frozenMoves = new HashSet<MCMove>();
 
-                Map<MachineOperand, Integer> degree = IntStream.range(0, 16)
+                Map<MachineOperand, Integer> degree = IntStream.range(0, 17)
                         .mapToObj(func::getPhyReg)
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
