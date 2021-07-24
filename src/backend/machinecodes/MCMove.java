@@ -10,10 +10,10 @@ public class MCMove extends MachineCode {
     }
 
     public void setDst(MachineOperand dst) {
-        dealReg(this.dst,dst,false);
+        dealReg(this.dst, dst, false);
         this.dst = dst;
-        if(dst.getState()== MachineOperand.state.imm){
-            dst=null;
+        if (dst.getState() == MachineOperand.state.imm) {
+            dst = null;
         }
     }
 
@@ -22,7 +22,7 @@ public class MCMove extends MachineCode {
     }
 
     public void setRhs(MachineOperand rhs) {
-        dealReg(this.rhs,rhs,true);
+        dealReg(this.rhs, rhs, true);
         this.rhs = rhs;
     }
 
@@ -36,22 +36,22 @@ public class MCMove extends MachineCode {
     }
 
     @Override
-    public String toString(){
-        String res="\t";
-        if(rhs.getState()== MachineOperand.state.imm&&!CodeGenManager.canEncodeImm(rhs.getImm())){
-            int imm=rhs.getImm();
-            int immH=imm>>>16;
-            int immL=(imm<<16)>>>16;
-            int offnum=1;
-            res+="movw"+ condString(cond)+"\t"+dst.getName()+",\t#"+immL+"\n";
-            if(immH!=0) {
-                res+="\tmovt"+ condString(cond)+"\t"+dst.getName()+",\t#"+immH+"\n";
+    public String toString() {
+        String res = "\t";
+        if (rhs.getState() == MachineOperand.state.imm && !CodeGenManager.canEncodeImm(rhs.getImm())) {
+            int imm = rhs.getImm();
+            int immH = imm >>> 16;
+            int immL = (imm << 16) >>> 16;
+            int offnum = 1;
+            res += "movw" + condString(cond) + "\t" + dst.getName() + ",\t#" + immL + "\n";
+            if (immH != 0) {
+                res += "\tmovt" + condString(cond) + "\t" + dst.getName() + ",\t#" + immH + "\n";
                 offnum++;
             }
-            CodeGenManager.getInstance().addOffset(offnum,res.length());
-        }else{
-            res+="mov"+ condString(cond)+"\t"+dst.getName()+",\t"+rhs.getName()+getShift().toString()+"\n";
-            CodeGenManager.getInstance().addOffset(1,res.length());
+            CodeGenManager.getInstance().addOffset(offnum, res.length());
+        } else {
+            res += "mov" + condString(cond) + "\t" + dst.getName() + ",\t" + rhs.getName() + getShift().toString() + "\n";
+            CodeGenManager.getInstance().addOffset(1, res.length());
         }
         return res;
     }
@@ -62,15 +62,15 @@ public class MCMove extends MachineCode {
 
     private ArmAddition.CondType cond = ArmAddition.CondType.Any;
 
-    public MCMove(MachineBlock mb){
-        super(TAG.Mv,mb);
+    public MCMove(MachineBlock mb) {
+        super(TAG.Mv, mb);
     }
 
-    public MCMove(){
+    public MCMove() {
         super(TAG.Mv);
     }
 
-    public MCMove(MachineBlock mb,int num){
-        super(TAG.Mv,mb,num);
+    public MCMove(MachineBlock mb, int num) {
+        super(TAG.Mv, mb, num);
     }
 }
