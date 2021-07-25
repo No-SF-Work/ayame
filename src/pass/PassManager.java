@@ -49,6 +49,8 @@ public class PassManager {
     irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new EmitLLVM("beforeinline.ll"));
     irPasses.add(new FunctionInline());
+    irPasses.add(new BBPredSucc());
+    irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new EmitLLVM("afterinline.ll"));
     irPasses.add(new BBPredSucc());
     irPasses.add(new InterproceduralAnalysis());
@@ -61,7 +63,7 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());
-    mcPasses.add(new PeepholeOptimization());
+//    mcPasses.add(new PeepholeOptimization());
   }
 
   public static PassManager getPassManager() {
