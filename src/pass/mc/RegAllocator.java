@@ -615,5 +615,21 @@ public class RegAllocator implements MCPass {
                 }
             }
         }
+
+        // todo: [to be refactor] fix allocator equality
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+
+                for (var instrEntry : block.getmclist()) {
+                    var instr = instrEntry.getVal();
+
+                    instr.getDef().stream().filter(PhyReg.class::isInstance)
+                            .map(PhyReg.class::cast).forEach(phyReg -> phyReg.isAllocated = false);
+                    instr.getUse().stream().filter(PhyReg.class::isInstance)
+                            .map(PhyReg.class::cast).forEach(phyReg -> phyReg.isAllocated = false);
+                }
+            }
+        }
     }
 }
