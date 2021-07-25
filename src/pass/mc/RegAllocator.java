@@ -301,7 +301,7 @@ public class RegAllocator implements MCPass {
                     degree.put(m, d - 1);
                     if (d == K) {
                         enableMoves.accept(m);
-                        spillWorklist.add(m);
+                        spillWorklist.remove(m);
                         if (moveRelated.apply(m)) {
                             freezeWorklist.add(m);
                         } else {
