@@ -61,6 +61,16 @@ public class PeepholeOptimization implements Pass.MCPass {
                         }
                     }
 
+                    if (instr instanceof MCBranch) {
+                        MCBranch brInstr = (MCBranch) instr;
+                        var nxtBB = blockEntry.getNext() == null ? null : blockEntry.getNext().getVal();
+                        boolean isSameTargetNxtBB = brInstr.getTarget().equals(nxtBB);
+
+                        if (isSameTargetNxtBB) {
+                            instrEntryIter.remove();
+                        }
+                    }
+
                     if (instr instanceof MCLoad) {
                         // str a, [b, x]
                         // ldr c, [b, x] (cur, to be replaced)
