@@ -16,6 +16,7 @@ import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.TerminatorInst;
+import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -111,11 +112,33 @@ public class FunctionInline implements IRPass {
   }
 
   private void inlineOneCall(CallInst call) {
+    var callNxt = call.node.getNext();
+    var callPre = call.node.getPrev();
     var arrive = factory.buildBasicBlock("", call.getBB().getParent());
-    getFunctionCopy((Function)call.getOperands().get(0));
+    var copy = getFunctionCopy((Function) call.getOperands().get(0));
+    var originBB = call.getBB();
+    var br2entry = factory.getBr(copy.getList_().getEntry().getVal());
+    var tmp = call.node.getNext();
+    //在call指令前面插入一个到目标函数的entry的跳转
+    var br = factory.getBr(copy.getList_().getEntry().getVal());
+    br.node.insertBefore(call.node);
+    //取出call指令后面的所有指令，放到arrive块中
+    ArrayList<Instruction> toBeMoved = new ArrayList<>();
+    while (tmp != null) {
+      toBeMoved.add(tmp.getVal());
+      tmp = tmp.getNext();
+    }
+    toBeMoved.forEach(val -> {
+      val.node.removeSelf();
+      val.node.insertAtEnd(arrive.list_);
+    });
+    //删除call
+    call.node.removeSelf();
+    //
 
   }
 
+  //todo 将所有ret 替换为对指定值的store以及对特定br的跳转
   private void replaceAllRet() {
   }
 
