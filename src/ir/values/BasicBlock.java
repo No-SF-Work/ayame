@@ -38,7 +38,7 @@ public class BasicBlock extends Value {
     this.idoms = new ArrayList<>();
     this.domers = new ArrayList<>();
     this.dominanceFrontier = new ArrayList<>();
-    this.parent = parent;
+
     list_ = new IList<>(this);
     node_ = new INode<>(this);
     node_.setParent(parent.getList_());
@@ -46,7 +46,7 @@ public class BasicBlock extends Value {
   }
 
   public Function getParent() {
-    return parent;
+    return node_.getParent().getVal();
   }
 
   public ArrayList<BasicBlock> getPredecessor_() {
@@ -103,7 +103,6 @@ public class BasicBlock extends Value {
 
   public INode<BasicBlock, Function> node_;
   public IList<Instruction, BasicBlock> list_; //在well form的bb里面,最后一个listNode是terminator
-  protected Function parent;//它所属的函数
   protected ArrayList<BasicBlock> predecessor_;//前驱
   protected ArrayList<BasicBlock> successor_;//后继
 
