@@ -48,7 +48,7 @@ public class PassManager {
     irPasses.add(new BBPredSucc());
     irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new EmitLLVM("beforeinline.ll"));
-//    irPasses.add(new FunctionInline());
+    irPasses.add(new FunctionInline());
     irPasses.add(new EmitLLVM("afterinline.ll"));
     irPasses.add(new BBPredSucc());
     irPasses.add(new InterproceduralAnalysis());
