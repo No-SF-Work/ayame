@@ -201,7 +201,7 @@ public class FunctionInline implements IRPass {
       bb.node_.removeSelf();
       bb.node_.insertBefore(arrive.node_);
     });
-    //todo 将所有alloca前提
+    //将所有alloca前提
     ArrayList<Instruction> allocas = new ArrayList<>();
     originFunc.getList_().forEach(bb -> bb.getVal().getList().forEach(inst -> {
       if (inst.getVal() instanceof AllocaInst) {
