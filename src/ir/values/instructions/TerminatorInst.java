@@ -44,7 +44,17 @@ public abstract class TerminatorInst extends Instruction {
         CoSetOperand(i + 1, args.get(i));//args
       }
     }
-
+  public CallInst(Function func,ArrayList<Value> args){
+      super(TAG_.Call,func.getType().getRetType(), args.size()+1);
+    assert func.getNumArgs()==args.size();
+    if (this.getType().isVoidTy()){
+      needname=false;
+    }
+    CoSetOperand(0, func);//op1 is func
+    for (int i = 0; i < args.size(); i++) {
+      CoSetOperand(i + 1, args.get(i));//args
+    }
+    }
     public boolean isPureCall() {
       Function func = (Function) this.getOperands().get(0);
       if (func.isHasSideEffect() || func.isUsedGlobalVariable()) {

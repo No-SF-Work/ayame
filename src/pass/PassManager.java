@@ -24,7 +24,7 @@ public class PassManager {
 
   private Logger mylogger = Mylogger.getLogger(PassManager.class);
   private static PassManager passManager = new PassManager();
-  private ArrayList<String> openedPasses_ = new ArrayList<>() {{
+  public ArrayList<String> openedPasses_ = new ArrayList<>() {{
     //  add("typeCheck");
     add("bbPredSucc");
     add("Mem2reg");
