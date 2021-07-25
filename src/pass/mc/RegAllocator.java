@@ -301,7 +301,7 @@ public class RegAllocator implements MCPass {
                     degree.put(m, d - 1);
                     if (d == K) {
                         enableMoves.accept(m);
-                        spillWorklist.remove(m);
+                        spillWorklist.add(m);
                         if (moveRelated.apply(m)) {
                             freezeWorklist.add(m);
                         } else {
@@ -612,6 +612,22 @@ public class RegAllocator implements MCPass {
                         func.addStackSize(4);
                     }
                     done = false;
+                }
+            }
+        }
+
+        // todo: [to be refactor] fix allocator equality
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+
+                for (var instrEntry : block.getmclist()) {
+                    var instr = instrEntry.getVal();
+
+                    instr.getDef().stream().filter(PhyReg.class::isInstance)
+                            .map(PhyReg.class::cast).forEach(phyReg -> phyReg.isAllocated = false);
+                    instr.getUse().stream().filter(PhyReg.class::isInstance)
+                            .map(PhyReg.class::cast).forEach(phyReg -> phyReg.isAllocated = false);
                 }
             }
         }
