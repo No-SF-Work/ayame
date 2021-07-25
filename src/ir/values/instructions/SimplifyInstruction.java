@@ -373,6 +373,11 @@ public class SimplifyInstruction {
       return inst;
     }
 
+    // lhs / 1 -> lhs
+    if (rhs instanceof ConstantInt && ((ConstantInt)rhs).getVal() == 1) {
+      return lhs;
+    }
+
     return inst;
   }
 
