@@ -18,6 +18,7 @@ import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.TerminatorInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
+import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,7 +32,7 @@ public class FunctionInline implements IRPass {
 
   @Override
   public String getName() {
-    return "simpleFuncInline";
+    return "funcinline";
   }
 
   /*
@@ -53,7 +54,6 @@ public class FunctionInline implements IRPass {
   public void run(MyModule m) {
     this.m = m;
     simpleInline();
-
   }
 
   /**
@@ -61,9 +61,9 @@ public class FunctionInline implements IRPass {
    */
   public void simpleInline() {
     ArrayList<Function> tobeProcessed = new ArrayList<>();
+    changed = true;
     while (changed) {
       changed = false;
-      tobeProcessed.clear();
       m.__functions.forEach(funcNode -> {
         var val = funcNode.getVal();
         if (!val.isBuiltin_() && val.getCalleeList().isEmpty()) {
@@ -71,6 +71,7 @@ public class FunctionInline implements IRPass {
         }
       });
       tobeProcessed.forEach(this::inlineMe);
+      tobeProcessed.clear();
     }
   }
 
@@ -109,19 +110,16 @@ public class FunctionInline implements IRPass {
     toBeReplaced.forEach(inst -> {
       inlineOneCall((CallInst) inst);
     });
+    f.getCallerList().clear();
   }
-
   private void inlineOneCall(CallInst call) {
-    var callNxt = call.node.getNext();
-    var callPre = call.node.getPrev();
     var arrive = factory.buildBasicBlock("", call.getBB().getParent());
     var copy = getFunctionCopy((Function) call.getOperands().get(0));
     var originBB = call.getBB();
     var br2entry = factory.getBr(copy.getList_().getEntry().getVal());
     var tmp = call.node.getNext();
     //在call指令前面插入一个到目标函数的entry的跳转
-    var br = factory.getBr(copy.getList_().getEntry().getVal());
-    br.node.insertBefore(call.node);
+    var funcArgs = copy.getArgList();
     //取出call指令后面的所有指令，放到arrive块中
     ArrayList<Instruction> toBeMoved = new ArrayList<>();
     while (tmp != null) {
@@ -132,15 +130,69 @@ public class FunctionInline implements IRPass {
       val.node.removeSelf();
       val.node.insertAtEnd(arrive.list_);
     });
-    //删除call
+    //将call从原块中取出
     call.node.removeSelf();
-    //
+    br2entry.node.insertAtEnd(originBB.getList());
+    //将目标函数中对arg的使用替换为call指令中对对应元素的使用
+    for (int i = 0; i < funcArgs.size(); i++) {
+      var tmparg = funcArgs.get(i);
+      var callerArg = call.getOperands().get(i + 1);
+      tmparg.COReplaceAllUseWith(callerArg);
+    }
+    //根据返回类型设置返回逻辑
+    if (call.getType().isI32()) {
+      //将对call的返回值的使用替换为对一个alloca的使用
+      //将ret替换为对alloca的store
+      //在arrive的开头插入一个对alloca的load将对ret值的使用替换为对load的使用
+      var alloca = factory.buildAlloca(originBB, IntegerType.getI32());
+      var load = factory.getLoad(factory.getI32Ty(), alloca);
+      load.node.insertAtEntry(arrive.list_);
+      call.COReplaceAllUseWith(load);
 
+      ArrayList<RetInst> rets = new ArrayList<>();
+      copy.getList_().forEach(bbNode -> {
+        bbNode.getVal().getList().forEach(instNode -> {
+          if (instNode.getVal() instanceof RetInst) {
+            rets.add((RetInst) instNode.getVal());
+          }
+        });
+      });
+      rets.forEach(ret -> {
+        var tmpstore = factory.getStore(ret.getOperands().get(0), alloca);
+        ret.CORemoveAllOperand();
+        ret.COReplaceAllUseWith(alloca);
+        var tmpBr = factory.getBr(arrive);
+        tmpstore.node.insertBefore(ret.node);
+        tmpBr.node.insertBefore(ret.node);
+        ret.node.removeSelf();
+      });
+    }
+    if (call.getType().isVoidTy()) {
+      ArrayList<RetInst> rets = new ArrayList<>();
+      copy.getList_().forEach(bbNode -> {
+        bbNode.getVal().getList().forEach(instNode -> {
+          if (instNode.getVal() instanceof RetInst) {
+            rets.add((RetInst) instNode.getVal());
+          }
+        });
+      });
+      rets.forEach(ret -> {
+        var tmpBr = factory.getBr(arrive);
+        tmpBr.node.insertBefore(ret.node);
+        ret.node.removeSelf();
+      });
+    }
+    ArrayList<BasicBlock> toBeMovedBBs = new ArrayList<>();
+    copy.getList_().forEach(node -> {
+      toBeMovedBBs.add(node.getVal());
+    });
+    toBeMovedBBs.forEach(bb -> {
+      bb.node_.removeSelf();
+      bb.node_.insertBefore(arrive.node_);
+    });
+    //将所有alloca前提
   }
 
-  //todo 将所有ret 替换为对指定值的store以及对特定br的跳转
-  private void replaceAllRet() {
-  }
 
   //因为使用的是双向侵入链表，对value的copy会有点复杂
   private Function getFunctionCopy(Function source) {
@@ -167,7 +219,9 @@ public class FunctionInline implements IRPass {
 
   private void processBasicblock(BasicBlock source, BasicBlock target) {
     source.getList().forEach(node -> {
-      getInstCopy(node.getVal()).node.insertAtEnd(target.getList());
+      var copy = getInstCopy(node.getVal());
+      valueMap.put(node.getVal(), copy);
+      copy.node.insertAtEnd(target.getList());
     });
   }
 
@@ -232,14 +286,15 @@ public class FunctionInline implements IRPass {
       return val;
     } else {
       assert valueMap.get(val) != null;
+      if (valueMap.get(val) == null) {
+        throw new RuntimeException();
+      }
       return valueMap.get(val);
     }
   }
 
   //cast origin Value to copied value
   private HashMap<Value, Value> valueMap = new HashMap<>();
-
-
 }
 
 

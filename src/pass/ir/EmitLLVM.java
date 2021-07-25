@@ -13,10 +13,16 @@ import util.Mylogger;
 public class EmitLLVM implements IRPass {
 
 
+  public EmitLLVM(String outputName) {
+   this.outputName = outputName;
+    sb = new StringBuilder();
+  }
+
   public EmitLLVM() {
     sb = new StringBuilder();
   }
 
+  String outputName = "out.ll";
   StringBuilder sb;
   private int vnc = 0;//value name counter
   Logger log = Mylogger.getLogger(EmitLLVM.class);
@@ -67,14 +73,14 @@ public class EmitLLVM implements IRPass {
             }
         );
         sb.append("}\n");
-      }else {
+      } else {
         sb.append("declare ")
             .append(val)
             .append("\n");
       }
     });
     try {
-      FileWriter fw = new FileWriter(new File("out.ll"));
+      FileWriter fw = new FileWriter(outputName);
       System.out.println(sb);
       fw.append(sb);
       fw.close();
@@ -86,7 +92,9 @@ public class EmitLLVM implements IRPass {
 
   private void nameVariable(MyModule m) {
     m.__globalVariables.forEach(gv -> {
-      gv.setName("@" + gv.getName());
+      if (!gv.getName().startsWith("@")){
+        gv.setName("@" + gv.getName());
+      }
     });
     m.__functions.forEach(
         f -> {
