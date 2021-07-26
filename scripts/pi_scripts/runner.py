@@ -3,7 +3,7 @@ import subprocess
 from pretty_print import Print_C
 
 class Runner:
-    run_kases = 3
+    run_kases = 1
 
     def __init__(self, scheme, testcases):
         self.scheme = scheme

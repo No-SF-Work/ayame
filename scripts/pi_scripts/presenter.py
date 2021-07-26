@@ -7,6 +7,7 @@ class Presenter:
     kases = Runner.run_kases
     splitter = re.compile('[-@ :\t\r\n]+')
     scheme_time_print_template = "{0:<10} :  {1:<10.0f}us"
+    self.wa_cases = [:]
 
     def __init__(self, schemes, testcases):
         self.schemes = schemes
@@ -58,7 +59,7 @@ class Presenter:
         for scheme_time in sorted_scheme_time_list:
             if not scheme_time[0] in wrong_schemes:
                 Print_C.print_pass(self.scheme_time_print_template.format(scheme_time[0], scheme_time[1]))
-        for scheme in  wrong_schemes:
+        for scheme in wrong_schemes:
             Print_C.print_error(f"{scheme} WA")
 
         for stage_scheme_time in stage_scheme_time_dict.items():
