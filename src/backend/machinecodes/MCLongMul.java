@@ -48,7 +48,7 @@ public class MCLongMul extends MachineCode{
     }
 
     public void setRhs(MachineOperand rhs) {
-        dealReg(this.rhs,rhs,false);
+        dealReg(this.rhs,rhs,true);
         this.rhs = rhs;
     }
 }
