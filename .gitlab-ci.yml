@@ -27,8 +27,13 @@
 
 run_functional:
   when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
   script:
-    - git checkout dev
     - bash scripts/server_scripts/build_ayame.sh
   tags:
     - x86
