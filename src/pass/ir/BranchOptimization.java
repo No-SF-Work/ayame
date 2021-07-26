@@ -49,7 +49,7 @@ public class BranchOptimization implements IRPass {
 
             completed = removeUselessPhi(func);
             completed &= onlyOneUncondBr(func);
-            completed &= endWithUncondBr(func);
+//            completed &= endWithUncondBr(func);
             completed &= removeDeadBB(func);
             completed &= mergeCondBr(func);
 
