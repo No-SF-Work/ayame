@@ -4,6 +4,7 @@ import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.MachineOperand;
 import pass.Pass;
+import util.Pair;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -147,30 +148,26 @@ public class PeepholeOptimization implements Pass.MCPass {
         return done;
     }
 
-    private HashMap<MachineCode, MachineCode> getLiveRange(MachineFunction func) {
+    private Pair<HashMap<MachineOperand, MachineCode>, HashMap<MachineCode, MachineCode>> getLiveRangeInBlock(MachineBlock block) {
         var lastDefMap = new HashMap<MachineOperand, MachineCode>();
         var lastNeedInstrMap = new HashMap<MachineCode, MachineCode>();
-        for (var blockEntry : func.getmbList()) {
-            var block = blockEntry.getVal();
+        for (var instrEntry : block.getmclist()) {
+            var instr = instrEntry.getVal();
 
-            for (var instrEntry : block.getmclist()) {
-                var instr = instrEntry.getVal();
+            var defs = instr.getMCDef();
+            var uses = instr.getMCUse();
+            var hasSideEffect = instr instanceof MCBranch ||
+                    instr instanceof MCCall ||
+                    instr instanceof MCJump ||
+                    instr instanceof MCStore ||
+                    instr instanceof MCReturn ||
+                    instr instanceof MCComment;
 
-                var defs = instr.getMCDef();
-                var uses = instr.getMCUse();
-                var hasSideEffect = instr instanceof MCBranch ||
-                        instr instanceof MCCall ||
-                        instr instanceof MCJump ||
-                        instr instanceof MCStore ||
-                        instr instanceof MCReturn ||
-                        instr instanceof MCComment;
-
-                uses.stream().filter(lastDefMap::containsKey).forEach(use -> lastNeedInstrMap.put(lastDefMap.get(use), instr));
-                defs.forEach(def -> lastDefMap.put(def, instr));
-                lastNeedInstrMap.put(instr, hasSideEffect ? instr : null);
-            }
+            uses.stream().filter(lastDefMap::containsKey).forEach(use -> lastNeedInstrMap.put(lastDefMap.get(use), instr));
+            defs.forEach(def -> lastDefMap.put(def, instr));
+            lastNeedInstrMap.put(instr, hasSideEffect ? instr : null);
         }
-        return lastNeedInstrMap;
+        return new Pair<>(lastDefMap, lastNeedInstrMap);
     }
 
     private static class BlockLiveInfo {
@@ -236,21 +233,27 @@ public class PeepholeOptimization implements Pass.MCPass {
         return liveInfoMap;
     }
 
-    private boolean peepholeWithDefUse(CodeGenManager manager) {
+    private boolean peepholeWithDataFlow(CodeGenManager manager) {
         boolean done = true;
         for (var func : manager.getMachineFunctions()) {
             var liveInfoMap = livenessAnalysis(func);
 
             for (var blockEntry : func.getmbList()) {
                 var block = blockEntry.getVal();
+                var liveRangePair = getLiveRangeInBlock(block);
+                var lastDefMap = liveRangePair.getFirst();
+                var liveRangeInBlock = liveRangePair.getSecond();
+                var liveout = liveInfoMap.get(block).liveOut;
 
                 for (var instrEntryIter = block.getmclist().iterator(); instrEntryIter.hasNext(); ) {
                     var instrEntry = instrEntryIter.next();
                     var instr = instrEntry.getVal();
 
                     // Remove unused instr
-                    var lastUseInstr = liveInfoMap.get(instr);
-                    if (lastUseInstr == null) {
+                    var lastUseInstr = liveRangeInBlock.get(instr);
+                    var isLastDefInstr = instr.getDef().stream().allMatch(def -> lastDefMap.get(def).equals(instr));
+                    var defRegInLiveout = instr.getDef().stream().anyMatch(liveout::contains);
+                    if (!isLastDefInstr && lastUseInstr == null) {
                         instrEntryIter.remove();
                         done = false;
                     } else {
@@ -282,7 +285,7 @@ public class PeepholeOptimization implements Pass.MCPass {
         boolean done = false;
 
         while (!done) {
-            done = trivialPeephole(manager);// && removeUselessBB(manager);
+            done = trivialPeephole(manager) && peepholeWithDataFlow(manager); //&& removeUselessBB(manager);
         }
     }
 }
