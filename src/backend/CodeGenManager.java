@@ -31,9 +31,6 @@ public class CodeGenManager {
     // all functions
     private ArrayList<MachineFunction> machineFunctions = new ArrayList<>();
 
-    //key为phi指令的目标vr，value为一串01序列，长度等同于phi指令所在基本块的前驱块，如果有环该位为0
-    private HashMap<VirtualReg, ArrayList<Boolean>> phiRows = new HashMap<>();
-
     //ir moudle
     private static MyModule myModule;
 
@@ -524,7 +521,6 @@ public class CodeGenManager {
                                 phiSet.add(phiArg);
                                 comment += phiArg.getName() + " ";
                             }
-                            phiRows.put((VirtualReg) phiTarget, new ArrayList<>());
                             MCComment m = new MCComment(comment, bMap.get(bb));
                         } else {
                             break;
@@ -543,6 +539,9 @@ public class CodeGenManager {
                             if (ir.tag == Instruction.TAG_.Phi) {
                                 MachineOperand phiTarget = analyzeValue(ir, mbb, false);
                                 assert (phiTarget instanceof VirtualReg);
+                                if(((Phi) ir).getIncomingVals().get(i) instanceof UndefValue){
+                                    continue;
+                                }
                                 MachineOperand phiParam = analyzeValue(((Phi) ir).getIncomingVals().get(i), mbb, false);
                                 edges.put(phiTarget, phiParam);
                             } else {
@@ -573,8 +572,6 @@ public class CodeGenManager {
                                 while (!stack.isEmpty()) {
                                     MachineOperand phiTarget = stack.pop();
                                     assert (edges.containsKey(phiTarget));
-                                    assert (phiRows.get(phiTarget).size() == i);
-                                    phiRows.get(phiTarget).add(true);
                                     MCMove mv = new MCMove();
                                     mv.setRhs(phiParam);
                                     mv.setDst(phiTarget);
@@ -595,8 +592,6 @@ public class CodeGenManager {
                                     mv=new MCMove();
                                     mv.setDst(r);
                                     assert (edges.containsKey(r));
-                                    assert (phiRows.get(r).size() == i);
-                                    phiRows.get(r).add(false);
                                     edges.remove(r);
                                 }
                                 mv.setRhs(temp);
@@ -604,8 +599,6 @@ public class CodeGenManager {
                                 while (!stack.isEmpty()) {
                                     MachineOperand phiTarget = stack.pop();
                                     assert (edges.containsKey(phiTarget));
-                                    assert (phiRows.get(phiTarget).size() == i);
-                                    phiRows.get(phiTarget).add(true);
                                     MCMove mv1=new MCMove();
                                     mv1.setRhs(phiParam);
                                     mv1.setDst(phiTarget);
@@ -932,12 +925,12 @@ public class CodeGenManager {
 //                        }
                     } else if (ir.tag == Instruction.TAG_.Load) {
                         Value ar = ir.getOperands().get(0);
+                        MachineOperand dst = analyzeValue(ir, mb, true);
                         //如果load的地址是二重指针
                         if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
                             loadToAlloca.put((MemInst.LoadInst) ir, (MemInst.AllocaInst) ar);
                             continue;
                         }
-                        MachineOperand dst = analyzeValue(ir, mb, true);
                         MachineOperand addr = analyzeValue(ir.getOperands().get(0), mb, true);
                         MachineOperand offset = new MachineOperand(0);
                         MCLoad load = new MCLoad(mb);
@@ -948,11 +941,11 @@ public class CodeGenManager {
                         Value ar = ir.getOperands().get(1);
                         //如果store的指针是个二重指针
                         if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
-                            allocaToStore.put((MemInst.AllocaInst) ar, ir.getOperands().get(0));
+                            allocaToStore.put((MemInst.AllocaInst) ar, analyzeValue(ir.getOperands().get(0),mb,true));
                             analyzeValue(ir.getOperands().get(0), mb, true);
                             continue;
                         }
-                        MachineOperand arr = analyzeValue(ir.getOperands().get(1), mb, true);
+                        MachineOperand arr = analyzeValue(ar, mb, true);
                         MachineOperand data = analyzeNoImm(ir.getOperands().get(0), mb);
                         MachineOperand offset = new MachineOperand(0);
                         MCStore store = new MCStore(mb);
@@ -1167,13 +1160,13 @@ public class CodeGenManager {
     //对于a[],会有alloca b store a b load d b
     //其中a,d是一个数组首地址，b是一个二重指针，但是d和a其实是一个东西，把对d的使用转换成对a的使用
     HashMap<MemInst.LoadInst, MemInst.AllocaInst> loadToAlloca = new HashMap<>();
-    HashMap<MemInst.AllocaInst, Value> allocaToStore = new HashMap<>();
+    HashMap<MemInst.AllocaInst, MachineOperand> allocaToStore = new HashMap<>();
     HashMap<GlobalVariable, MCLoad> globalMap = new HashMap<>();
     MachineFunction mf = null;
     Function f = null;
     HashMap<BasicBlock, MachineBlock> bMap = new HashMap<>();
 
-
+    //isInsert：如果v是字面量，那么isInsert决定了是把他move到一个虚拟寄存器里还是之间返回一个字面量的MachineOperand
     private MachineOperand analyzeValue(Value v, MachineBlock mb, boolean isInsert) {
         if (v instanceof Function.Arg && f.getArgList().contains(v)) {
             VirtualReg vr;
@@ -1228,8 +1221,7 @@ public class CodeGenManager {
                 return new MachineOperand(((Constants.ConstantInt) v).getVal());
         } else if (v instanceof MemInst.LoadInst && loadToAlloca.containsKey(v)) {
             assert (allocaToStore.containsKey(loadToAlloca.get(v)));
-            assert (irMap.containsKey(allocaToStore.get(loadToAlloca.get(v))));
-            return irMap.get(allocaToStore.get(loadToAlloca.get(v)));
+            return allocaToStore.get(loadToAlloca.get(v));
         } else {
             if (!irMap.containsKey(v)) {
                 VirtualReg vr = new VirtualReg(v.getName());
