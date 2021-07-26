@@ -49,7 +49,9 @@ public class CompilerDriverRaw {
         target = iter.next();
         continue;
       }
-
+      if (cmd.equals("-O2")) {
+        Config.getInstance().isO2 = true;
+      }
       if (cmd.endsWith(".sy")) {
         source = cmd;
       }
