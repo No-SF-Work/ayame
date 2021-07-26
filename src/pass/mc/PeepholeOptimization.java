@@ -6,6 +6,7 @@ import backend.reg.MachineOperand;
 import pass.Pass;
 
 import java.util.HashMap;
+import java.util.HashSet;
 
 import static backend.machinecodes.ArmAddition.CondType.*;
 import static backend.machinecodes.ArmAddition.ShiftType.*;
@@ -17,13 +18,8 @@ public class PeepholeOptimization implements Pass.MCPass {
         return "Peephole";
     }
 
-    private boolean isSameOperand(MachineOperand a, MachineOperand b) {
-        return a.getState().equals(imm) ?
-                a.equals(b) :
-                a.getState().equals(b.getState()) && a.getName().equals(b.getName());
-    }
-
-    private void trivialPeephole(CodeGenManager manager) {
+    private boolean trivialPeephole(CodeGenManager manager) {
+        boolean done = true;
         for (var func : manager.getMachineFunctions()) {
             for (var blockEntry : func.getmbList()) {
                 var block = blockEntry.getVal();
@@ -39,12 +35,13 @@ public class PeepholeOptimization implements Pass.MCPass {
                         MCBinary binInstr = (MCBinary) instr;
                         boolean isAddOrSub = binInstr.getTag() == MachineCode.TAG.Add ||
                                 binInstr.getTag() == MachineCode.TAG.Sub;
-                        boolean isSameDstLhs = isSameOperand(binInstr.getDst(), binInstr.getLhs());
-                        boolean hasZeroOperand = isSameOperand(binInstr.getRhs(),MachineOperand.zeroImm);
+                        boolean isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
+                        boolean hasZeroOperand = binInstr.getRhs().equals(MachineOperand.zeroImm);
                         boolean hasNoShift = binInstr.getShift().isNone();
 
                         if (isAddOrSub && isSameDstLhs && hasZeroOperand && hasNoShift) {
                             instrEntryIter.remove();
+                            done = false;
                         }
                     }
 
@@ -58,6 +55,21 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                         if (isSameTargetNxtBB) {
                             instrEntryIter.remove();
+                            done = false;
+                        }
+                    }
+
+                    if (instr instanceof MCBranch) {
+                        // B1:
+                        // jump target (to be remove)
+                        // target:
+                        MCBranch brInstr = (MCBranch) instr;
+                        var nxtBB = blockEntry.getNext() == null ? null : blockEntry.getNext().getVal();
+                        boolean isSameTargetNxtBB = brInstr.getTarget().equals(nxtBB);
+
+                        if (isSameTargetNxtBB) {
+                            instrEntryIter.remove();
+                            done = false;
                         }
                     }
 
@@ -71,8 +83,8 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                         if (preInstrEntry != null && preInstrEntry.getVal() instanceof MCStore) {
                             MCStore preStore = (MCStore) preInstrEntry.getVal();
-                            boolean isSameAddr = isSameOperand(preStore.getAddr(), curLoad.getAddr());
-                            boolean isSameOffset = isSameOperand(preStore.getOffset(), curLoad.getOffset());
+                            boolean isSameAddr = preStore.getAddr().equals(curLoad.getAddr());
+                            boolean isSameOffset = preStore.getOffset().equals(curLoad.getOffset());
                             boolean isSameShift = preStore.getShift().equals(curLoad.getShift());
 
                             if (isSameAddr && isSameOffset && isSameShift) {
@@ -82,6 +94,7 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                                 moveInstr.insertAfterNode(preInstrEntry.getVal());
                                 instrEntryIter.remove();
+                                done = false;
                             }
                         }
                     }
@@ -94,9 +107,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                             continue;
                         }
 
-                        if (isSameOperand(curMove.getDst(), curMove.getRhs())) {
+                        if (curMove.getDst().equals(curMove.getRhs())) {
                             // move a a (to be remove)
                             instrEntryIter.remove();
+                            done = false;
                         } else {
                             if (nxtInstrEntry != null && nxtInstrEntry.getVal() instanceof MCMove) {
                                 // move a b (cur, to be remove)
@@ -105,10 +119,11 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 // move a b
                                 // move a a
                                 var nxtMove = (MCMove) nxtInstrEntry.getVal();
-                                boolean isSameDst = isSameOperand(nxtMove.getDst(), curMove.getDst());
-                                boolean nxtInstrNotIdentity = !isSameOperand(nxtMove.getRhs(), nxtMove.getDst());
+                                boolean isSameDst = nxtMove.getDst().equals(curMove.getDst());
+                                boolean nxtInstrNotIdentity = !nxtMove.getRhs().equals(nxtMove.getDst());
                                 if (isSameDst && nxtInstrNotIdentity) {
                                     instrEntryIter.remove();
+                                    done = false;
                                 }
                             }
 
@@ -116,10 +131,11 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 // move a b
                                 // move b a (cur, to be remove)
                                 MCMove preMove = (MCMove) preInstrEntry.getVal();
-                                boolean isSameA = isSameOperand(preMove.getDst(), curMove.getRhs());
-                                boolean isSameB = isSameOperand(preMove.getRhs(), curMove.getDst());
+                                boolean isSameA = preMove.getDst().equals(curMove.getRhs());
+                                boolean isSameB = preMove.getRhs().equals(curMove.getDst());
                                 if (isSameA && isSameB) {
                                     instrEntryIter.remove();
+                                    done = false;
                                 }
                             }
                         }
@@ -127,6 +143,8 @@ public class PeepholeOptimization implements Pass.MCPass {
                 }
             }
         }
+
+        return done;
     }
 
     private HashMap<MachineCode, MachineCode> getLiveRange(MachineFunction func) {
@@ -155,9 +173,73 @@ public class PeepholeOptimization implements Pass.MCPass {
         return lastNeedInstrMap;
     }
 
-    private void peepholeWithDefUse(CodeGenManager manager) {
+    private static class BlockLiveInfo {
+        private final HashSet<MachineOperand> liveUse = new HashSet<>();
+        private final HashSet<MachineOperand> liveDef = new HashSet<>();
+        private HashSet<MachineOperand> liveIn = new HashSet<>();
+        private HashSet<MachineOperand> liveOut = new HashSet<>();
+
+        BlockLiveInfo(MachineBlock block) {
+        }
+    }
+
+    private HashMap<MachineBlock, BlockLiveInfo> livenessAnalysis(MachineFunction func) {
+        var liveInfoMap = new HashMap<MachineBlock, BlockLiveInfo>();
+        for (var blockEntry : func.getmbList()) {
+            var block = blockEntry.getVal();
+            var blockLiveInfo = new BlockLiveInfo(block);
+            liveInfoMap.put(block, blockLiveInfo);
+
+            for (var instrEntry : block.getmclist()) {
+                var instr = instrEntry.getVal();
+                instr.getUse().stream()
+                        .filter(use -> !blockLiveInfo.liveDef.contains(use))
+                        .forEach(blockLiveInfo.liveUse::add);
+                instr.getDef().stream()
+                        .filter(def -> !blockLiveInfo.liveUse.contains(def))
+                        .forEach(blockLiveInfo.liveDef::add);
+            }
+
+            blockLiveInfo.liveIn.addAll(blockLiveInfo.liveUse);
+        }
+
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+                var blockLiveInfo = liveInfoMap.get(block);
+                var newLiveOut = new HashSet<MachineOperand>();
+
+                if (block.getTrueSucc() != null) {
+                    var succBlockInfo = liveInfoMap.get(block.getTrueSucc());
+                    newLiveOut.addAll(succBlockInfo.liveIn);
+                }
+
+                if (block.getFalseSucc() != null) {
+                    var succBlockInfo = liveInfoMap.get(block.getFalseSucc());
+                    newLiveOut.addAll(succBlockInfo.liveIn);
+                }
+
+                if (!newLiveOut.equals(blockLiveInfo.liveOut)) {
+                    changed = true;
+                    blockLiveInfo.liveOut = newLiveOut;
+
+                    blockLiveInfo.liveIn = new HashSet<>(blockLiveInfo.liveUse);
+                    blockLiveInfo.liveOut.stream()
+                            .filter(MachineOperand -> !blockLiveInfo.liveDef.contains(MachineOperand))
+                            .forEach(blockLiveInfo.liveIn::add);
+                }
+            }
+        }
+
+        return liveInfoMap;
+    }
+
+    private boolean peepholeWithDefUse(CodeGenManager manager) {
+        boolean done = true;
         for (var func : manager.getMachineFunctions()) {
-            var liveRanges = getLiveRange(func);
+            var liveInfoMap = livenessAnalysis(func);
 
             for (var blockEntry : func.getmbList()) {
                 var block = blockEntry.getVal();
@@ -167,9 +249,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                     var instr = instrEntry.getVal();
 
                     // Remove unused instr
-                    var lastUseInstr = liveRanges.get(instr);
+                    var lastUseInstr = liveInfoMap.get(instr);
                     if (lastUseInstr == null) {
                         instrEntryIter.remove();
+                        done = false;
                     } else {
                         var nxtInstrEntry = instrEntry.getNext();
 
@@ -183,10 +266,23 @@ public class PeepholeOptimization implements Pass.MCPass {
                 }
             }
         }
+
+        return done;
+    }
+
+    private boolean removeUselessBB(CodeGenManager manager) {
+        boolean done = true;
+
+        // todo
+
+        return done;
     }
 
     public void run(CodeGenManager manager) {
-        trivialPeephole(manager);
-        peepholeWithDefUse(manager);
+        boolean done = false;
+
+        while (!done) {
+            done = peepholeWithDefUse(manager);// && removeUselessBB(manager);
+        }
     }
 }

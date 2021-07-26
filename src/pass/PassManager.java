@@ -12,6 +12,7 @@ import pass.ir.BBPredSucc;
 import pass.ir.BranchOptimization;
 import pass.ir.DeadCodeEmit;
 import pass.ir.EmitLLVM;
+import pass.ir.FunctionInline;
 import pass.ir.GVNGCM;
 import pass.ir.InterproceduralAnalysis;
 
@@ -24,7 +25,7 @@ public class PassManager {
 
   private Logger mylogger = Mylogger.getLogger(PassManager.class);
   private static PassManager passManager = new PassManager();
-  private ArrayList<String> openedPasses_ = new ArrayList<>() {{
+  public ArrayList<String> openedPasses_ = new ArrayList<>() {{
     //  add("typeCheck");
     add("bbPredSucc");
     add("Mem2reg");
@@ -33,10 +34,10 @@ public class PassManager {
     add("interproceduralAnalysis");
     add("gvngcm");
     add("deadcodeemit");
-    add("functioninline");
+    add("funcinline");
     add("RegAlloc");
     //  add("ListScheduling");
-     add("Peephole");
+    add("Peephole");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
   };
@@ -45,17 +46,24 @@ public class PassManager {
   private PassManager() {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new BBPredSucc());
-    irPasses.add(new Mem2reg());
-    //irPasses.add(new EmitLLVM());
-    irPasses.add(new BranchOptimization());
     irPasses.add(new InterproceduralAnalysis());
+    irPasses.add(new EmitLLVM("beforeinline.ll"));
+    irPasses.add(new FunctionInline());
+    irPasses.add(new BBPredSucc());
+    irPasses.add(new InterproceduralAnalysis());
+    irPasses.add(new EmitLLVM("afterinline.ll"));
+    irPasses.add(new BBPredSucc());
+    irPasses.add(new InterproceduralAnalysis());
+    irPasses.add(new Mem2reg());
+//    irPasses.add(new EmitLLVM());
+    irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new BranchOptimization());
     irPasses.add(new DeadCodeEmit());
 //    irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());
-    mcPasses.add(new PeepholeOptimization());
+//    mcPasses.add(new PeepholeOptimization());
   }
 
   public static PassManager getPassManager() {

@@ -115,6 +115,10 @@ public class MyFactoryBuilder {
     return new ArrayType(containedTy, numElem);
   }
 
+  public CallInst getFuncCall(Function func, ArrayList<Value> args) {
+    return new CallInst(func, args);
+  }
+
   public CallInst buildFuncCall(Function func, ArrayList<Value> args, BasicBlock bb) {
     return new CallInst(func, args, bb);
   }
@@ -200,6 +204,14 @@ public class MyFactoryBuilder {
     return new BrInst(trueblock, parent);
   }
 
+  public BrInst getBr(BasicBlock trueblock) {
+    return new BrInst(trueblock);
+  }
+
+  public BrInst getBr(Value cond, BasicBlock trueblock, BasicBlock falseblock) {
+    return new BrInst(cond, trueblock, falseblock);
+  }
+
   /**
    * 在bb末尾造一个条件转移
    */
@@ -219,6 +231,7 @@ public class MyFactoryBuilder {
   /**
    * 在bb末尾造一个return void
    */
+
   public RetInst buildRet(BasicBlock bb) {
     return new RetInst(bb);
   }
@@ -226,8 +239,18 @@ public class MyFactoryBuilder {
   /**
    * 在bb末尾造一个 return i32
    */
+
   public RetInst buildRet(Value val, BasicBlock bb) {
     return new RetInst(val, bb);
+  }
+
+  //
+  public RetInst getRet(Value val) {
+    return new RetInst(val);
+  }
+
+  public RetInst getRet() {
+    return new RetInst();
   }
 
   /**
@@ -322,5 +345,9 @@ public class MyFactoryBuilder {
   //cast val to  i32 type (u only need i32 type)
   public ZextInst buildZext(Value val, BasicBlock parent) {
     return new ZextInst(val, getI32Ty(), parent);
+  }
+
+  public ZextInst getZext(Value val) {
+    return new ZextInst(val, getI32Ty());
   }
 }

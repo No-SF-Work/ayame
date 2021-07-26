@@ -36,7 +36,7 @@ public class PhyReg extends Reg{
         isAllocated = true;
     }
 
-    boolean isAllocated=false;
+    public boolean isAllocated=false;
 
     public PhyReg(int n){
         super(state.phy);

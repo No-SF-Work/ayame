@@ -1,6 +1,5 @@
 import subprocess
 from tester import Tester
-from presenter import Presenter
 from tester import get_sy_testcases
 from pretty_print import Print_C
 
@@ -42,7 +41,7 @@ ayame_ayame_scheme = {"scheme": "ayame_ayame",
 #                     "frontend_instr": ustc_compiler + "-emit -o {ir} {sy}",
 #                     "emit_llvm_ir": True}
 
-all_schemes = [clang_llvm_scheme, thu_llvm_scheme, thu_thu_scheme, ayame_ayame_scheme] # gcc_gcc_scheme, ustc_ustc_scheme, ustc_ustc_no_vec_scheme]
+all_schemes = [clang_llvm_scheme, thu_thu_scheme, ayame_ayame_scheme] # gcc_gcc_scheme, ustc_ustc_scheme, ustc_ustc_no_vec_scheme]
 testers = []
 
 Print_C.print_header("[Removing old data...]\n\n")
@@ -59,5 +58,5 @@ for scheme in all_schemes:
 
 # Tester(ustc_llvm_scheme).test_ir()
 
-presenter = Presenter(schemes=[scheme["scheme"] for scheme in all_schemes], testcases=get_sy_testcases())
-presenter.present_all_testcases()
+# presenter = Presenter(schemes=[scheme["scheme"] for scheme in all_schemes], testcases=get_sy_testcases())
+# presenter.present_all_testcases()

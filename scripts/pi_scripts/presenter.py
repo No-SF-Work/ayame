@@ -13,8 +13,8 @@ class Presenter:
         self.testcases = testcases
 
     def __diff(self, file1, file2):
-        file1_lines = open(file1).readlines()
-        file2_lines = open(file2).readlines()
+        file1_lines = list(filter(lambda line: not(line == ""), map(lambda line: line.rstrip('\n'), open(file1).readlines())))
+        file2_lines = list(filter(lambda line: not(line == ""), map(lambda line: line.rstrip('\n'), open(file2).readlines())))
         return file1_lines == file2_lines
 
     def __time_to_us(self, l):

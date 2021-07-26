@@ -109,7 +109,6 @@ public abstract class Value {
     return this instanceof Instruction;
   }
 
-  private Value parent;
   private LinkedList<Use> usesList;//记录使用这个Value的所有User
   private String name;
   private Type type;
