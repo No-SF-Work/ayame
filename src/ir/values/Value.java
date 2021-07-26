@@ -1,14 +1,9 @@
 package ir.values;
 
 import ir.MyModule;
-import ir.types.Type;
 import ir.Use;
-
-import ir.types.Type.NoType;
+import ir.types.Type;
 import ir.values.instructions.Instruction;
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 
 /**
@@ -59,6 +54,7 @@ public abstract class Value {
     for (Use use : usesList) {
       use.getUser().CoSetOperand(use.getOperandRank(), v);
     }
+    this.usesList.clear();
   }
 
   /**

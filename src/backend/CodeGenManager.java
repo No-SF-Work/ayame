@@ -31,11 +31,10 @@ public class CodeGenManager {
     // all functions
     private ArrayList<MachineFunction> machineFunctions = new ArrayList<>();
 
-    //key为phi指令的目标vr，value为一串01序列，长度等同于phi指令所在基本块的前驱块，如果有环该位为0
-    private HashMap<VirtualReg, ArrayList<Boolean>> phiRows = new HashMap<>();
-
     //ir moudle
     private static MyModule myModule;
+
+    private boolean ifPrintIR = true;
 
     private static Logger logger;
 
@@ -98,7 +97,8 @@ public class CodeGenManager {
         void dfsSerialize();
     }
 
-    public void dfsSerial(MachineBlock mb, MachineFunction mf, HashMap<MachineBlock, Boolean> isVisit) {
+    //优先把false块放到当前块之后
+    public void dfsFalseSerial(MachineBlock mb, MachineFunction mf, HashMap<MachineBlock, Boolean> isVisit) {
         isVisit.put(mb, true);
         mf.insertBlock(mb);
         if (mb.getTrueSucc() == null && mb.getFalseSucc() == null) {
@@ -123,7 +123,7 @@ public class CodeGenManager {
             if (isVisit.containsKey(mb.getTrueSucc())) {
                 mb.addAtEndMC(mcl.getNode());
             } else {
-                dfsSerial(mb.getTrueSucc(), mf, isVisit);
+                dfsFalseSerial(mb.getTrueSucc(), mf, isVisit);
             }
         } else {
             //如果false后继已经在mblist中而true后继不在，那交换位置，尽量让false块在序列化的下一个
@@ -206,10 +206,130 @@ public class CodeGenManager {
             }
             //以上过程可能修改本基本块的True后继/False后继，所以重新判断是否被访问过
             if (!isVisit.containsKey(mb.getFalseSucc())) {
-                dfsSerial(mb.getFalseSucc(), mf, isVisit);
+                dfsFalseSerial(mb.getFalseSucc(), mf, isVisit);
             }
             if (!isVisit.containsKey(mb.getTrueSucc())) {
-                dfsSerial(mb.getTrueSucc(), mf, isVisit);
+                dfsFalseSerial(mb.getTrueSucc(), mf, isVisit);
+            }
+        }
+    }
+
+    //优先把true块放到当前块之后
+    public void dfsTrueSerial(MachineBlock mb, MachineFunction mf, HashMap<MachineBlock, Boolean> isVisit) {
+        isVisit.put(mb, true);
+        mf.insertBlock(mb);
+        if (mb.getTrueSucc() == null && mb.getFalseSucc() == null) {
+            return;
+        }
+        //只有一个后继的情况
+        Pair<MachineBlock, MachineBlock> truePair = new Pair<>(mb, mb.getTrueSucc());
+        Pair<MachineBlock, MachineBlock> falsePair = new Pair<>(mb, mb.getFalseSucc());
+        if (mb.getFalseSucc() == null) {
+            //当前基本块只有一个后继，且后继一定排在当前基本块之后，那么跳转指令就是废的
+            MachineCode mcl = mb.getmclist().getLast().getVal();
+            assert (mcl instanceof MCJump);
+            mb.getmclist().getLast().removeSelf();
+            //如果waiting中有copy，则插入当前块之后，即两个块中间
+            if (waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()) {
+                Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
+                while (mcIte.hasNext()) {
+                    MachineCode mci = mcIte.next();
+                    mci.setMb(mb);
+                }
+            }
+            if (isVisit.containsKey(mb.getTrueSucc())) {
+                mb.addAtEndMC(mcl.getNode());
+            } else {
+                dfsTrueSerial(mb.getTrueSucc(), mf, isVisit);
+            }
+        } else {
+            //如果两个后继块都未被访问过，那么让之前的True块变成现在的false块，并放到当前块后面
+            if (!isVisit.containsKey(mb.getTrueSucc()) && !isVisit.containsKey(mb.getFalseSucc())) {
+                MachineBlock temp = mb.getTrueSucc();
+                mb.setTrueSucc(mb.getFalseSucc());
+                mb.setFalseSucc(temp);
+                assert (mb.getmclist().getLast().getVal() instanceof MCBranch);
+                CondType cond = mb.getmclist().getLast().getVal().getCond();
+                ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
+                ((MCBranch) mb.getmclist().getLast().getVal()).setTarget(mb.getTrueSucc());
+            }
+            truePair = new Pair<>(mb, mb.getTrueSucc());
+            falsePair = new Pair<>(mb, mb.getFalseSucc());
+            //处理True后继
+            if (waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()) {
+
+                //如果false块已经被访问，那么需要把条件跳转的条件翻转
+                if(isVisit.containsKey(mb.getFalseSucc())){
+
+                }
+                //如果true块只有一个前驱基本块，那么就可以把waiting中的copy插入true块的最前面
+                if (mb.getTrueSucc().getPred().size() == 1) {
+                    Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
+                    while (mcIte.hasNext()) {
+                        MachineCode mci = mcIte.next();
+                        mci.insertBeforeNode(mb.getTrueSucc().getmclist().getEntry().getVal());
+                    }
+                } else {
+                    //如果true块有多个前驱块，那么只能在当前块和true块之间新建一个块插入waiting中的copy
+                    MachineBlock newMB = new MachineBlock(mf);
+                    Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
+                    while (mcIte.hasNext()) {
+                        MachineCode mci = mcIte.next();
+                        mci.setMb(newMB);
+                    }
+                    MCJump jump = new MCJump(newMB);
+                    jump.setTarget(mb.getTrueSucc());
+                    assert (mb.getTrueSucc().getPred().contains(mb));
+                    mb.getTrueSucc().removePred(mb);
+                    mb.getTrueSucc().addPred(newMB);
+                    newMB.setTrueSucc(mb.getTrueSucc());
+                    newMB.addPred(mb);
+                    mb.setTrueSucc(newMB);
+                    MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
+                    br.setTarget(mb.getTrueSucc());
+                }
+
+
+            }
+
+            if (isVisit.containsKey(mb.getFalseSucc())) {
+                if (waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()) {
+                    MachineBlock newMB = new MachineBlock(mf);
+                    Iterator<MachineCode> mcIte = waiting.get(falsePair).iterator();
+                    while (mcIte.hasNext()) {
+                        MachineCode mci = mcIte.next();
+                        mci.setMb(newMB);
+                    }
+                    MCJump jump = new MCJump(newMB);
+                    jump.setTarget(mb.getFalseSucc());
+                    assert (mb.getFalseSucc().getPred().contains(mb));
+                    mb.getFalseSucc().removePred(mb);
+                    mb.getFalseSucc().addPred(newMB);
+                    newMB.setTrueSucc(mb.getFalseSucc());
+                    newMB.addPred(mb);
+                    mb.setFalseSucc(newMB);
+                }
+                //如果两个后继块都已经在mbList中，本基本块的最后一条指令跳转到True块，还缺一条跳转到False块的指令，加到最后
+                MCJump jump = new MCJump(mb);
+                jump.setTarget(mb.getFalseSucc());
+
+            } else {
+                //如果false块没有被访问过，那么就放在当前块后面，当前块的br(跳向true块)指令后，
+                //false块之前可以插入waiting中的copy指令
+                if (waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()) {
+                    Iterator<MachineCode> mcIte = waiting.get(falsePair).iterator();
+                    while (mcIte.hasNext()) {
+                        MachineCode mci = mcIte.next();
+                        mci.setMb(mb);
+                    }
+                }
+            }
+            //以上过程可能修改本基本块的True后继/False后继，所以重新判断是否被访问过
+            if (!isVisit.containsKey(mb.getFalseSucc())) {
+                dfsFalseSerial(mb.getFalseSucc(), mf, isVisit);
+            }
+            if (!isVisit.containsKey(mb.getTrueSucc())) {
+                dfsFalseSerial(mb.getTrueSucc(), mf, isVisit);
             }
         }
     }
@@ -524,8 +644,9 @@ public class CodeGenManager {
                                 phiSet.add(phiArg);
                                 comment += phiArg.getName() + " ";
                             }
-                            phiRows.put((VirtualReg) phiTarget, new ArrayList<>());
-                            MCComment m = new MCComment(comment, bMap.get(bb));
+                            if (ifPrintIR) {
+                                MCComment m = new MCComment(comment, bMap.get(bb));
+                            }
                         } else {
                             break;
                         }
@@ -543,6 +664,9 @@ public class CodeGenManager {
                             if (ir.tag == Instruction.TAG_.Phi) {
                                 MachineOperand phiTarget = analyzeValue(ir, mbb, false);
                                 assert (phiTarget instanceof VirtualReg);
+                                if (((Phi) ir).getIncomingVals().get(i) instanceof UndefValue) {
+                                    continue;
+                                }
                                 MachineOperand phiParam = analyzeValue(((Phi) ir).getIncomingVals().get(i), mbb, false);
                                 edges.put(phiTarget, phiParam);
                             } else {
@@ -573,30 +697,26 @@ public class CodeGenManager {
                                 while (!stack.isEmpty()) {
                                     MachineOperand phiTarget = stack.pop();
                                     assert (edges.containsKey(phiTarget));
-                                    assert (phiRows.get(phiTarget).size() == i);
-                                    phiRows.get(phiTarget).add(true);
                                     MCMove mv = new MCMove();
                                     mv.setRhs(phiParam);
                                     mv.setDst(phiTarget);
-                                    list.add(0,mv);
-                                    phiParam=phiTarget;
+                                    list.add(0, mv);
+                                    phiParam = phiTarget;
                                     edges.remove(phiTarget);
                                 }
                             } else {
-                                VirtualReg temp=new VirtualReg();
+                                VirtualReg temp = new VirtualReg();
                                 mf.addVirtualReg(temp);
-                                MCMove mv=new MCMove();
+                                MCMove mv = new MCMove();
                                 mv.setDst(temp);
                                 assert (stack.contains(now));
                                 while (stack.contains(now)) {
                                     MachineOperand r = stack.pop();
                                     mv.setRhs(r);
                                     list.add(mv);
-                                    mv=new MCMove();
+                                    mv = new MCMove();
                                     mv.setDst(r);
                                     assert (edges.containsKey(r));
-                                    assert (phiRows.get(r).size() == i);
-                                    phiRows.get(r).add(false);
                                     edges.remove(r);
                                 }
                                 mv.setRhs(temp);
@@ -604,13 +724,11 @@ public class CodeGenManager {
                                 while (!stack.isEmpty()) {
                                     MachineOperand phiTarget = stack.pop();
                                     assert (edges.containsKey(phiTarget));
-                                    assert (phiRows.get(phiTarget).size() == i);
-                                    phiRows.get(phiTarget).add(true);
-                                    MCMove mv1=new MCMove();
+                                    MCMove mv1 = new MCMove();
                                     mv1.setRhs(phiParam);
                                     mv1.setDst(phiTarget);
-                                    list.add(0,mv1);
-                                    phiParam=phiTarget;
+                                    list.add(0, mv1);
+                                    phiParam = phiTarget;
                                     edges.remove(phiTarget);
                                 }
                             }
@@ -627,10 +745,14 @@ public class CodeGenManager {
             for (bIt = bList.iterator(); bIt.hasNext(); ) {
                 BasicBlock bb = bIt.next().getVal();
                 MachineBlock mb = bMap.get(bb);
-                MCComment bc = new MCComment("bb:" + bb.getName(), mb);
+                if (ifPrintIR) {
+                    MCComment bc = new MCComment("bb:" + bb.getName(), mb);
+                }
                 for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
                     Instruction ir = iIt.next().getVal();
-                    MCComment co = new MCComment(ir.toString(), mb);
+                    if (ifPrintIR) {
+                        MCComment co = new MCComment(ir.toString(), mb);
+                    }
                     if (ir.tag == Instruction.TAG_.Phi) {
                         continue;
                     } else if (ir instanceof BinaryInst && ((BinaryInst) ir).isDiv()) {
@@ -932,12 +1054,12 @@ public class CodeGenManager {
 //                        }
                     } else if (ir.tag == Instruction.TAG_.Load) {
                         Value ar = ir.getOperands().get(0);
+                        MachineOperand dst = analyzeValue(ir, mb, true);
                         //如果load的地址是二重指针
                         if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
                             loadToAlloca.put((MemInst.LoadInst) ir, (MemInst.AllocaInst) ar);
                             continue;
                         }
-                        MachineOperand dst = analyzeValue(ir, mb, true);
                         MachineOperand addr = analyzeValue(ir.getOperands().get(0), mb, true);
                         MachineOperand offset = new MachineOperand(0);
                         MCLoad load = new MCLoad(mb);
@@ -948,11 +1070,11 @@ public class CodeGenManager {
                         Value ar = ir.getOperands().get(1);
                         //如果store的指针是个二重指针
                         if (((PointerType) (ar).getType()).getContained().isPointerTy()) {
-                            allocaToStore.put((MemInst.AllocaInst) ar, ir.getOperands().get(0));
+                            allocaToStore.put((MemInst.AllocaInst) ar, analyzeValue(ir.getOperands().get(0), mb, true));
                             analyzeValue(ir.getOperands().get(0), mb, true);
                             continue;
                         }
-                        MachineOperand arr = analyzeValue(ir.getOperands().get(1), mb, true);
+                        MachineOperand arr = analyzeValue(ar, mb, true);
                         MachineOperand data = analyzeNoImm(ir.getOperands().get(0), mb);
                         MachineOperand offset = new MachineOperand(0);
                         MCStore store = new MCStore(mb);
@@ -1083,7 +1205,7 @@ public class CodeGenManager {
 
             DFSSerialize s = () -> {
                 HashMap<MachineBlock, Boolean> isVisit = new HashMap<>();
-                dfsSerial(bMap.get(f.getList_().getEntry().getVal()), mf, isVisit);
+                dfsFalseSerial(bMap.get(f.getList_().getEntry().getVal()), mf, isVisit);
             };
 
             s.dfsSerialize();
@@ -1167,13 +1289,13 @@ public class CodeGenManager {
     //对于a[],会有alloca b store a b load d b
     //其中a,d是一个数组首地址，b是一个二重指针，但是d和a其实是一个东西，把对d的使用转换成对a的使用
     HashMap<MemInst.LoadInst, MemInst.AllocaInst> loadToAlloca = new HashMap<>();
-    HashMap<MemInst.AllocaInst, Value> allocaToStore = new HashMap<>();
+    HashMap<MemInst.AllocaInst, MachineOperand> allocaToStore = new HashMap<>();
     HashMap<GlobalVariable, MCLoad> globalMap = new HashMap<>();
     MachineFunction mf = null;
     Function f = null;
     HashMap<BasicBlock, MachineBlock> bMap = new HashMap<>();
 
-
+    //isInsert：如果v是字面量，那么isInsert决定了是把他move到一个虚拟寄存器里还是之间返回一个字面量的MachineOperand
     private MachineOperand analyzeValue(Value v, MachineBlock mb, boolean isInsert) {
         if (v instanceof Function.Arg && f.getArgList().contains(v)) {
             VirtualReg vr;
@@ -1228,8 +1350,7 @@ public class CodeGenManager {
                 return new MachineOperand(((Constants.ConstantInt) v).getVal());
         } else if (v instanceof MemInst.LoadInst && loadToAlloca.containsKey(v)) {
             assert (allocaToStore.containsKey(loadToAlloca.get(v)));
-            assert (irMap.containsKey(allocaToStore.get(loadToAlloca.get(v))));
-            return irMap.get(allocaToStore.get(loadToAlloca.get(v)));
+            return allocaToStore.get(loadToAlloca.get(v));
         } else {
             if (!irMap.containsKey(v)) {
                 VirtualReg vr = new VirtualReg(v.getName());

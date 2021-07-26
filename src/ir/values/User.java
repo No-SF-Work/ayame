@@ -1,10 +1,8 @@
 package ir.values;
 
 import ir.Use;
-import ir.types.IntegerType;
 import ir.types.Type;
 import ir.values.Constants.ConstantInt;
-import java.awt.List;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -113,6 +111,7 @@ public abstract class User extends Value {
    * 将自己的所有 operand 删除， 并删除所有相关的 Use
    */
   public void CORemoveAllOperand() {
+    this.numOP = 0;
     removeUsesOfOPs();
     operands.clear();
   }

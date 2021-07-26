@@ -35,8 +35,8 @@ public class PassManager {
     add("deadcodeemit");
     add("funcinline");
     add("RegAlloc");
-    //  add("ListScheduling");
-    add("Peephole");
+      add("ListScheduling");
+//    add("Peephole");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
   };
@@ -49,12 +49,12 @@ public class PassManager {
     irPasses.add(new EmitLLVM("beforeinline.ll"));
     irPasses.add(new FunctionInline());
 //    irPasses.add(new BBPredSucc());
-    irPasses.add(new InterproceduralAnalysis());
+//    irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new BBPredSucc());
-    irPasses.add(new EmitLLVM("afterinline.ll"));
-    irPasses.add(new DeadCodeEmit());
     irPasses.add(new InterproceduralAnalysis());
-    irPasses.add(new BranchOptimization());
+    irPasses.add(new EmitLLVM("afterinline.ll"));
+//    irPasses.add(new DeadCodeEmit());
+//    irPasses.add(new BranchOptimization());
     irPasses.add(new Mem2reg());
 //    irPasses.add(new EmitLLVM());
     irPasses.add(new BranchOptimization());
