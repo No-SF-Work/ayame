@@ -108,9 +108,8 @@ public class FunctionInline implements IRPass {
         }
       }
     }
-    toBeReplaced.forEach(inst -> {
-      inlineOneCall((CallInst) inst);
-    });
+    toBeReplaced.forEach(inst -> inlineOneCall((CallInst) inst));
+    f.getCallerList().forEach(list->list.getCalleeList().removeIf(i->i.equals(f)));
     f.getCallerList().clear();
   }
 
@@ -121,9 +120,9 @@ public class FunctionInline implements IRPass {
     var copy = getFunctionCopy((Function) call.getOperands().get(0));
     var originBB = call.getBB();
     arrive.node_.insertAfter(originBB.node_);
+    //在call指令前面插入一个到目标函数的entry的跳转
     var br2entry = factory.getBr(copy.getList_().getEntry().getVal());
     var tmp = call.node.getNext();
-    //在call指令前面插入一个到目标函数的entry的跳转
     var funcArgs = copy.getArgList();
     //取出call指令后面的所有指令，放到arrive块中
     ArrayList<Instruction> toBeMoved = new ArrayList<>();
@@ -140,11 +139,13 @@ public class FunctionInline implements IRPass {
       var tmparg = funcArgs.get(i);
       var callerArg = call.getOperands().get(i + 1);
       if (callerArg.getType().isI32()) {
+        //pass value
         var alloca = factory.buildAlloca(originBB, factory.getI32Ty());
         factory.buildStore(callerArg, alloca, originBB);
         var load = factory.buildLoad(factory.getI32Ty(), alloca, originBB);
         tmparg.COReplaceAllUseWith(load);
       } else {
+
         tmparg.COReplaceAllUseWith(callerArg);
       }
     }
