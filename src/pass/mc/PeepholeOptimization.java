@@ -282,7 +282,7 @@ public class PeepholeOptimization implements Pass.MCPass {
         boolean done = false;
 
         while (!done) {
-            done = peepholeWithDefUse(manager);// && removeUselessBB(manager);
+            done = trivialPeephole(manager);// && removeUselessBB(manager);
         }
     }
 }
