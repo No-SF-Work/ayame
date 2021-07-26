@@ -69,8 +69,7 @@ public class FunctionInline implements IRPass {
         var val = funcNode.getVal();
         if (!val.isBuiltin_() && !val.getName().equals("main")) {
           //只要caller和callee没有交集，就可以把这个func inline到parent里
-          if (val.getCalleeList().stream().distinct()
-              .noneMatch(x -> val.getCallerList().stream().anyMatch(y -> equals(x)))) {
+          if (val.getCalleeList().isEmpty()) {
             tobeProcessed.add(val);
           }
         }
