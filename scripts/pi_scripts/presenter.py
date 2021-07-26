@@ -7,11 +7,11 @@ class Presenter:
     kases = Runner.run_kases
     splitter = re.compile('[-@ :\t\r\n]+')
     scheme_time_print_template = "{0:<10} :  {1:<10.0f}us"
-    self.wa_cases = [:]
 
     def __init__(self, schemes, testcases):
         self.schemes = schemes
         self.testcases = testcases
+        self.wa_cases = { scheme["scheme"] : [] for scheme in schemes }
 
     def __diff(self, file1, file2):
         file1_lines = list(filter(lambda line: not(line == ""), map(lambda line: line.rstrip('\n'), open(file1).readlines())))
@@ -36,6 +36,7 @@ class Presenter:
             myout = f"build/output/{testcase}/{scheme}.out"
             if not self.__diff(stdout, myout):
                 wrong_schemes.append(scheme)
+                self.wa_cases[scheme["scheme"]].append(testcase)
                 continue
 
             stage_time_counter = Counter({}) # {stage: time}
@@ -85,4 +86,10 @@ class Presenter:
         for scheme_tot_time in sorted_scheme_tot_time_list:
             print(self.scheme_time_print_template.format(scheme_tot_time[0], scheme_tot_time[1]))
         print()
+
+        for scheme in self.schemes:
+            Print_C.print_error(f"[WA cases for {scheme[scheme]}]")
+            print(self.wa_cases[scheme["scheme"]])
+            print()
+
         print()
