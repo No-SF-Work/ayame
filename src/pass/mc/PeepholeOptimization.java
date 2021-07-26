@@ -4,11 +4,10 @@ import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.MachineOperand;
 import pass.Pass;
+import util.IList;
 import util.Pair;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Objects;
+import java.util.*;
 
 import static backend.machinecodes.ArmAddition.CondType.*;
 import static backend.machinecodes.ArmAddition.ShiftType.*;
@@ -349,10 +348,121 @@ public class PeepholeOptimization implements Pass.MCPass {
         return done;
     }
 
-    private boolean removeUselessBB(CodeGenManager manager) {
-        boolean done = true;
+    private HashMap<MachineBlock, MachineBlock> getReplaceableBB(CodeGenManager manager) {
+        var replaceableBB = new HashMap<MachineBlock, MachineBlock>();
 
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+                var mcCount = block.getmclist().getNumNode();
+
+                if (mcCount == 1) {
+                    var instrEntry = block.getmclist().getEntry();
+                    var instr = instrEntry.getVal();
+
+                    if (instr.getCond() == Any && (instr instanceof MCJump || instr instanceof MCBranch)) {
+                        MachineBlock target;
+
+                        if (instr instanceof MCJump) {
+                            target = ((MCJump) instr).getTarget();
+                        } else {
+                            target = ((MCBranch) instr).getTarget();
+                        }
+
+                        replaceableBB.put(block, target);
+                        instrEntry.removeSelf();
+                    }
+                }
+            }
+        }
+        return replaceableBB;
+    }
+
+    private HashMap<MachineBlock, MachineBlock> getEmptyReplaceableBB(CodeGenManager manager) {
+        var replaceableBB = new HashMap<MachineBlock, MachineBlock>();
+
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+                var mcCount = block.getmclist().getNumNode();
+
+                if (mcCount == 0) {
+                    if (blockEntry.getNext() != null) {
+                        replaceableBB.put(block, blockEntry.getNext().getVal());
+                    } else {
+                        replaceableBB.put(block, null);
+                    }
+                }
+            }
+        }
+        return replaceableBB;
+    }
+
+    private void replaceBB(CodeGenManager manager, HashMap<MachineBlock, MachineBlock> replaceableBB) {
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+
+                for (var instrEntry : block.getmclist()) {
+                    var instr = instrEntry.getVal();
+
+                    if (instr instanceof MCJump) {
+                        var jumpInstr = (MCJump) instr;
+                        var target = jumpInstr.getTarget();
+
+                        if (replaceableBB.containsKey(target)) {
+                            jumpInstr.setTarget(replaceableBB.get(target));
+                        }
+                    } else if (instr instanceof MCBranch) {
+                        var brInstr = (MCBranch) instr;
+                        var target = brInstr.getTarget();
+
+                        if (replaceableBB.containsKey(target)) {
+                            brInstr.setTarget(replaceableBB.get(target));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void removeEmptyBB(CodeGenManager manager) {
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntryIter = func.getmbList().iterator(); blockEntryIter.hasNext(); ) {
+                var blockEntry = blockEntryIter.next();
+                var block = blockEntry.getVal();
+
+                if (block.getmclist().getNumNode() == 0) {
+                    blockEntryIter.remove();
+                }
+            }
+        }
+    }
+
+    private boolean removeUselessBB(CodeGenManager manager) {
         // todo
+        boolean done;
+
+        var replaceableBB = getReplaceableBB(manager);
+        // make closure
+        for (boolean isClosure = false; !isClosure; ) {
+            isClosure = true;
+            for (var entry : replaceableBB.entrySet()) {
+                var key = entry.getKey();
+                var value = entry.getValue();
+                if (replaceableBB.containsKey(value)) {
+                    replaceableBB.put(key, replaceableBB.get(value));
+                    isClosure = false;
+                }
+            }
+        }
+        done = replaceableBB.isEmpty();
+        replaceBB(manager, replaceableBB);
+
+//        replaceableBB = getEmptyReplaceableBB(manager);
+//        replaceableBB.isEmpty();
+//        replaceBB(manager, replaceableBB);
+//        removeEmptyBB(manager);
 
         return done;
     }
@@ -361,7 +471,9 @@ public class PeepholeOptimization implements Pass.MCPass {
         boolean done = false;
 
         while (!done) {
-            done = trivialPeephole(manager) & peepholeWithDataFlow(manager); //&& removeUselessBB(manager);
+            done = trivialPeephole(manager);
+            done &= peepholeWithDataFlow(manager);
+            done &= removeUselessBB(manager);
         }
     }
 }
