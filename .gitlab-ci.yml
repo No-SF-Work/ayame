@@ -28,6 +28,7 @@
 run_functional:
   when: manual
   script:
+    - git checkout dev
     - bash scripts/server_scripts/build_ayame.sh
   tags:
     - x86
