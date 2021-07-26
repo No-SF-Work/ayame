@@ -37,7 +37,7 @@ run_functional:
     - bash scripts/server_scripts/build_ayame.sh
   tags:
     - x86
-  timeout: 3h
+  timeout: 3m
 
 #test_all_cases:   # Test & Judge all testcases
 
