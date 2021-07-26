@@ -17,7 +17,7 @@ public class Config {
   public boolean isDebugMode = false;
   public boolean isIRMode = false;
   public boolean isOutPutMode = false;
-  public boolean isO1 = false;
+  public boolean isO2 = false;
 
   private Config() {
   }
