@@ -9,4 +9,7 @@ scp test_results.tar pi@192.168.0.3:~/ci/test_results.tar
 echo -e "\033[32m\033[1m[Sent.]\033[0m"
 
 echo -e "\033[32m\033[1m[Uncompressing on PI...]\033[0m"
-ssh pi@192.168.0.3 "tar xf ~/ci/test_results.tar --directory=~/ci"
+ssh pi@192.168.0.3 "cd ci; tar xf ~/ci/test_results.tar"
+
+echo -e "\033[32m\033[1m[Running on PI...]\033[0m"
+ssh pi@192.168.0.3 "cd ci; python3 pi_scripts/test_std.py"
