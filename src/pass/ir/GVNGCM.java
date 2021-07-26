@@ -1,5 +1,6 @@
 package pass.ir;
 
+import driver.Config;
 import ir.Analysis.ArrayAliasAnalysis;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
@@ -107,15 +108,15 @@ public class GVNGCM implements IRPass {
       var key = valueTable.get(i).getFirst();
       var valueNumber = valueTable.get(i).getSecond();
       // FIXME: side_effect WA here!
-//      if (key instanceof LoadInst && !loadInst.equals(key)) {
-//        LoadInst keyInst = (LoadInst) key;
-//        var allSame =
-//            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
-//        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
-//        if (allSame) {
-//          return valueNumber;
-//        }
-//      } else
+      if (Config.getInstance().isO2 && key instanceof LoadInst && !loadInst.equals(key)) {
+        LoadInst keyInst = (LoadInst) key;
+        var allSame =
+            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
+        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
+        if (allSame) {
+          return valueNumber;
+        }
+      }
       if (key instanceof StoreInst) {
         StoreInst keyInst = (StoreInst) key;
         var allSame =

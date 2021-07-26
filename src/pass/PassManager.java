@@ -17,7 +17,6 @@ import pass.ir.GVNGCM;
 import pass.ir.InterproceduralAnalysis;
 
 import pass.ir.Mem2reg;
-import pass.mc.PeepholeOptimization;
 import pass.mc.RegAllocator;
 import util.Mylogger;
 
@@ -29,7 +28,7 @@ public class PassManager {
     //  add("typeCheck");
     add("bbPredSucc");
     add("Mem2reg");
-//    add("branchOptimization");
+    add("branchOptimization");
     add("emitllvm");
     add("interproceduralAnalysis");
     add("gvngcm");
@@ -49,17 +48,20 @@ public class PassManager {
     irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new EmitLLVM("beforeinline.ll"));
     irPasses.add(new FunctionInline());
-    irPasses.add(new BBPredSucc());
+//    irPasses.add(new BBPredSucc());
     irPasses.add(new InterproceduralAnalysis());
+    irPasses.add(new BBPredSucc());
     irPasses.add(new EmitLLVM("afterinline.ll"));
-    irPasses.add(new BBPredSucc());
+    irPasses.add(new DeadCodeEmit());
     irPasses.add(new InterproceduralAnalysis());
+    irPasses.add(new BranchOptimization());
     irPasses.add(new Mem2reg());
 //    irPasses.add(new EmitLLVM());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new BranchOptimization());
     irPasses.add(new DeadCodeEmit());
+    irPasses.add(new EmitLLVM("beforeconvert.ll"));
 //    irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());

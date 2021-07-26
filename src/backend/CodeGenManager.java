@@ -260,7 +260,7 @@ public class CodeGenManager {
         arm += ".text\n";
         Iterator<MachineFunction> mfIte = machineFunctions.iterator();
         while (mfIte.hasNext()) {
-            this.mcOffset=0;
+            this.mcOffset = 0;
             globalLoad.clear();
             MachineFunction mf = mfIte.next();
             fixStack(mf);
@@ -279,7 +279,7 @@ public class CodeGenManager {
                 arm += "\tpush\t{";
                 arm += s;
                 arm += "}\n";
-                mcOffset+=4;
+                mcOffset += 4;
             }
             if (mf.getStackSize() != 0) {
                 String op = canEncodeImm(-mf.getStackSize()) ? "add" : "sub";
@@ -294,7 +294,7 @@ public class CodeGenManager {
                     arm += mv.toString();
                     arm += op + "\tsp,\tsp,\t" + mf.getPhyReg(5).getName() + "\n";
                 }
-                mcOffset+=4;
+                mcOffset += 4;
             }
             Iterator<INode<MachineBlock, MachineFunction>> mbIte = mf.getmbList().iterator();
             while (mbIte.hasNext()) {
@@ -321,47 +321,47 @@ public class CodeGenManager {
                 while (mcIte.hasNext()) {
                     INode<MachineCode, MachineBlock> mcNode = mcIte.next();
                     MachineCode mc = mcNode.getVal();
-                    String str=mc.toString();
+                    String str = mc.toString();
                     arm += str;
-                    strOffset+=str.length();
+                    strOffset += str.length();
                 }
                 arm += "\n";
             }
-            StringBuffer sbf=new StringBuffer(arm);
-            ArrayList<VirtualReg> globalAddress=new ArrayList<>();
-            for(int i=globalLoad.size()-1;i>=0;i--){
-                MCLoad load=globalLoad.get(i);
-                int strOffset=accessGlobalOffset.get(load).getSecond();
-                int thisOffset=accessGlobalOffset.get(load).getFirst();
-                int absOffset=this.mcOffset-thisOffset;
-                MachineOperand addr=load.getAddr();
-                MachineOperand dst=load.getDst();
-                CondType cond=load.getCond();
+            StringBuffer sbf = new StringBuffer(arm);
+            ArrayList<VirtualReg> globalAddress = new ArrayList<>();
+            for (int i = globalLoad.size() - 1; i >= 0; i--) {
+                MCLoad load = globalLoad.get(i);
+                int strOffset = accessGlobalOffset.get(load).getSecond();
+                int thisOffset = accessGlobalOffset.get(load).getFirst();
+                int absOffset = this.mcOffset - thisOffset;
+                MachineOperand addr = load.getAddr();
+                MachineOperand dst = load.getDst();
+                CondType cond = load.getCond();
                 String access;
-                int idx=globalAddress.indexOf(addr)+1;
-                if(idx==0){
+                int idx = globalAddress.indexOf(addr) + 1;
+                if (idx == 0) {
                     globalAddress.add((VirtualReg) addr);
-                    idx=globalAddress.size();
+                    idx = globalAddress.size();
                 }
-                if(absOffset<4000){
-                    access="\tldr\t"+dst.getName()+",\t"+addr.getName()+"_"+mf.getName()+"\n";
-                }else {
-                    MCMove mv=new MCMove();
+                if (absOffset < 4000) {
+                    access = "\tldr\t" + dst.getName() + ",\t" + addr.getName() + "_" + mf.getName() + "\n";
+                } else {
+                    MCMove mv = new MCMove();
                     //减8是因为arm中真实的pc比当前指令的pc值大8，详见https://azeria-labs.com/arm-data-types-and-registers-part-2/
-                    mv.setRhs(new MachineOperand(absOffset+idx*4-8));
+                    mv.setRhs(new MachineOperand(absOffset + idx * 4 - 8));
                     mv.setDst(load.getDst());
                     mv.setCond(load.getCond());
-                    access=mv.toString();
-                    access+="\tldr"+load.condString(cond)+"\t"+dst.getName()+",\t["+mf.getPhyReg("pc").getName();
-                    access+=",\t"+dst.getName()+"]\n";
+                    access = mv.toString();
+                    access += "\tldr" + load.condString(cond) + "\t" + dst.getName() + ",\t[" + mf.getPhyReg("pc").getName();
+                    access += ",\t" + dst.getName() + "]\n";
                 }
-                sbf.insert(strOffset,access);
+                sbf.insert(strOffset, access);
                 //absoffset>4000时由于move的偏移在toString方法中计算了，所以只用算ldr的偏移，所以两种情况下偏移都只+4
-                this.mcOffset+=4;
+                this.mcOffset += 4;
             }
-            arm=sbf.toString();
-            for(VirtualReg gv:globalAddress){
-                arm+=gv.getName()+"_"+mf.getName()+":\t.word\t"+gv.getName()+"\n";
+            arm = sbf.toString();
+            for (VirtualReg gv : globalAddress) {
+                arm += gv.getName() + "_" + mf.getName() + ":\t.word\t" + gv.getName() + "\n";
             }
             arm += "\n";
         }
@@ -393,7 +393,7 @@ public class CodeGenManager {
                     }
                     globalOffset += 4 * n;
 //                    arm += "\t.fill\t" + n + ",\t4,\t0\n";
-                    arm+="\t.zero\t"+n*4+"\n";
+                    arm += "\t.zero\t" + n * 4 + "\n";
                 } else {
                     ArrayList<Constant> initValues = ((Constants.ConstantArray) gv.init).getConst_arr_();
                     globalOffset += 4 * initValues.size();
@@ -407,9 +407,9 @@ public class CodeGenManager {
                             if (count == 1) {
                                 arm += "\t.word\t" + lastv + "\n";
                             } else {
-                                if(lastv==0){
-                                    arm+="\t.zero\t"+(count*4)+"\n";
-                                }else {
+                                if (lastv == 0) {
+                                    arm += "\t.zero\t" + (count * 4) + "\n";
+                                } else {
                                     arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
                                 }
                             }
@@ -420,9 +420,9 @@ public class CodeGenManager {
                     if (count == 1) {
                         arm += "\t.word\t" + lastv + "\n";
                     } else {
-                        if(lastv==0){
-                            arm+="\t.zero\t"+(count*4)+"\n";
-                        }else {
+                        if (lastv == 0) {
+                            arm += "\t.zero\t" + (count * 4) + "\n";
+                        } else {
                             arm += "\t.fill\t" + count + ",\t4,\t" + lastv + "\n";
                         }
                     }
@@ -549,48 +549,72 @@ public class CodeGenManager {
                                 break;
                             }
                         }
-                        ArrayList<ArrayList<MachineOperand>> circles = calcCircle(edges, i);
-                        if (!circles.isEmpty()) {
-                            Iterator<ArrayList<MachineOperand>> it1 = circles.iterator();
-                            while (it1.hasNext()) {
-                                ArrayList<MachineOperand> circle = it1.next();
-                                Iterator<MachineOperand> it2 = circle.iterator();
-                                assert (!circle.isEmpty());
-                                VirtualReg temp = new VirtualReg();
-                                mf.addVirtualReg(temp);
-                                MachineCode mc = new MCMove();
-                                ((MCMove) mc).setDst(temp);
-                                while (it2.hasNext()) {
-                                    MachineOperand vr = it2.next();
-                                    ((MCMove) mc).setRhs(vr);
-                                    waiting.get(new Pair<>(bMap.get(bb.getPredecessor_().get(i)), mbb)).add(mc);
-                                    mc = new MCMove();
-                                    ((MCMove) mc).setDst(vr);
+                        ArrayList<MachineCode> list = waiting.get(new Pair<>(bMap.get(bb.getPredecessor_().get(i)), mbb));
+                        while (!edges.isEmpty()) {
+                            //从剩余图中获得一个节点
+                            Iterator<Map.Entry<MachineOperand, MachineOperand>> ite = edges.entrySet().iterator();
+                            MachineOperand now = ite.next().getKey();
+                            Stack<MachineOperand> stack = new Stack<>();
+                            //深度优先搜索
+                            while (true) {
+                                //如果一个节点没有出度，退出循环
+                                if (!edges.containsKey(now)) {
+                                    break;
+                                } else if (stack.contains(now)) {
+                                    break;
+                                } else {
+                                    stack.push(now);
+                                    now = edges.get(now);
                                 }
-                                ((MCMove) mc).setRhs(temp);
-                                waiting.get(new Pair<>(bMap.get(bb.getPredecessor_().get(i)), mbb)).add(mc);
                             }
-                        }
-                        Iterator<INode<Instruction, BasicBlock>> irItt = irList.iterator();
-                        //对于没有环的正常插入copy：phiParam->phiTarget
-                        while (irItt.hasNext()) {
-                            Instruction ir = irItt.next().getVal();
-                            if (ir.tag == Instruction.TAG_.Phi) {
-                                MachineOperand phiTarget = analyzeValue(ir, mbb, false);
-                                assert (phiTarget instanceof VirtualReg);
-                                assert (phiRows.containsKey(phiTarget));
-                                if (phiRows.get(phiTarget).get(i)) {
-                                    MachineOperand phiParam = analyzeValue(((Phi) ir).getIncomingVals().get(i), mbb, false);
-                                    MachineCode mv = new MCMove();
-                                    ((MCMove) mv).setRhs(phiParam);
-                                    ((MCMove) mv).setDst(phiTarget);
-                                    waiting.get(new Pair<>(bMap.get(bb.getPredecessor_().get(i)), mbb)).add(mv);
+                            //如果以该点出发没有环路，那么从graph中删去栈内所有点
+                            if (!edges.containsKey(now)) {
+                                MachineOperand phiParam = now;
+                                while (!stack.isEmpty()) {
+                                    MachineOperand phiTarget = stack.pop();
+                                    assert (edges.containsKey(phiTarget));
+                                    assert (phiRows.get(phiTarget).size() == i);
+                                    phiRows.get(phiTarget).add(true);
+                                    MCMove mv = new MCMove();
+                                    mv.setRhs(phiParam);
+                                    mv.setDst(phiTarget);
+                                    list.add(0,mv);
+                                    phiParam=phiTarget;
+                                    edges.remove(phiTarget);
                                 }
                             } else {
-                                break;
+                                VirtualReg temp=new VirtualReg();
+                                mf.addVirtualReg(temp);
+                                MCMove mv=new MCMove();
+                                mv.setDst(temp);
+                                assert (stack.contains(now));
+                                while (stack.contains(now)) {
+                                    MachineOperand r = stack.pop();
+                                    mv.setRhs(r);
+                                    list.add(mv);
+                                    mv=new MCMove();
+                                    mv.setDst(r);
+                                    assert (edges.containsKey(r));
+                                    assert (phiRows.get(r).size() == i);
+                                    phiRows.get(r).add(false);
+                                    edges.remove(r);
+                                }
+                                mv.setRhs(temp);
+                                MachineOperand phiParam = now;
+                                while (!stack.isEmpty()) {
+                                    MachineOperand phiTarget = stack.pop();
+                                    assert (edges.containsKey(phiTarget));
+                                    assert (phiRows.get(phiTarget).size() == i);
+                                    phiRows.get(phiTarget).add(true);
+                                    MCMove mv1=new MCMove();
+                                    mv1.setRhs(phiParam);
+                                    mv1.setDst(phiTarget);
+                                    list.add(0,mv1);
+                                    phiParam=phiTarget;
+                                    edges.remove(phiTarget);
+                                }
                             }
                         }
-
                     }
                 }
             };
@@ -1114,59 +1138,6 @@ public class CodeGenManager {
             assert (false);
             return CondType.Ge;
         }
-    }
-
-    //计算来自某一前驱块的一堆phiTarget中哪些在环中，共有几个环。
-    private ArrayList<ArrayList<MachineOperand>> calcCircle(HashMap<MachineOperand, MachineOperand> graph, int i) {
-        ArrayList<ArrayList<MachineOperand>> result = new ArrayList<>();
-        while (!graph.isEmpty()) {
-            //从剩余图中获得一个节点
-            Iterator<Map.Entry<MachineOperand, MachineOperand>> ite = graph.entrySet().iterator();
-            MachineOperand now = ite.next().getKey();
-            Stack<MachineOperand> stack = new Stack<>();
-            //深度优先搜索
-            while (true) {
-                //如果一个节点没有出度，退出循环
-                if (!graph.containsKey(now)) {
-                    break;
-                } else if (stack.contains(now)) {
-                    break;
-                } else {
-                    stack.push(now);
-                    now = graph.get(now);
-                }
-            }
-            //如果以该点出发没有环路，那么从graph中删去把栈内所有点
-            if (!graph.containsKey(now)) {
-                while (!stack.isEmpty()) {
-                    MachineOperand r = stack.pop();
-                    assert (graph.containsKey(r));
-                    assert (phiRows.get(r).size() == i);
-                    phiRows.get(r).add(true);
-                    graph.remove(r);
-                }
-            } else {
-                ArrayList<MachineOperand> circle = new ArrayList<>();
-                assert (stack.contains(now));
-                while (stack.contains(now)) {
-                    MachineOperand r = stack.pop();
-                    circle.add(r);
-                    assert (graph.containsKey(r));
-                    assert (phiRows.get(r).size() == i);
-                    phiRows.get(r).add(false);
-                    graph.remove(r);
-                }
-                while (!stack.isEmpty()) {
-                    MachineOperand r = stack.pop();
-                    assert (graph.containsKey(r));
-                    assert (phiRows.get(r).size() == i);
-                    phiRows.get(r).add(true);
-                    graph.remove(r);
-                }
-                result.add(circle);
-            }
-        }
-        return result;
     }
 
     private MachineOperand dealShiftImm(ArmAddition.Shift s, MachineOperand mo, MachineBlock mb) {
