@@ -64,7 +64,7 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                     if (instr instanceof MCBranch) {
                         // B1:
-                        // jump target (to be remove)
+                        // br target (to be remove)
                         // target:
                         MCBranch brInstr = (MCBranch) instr;
                         var nxtBB = blockEntry.getNext() == null ? null : blockEntry.getNext().getVal();
@@ -259,17 +259,17 @@ public class PeepholeOptimization implements Pass.MCPass {
                             instrEntryIter.remove();
                             done = false;
                         } else {
-                            // add/sub a a #i
+                            // add/sub a c #i
                             // ldr b [a, #x]
                             // =>
-                            // ldr b [a, #x+i]
+                            // ldr b [c, #x+i]
                             // ---------------
-                            // add/sub a a #i
+                            // add/sub a c #i
                             // move b x
                             // str b [a, #x]
                             // =>
                             // move b x
-                            // str b [a, #x+i]
+                            // str b [c, #x+i]
                             var isCurAddSub = instr.getTag().equals(MachineCode.TAG.Add) || instr.getTag().equals(MachineCode.TAG.Sub);
                             if (!isCurAddSub) {
                                 continue;
@@ -277,10 +277,10 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                             assert instr instanceof MCBinary;
                             var binInstr = (MCBinary) instr;
-                            var isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
+//                            var isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
                             var hasImmRhs = binInstr.getRhs().getState() == imm;
 
-                            if (!(isSameDstLhs && hasImmRhs)) {
+                            if (!hasImmRhs) {
                                 continue;
                             }
 
@@ -294,28 +294,30 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                             var nxtInstr = nxtInstrEntry.getVal();
 
-                            if (nxtInstr instanceof MCLoad && !Objects.equals(lastUser, nxtInstr)) {
-                                // add/sub a a #i
+                            if (nxtInstr instanceof MCLoad && Objects.equals(lastUser, nxtInstr)) {
+                                // add/sub a c #i
                                 // ldr b [a, #x]
                                 // =>
-                                // ldr b [a, #x+i]
+                                // ldr b [c, #x+i]
                                 var loadInstr = (MCLoad) nxtInstr;
-                                var isSameLhsAddr = loadInstr.getAddr().equals(binInstr.getLhs());
+                                var isSameDstAddr = loadInstr.getAddr().equals(binInstr.getDst());
 
-                                if (isSameLhsAddr) {
+                                if (isSameDstAddr) {
                                     var addImm = new MachineOperand(loadInstr.getOffset().getImm() + imm);
                                     var subImm = new MachineOperand(loadInstr.getOffset().getImm() - imm);
+                                    loadInstr.setAddr(binInstr.getLhs());
                                     loadInstr.setOffset(isAdd ? addImm : subImm);
                                     instrEntryIter.remove();
+                                    done = false;
                                 }
                             } else if (nxtInstr instanceof MCMove) {
-                                // add/sub a a #i
+                                // add/sub a c #i
                                 // move b y
                                 // str b [a, #x]
                                 // =>
                                 // move b y
-                                // str b [a, #x+i]
-                                var nxt2InstrEntry = instrEntry.getNext();
+                                // str b [c, #x+i]
+                                var nxt2InstrEntry = nxtInstrEntry.getNext();
                                 if (nxt2InstrEntry == null) {
                                     continue;
                                 }
@@ -326,13 +328,15 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 if (nxt2Instr instanceof MCStore) {
                                     var storeInstr = (MCStore) nxt2Instr;
                                     var isSameData = moveInstr.getDst().equals(storeInstr.getData());
-                                    var isSameLhsAddr = storeInstr.getAddr().equals(binInstr.getLhs());
+                                    var isSameDstAddr = storeInstr.getAddr().equals(binInstr.getDst());
 
-                                    if (isSameData && isSameLhsAddr) {
+                                    if (isSameData && isSameDstAddr) {
                                         var addImm = new MachineOperand(storeInstr.getOffset().getImm() + imm);
                                         var subImm = new MachineOperand(storeInstr.getOffset().getImm() - imm);
+                                        storeInstr.setAddr(binInstr.getLhs());
                                         storeInstr.setOffset(isAdd ? addImm : subImm);
                                         instrEntryIter.remove();
+                                        done = false;
                                     }
                                 }
                             }
@@ -357,7 +361,7 @@ public class PeepholeOptimization implements Pass.MCPass {
         boolean done = false;
 
         while (!done) {
-            done = trivialPeephole(manager) && peepholeWithDataFlow(manager); //&& removeUselessBB(manager);
+            done = trivialPeephole(manager) & peepholeWithDataFlow(manager); //&& removeUselessBB(manager);
         }
     }
 }
