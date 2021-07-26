@@ -48,7 +48,7 @@ public class VirtualReg extends Reg {
 
     public VirtualReg(){
         super(state.virtual);
-        this.name="%%"+Integer.toString(Name++);
+        this.name="$"+Integer.toString(Name++);
     }
 
     public VirtualReg(String name, boolean isGlobal){
