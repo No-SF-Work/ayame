@@ -474,13 +474,13 @@ public class GVNGCM implements IRPass {
       BasicBlock bestbb = lcabb;
       Integer bestbbLoopDepth = func.getLoopInfo().getLoopDepthForBB(bestbb);
       while (lcabb != inst.getBB()) {
+        lcabb = lcabb.getIdomer();
+        assert lcabb != null;
         int currLoopDepth = func.getLoopInfo().getLoopDepthForBB(lcabb);
         if (currLoopDepth < bestbbLoopDepth) {
           bestbb = lcabb;
           bestbbLoopDepth = currLoopDepth;
         }
-        assert lcabb != null;
-        lcabb = lcabb.getIdomer();
       }
       inst.node.removeSelf();
       inst.node.insertAtSecondToEnd(bestbb.getList());

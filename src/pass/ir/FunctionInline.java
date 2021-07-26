@@ -67,8 +67,12 @@ public class FunctionInline implements IRPass {
       changed = false;
       m.__functions.forEach(funcNode -> {
         var val = funcNode.getVal();
-        if (!val.isBuiltin_() && val.getCalleeList().isEmpty()&&!val.getName().equals("main")) {
-          tobeProcessed.add(val);
+        if (!val.isBuiltin_() && !val.getName().equals("main")) {
+          //只要caller和callee没有交集，就可以把这个func inline到parent里
+          if (val.getCalleeList().stream().distinct()
+              .noneMatch(x -> val.getCallerList().stream().anyMatch(y -> equals(x)))) {
+            tobeProcessed.add(val);
+          }
         }
       });
       tobeProcessed.forEach(this::inlineMe);
@@ -77,8 +81,7 @@ public class FunctionInline implements IRPass {
   }
 
   /*todo:
-   *   1.将强联通分量并为一个函数
-   *   2.将这个函数展开预先写好的次数
+   *   1.将递归函数展开一定次数
    * */
   public void hardInline() {
 
@@ -109,7 +112,11 @@ public class FunctionInline implements IRPass {
       }
     }
     toBeReplaced.forEach(inst -> inlineOneCall((CallInst) inst));
-    f.getCallerList().forEach(list->list.getCalleeList().removeIf(i->i.equals(f)));
+    f.getCallerList().forEach(list -> {
+      //如果一个函数的caller和callee没有交集，那么其一定可以被内联到caller中
+      list.getCalleeList().removeIf(i -> i.equals(f));
+      list.getCalleeList().addAll(f.getCalleeList());
+    });
     f.getCallerList().clear();
   }
 
