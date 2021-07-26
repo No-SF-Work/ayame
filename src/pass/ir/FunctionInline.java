@@ -22,6 +22,7 @@ import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import pass.Pass;
 import pass.Pass.IRPass;
 import util.IList;
@@ -66,7 +67,7 @@ public class FunctionInline implements IRPass {
       changed = false;
       m.__functions.forEach(funcNode -> {
         var val = funcNode.getVal();
-        if (!val.isBuiltin_() && val.getCalleeList().isEmpty()) {
+        if (!val.isBuiltin_() && val.getCalleeList().isEmpty()&&!val.getName().equals("main")) {
           tobeProcessed.add(val);
         }
       });
@@ -95,27 +96,31 @@ public class FunctionInline implements IRPass {
     changed = true;
     ArrayList<Instruction> toBeReplaced = new ArrayList<>();
     //dfs找到需要替换的call指令，不原地替换了
-    f.getCallerList().forEach(caller -> {
-      caller.getList_().forEach(bbnode -> {
-        bbnode.getVal().getList().forEach(instNode -> {
+    for (Function caller : f.getCallerList().stream().distinct().collect(Collectors.toList())) {
+      for (INode<BasicBlock, Function> bbnode : caller.getList_()) {
+        for (INode<Instruction, BasicBlock> instNode : bbnode.getVal().getList()) {
           var inst = instNode.getVal();
           if (inst instanceof CallInst) {
             if (((CallInst) inst).getFunc().getName().equals(f.getName())) {
               toBeReplaced.add(inst);
             }
           }
-        });
-      });
-    });
+        }
+      }
+    }
     toBeReplaced.forEach(inst -> {
       inlineOneCall((CallInst) inst);
     });
     f.getCallerList().clear();
   }
+
   private void inlineOneCall(CallInst call) {
-    var arrive = factory.buildBasicBlock("", call.getBB().getParent());
+    var retType = call.getType();
+    var originFunc = call.getBB().getParent();
+    var arrive = factory.getBasicBlock("");
     var copy = getFunctionCopy((Function) call.getOperands().get(0));
     var originBB = call.getBB();
+    arrive.node_.insertAfter(originBB.node_);
     var br2entry = factory.getBr(copy.getList_().getEntry().getVal());
     var tmp = call.node.getNext();
     //在call指令前面插入一个到目标函数的entry的跳转
@@ -126,21 +131,27 @@ public class FunctionInline implements IRPass {
       toBeMoved.add(tmp.getVal());
       tmp = tmp.getNext();
     }
-    toBeMoved.forEach(val -> {
-      val.node.removeSelf();
-      val.node.insertAtEnd(arrive.list_);
-    });
-    //将call从原块中取出
+    for (Instruction val : toBeMoved) {
+      val.node.removeSelf().insertAtEnd(arrive.list_);
+    }
+//    将call从原块中取出
     call.node.removeSelf();
-    br2entry.node.insertAtEnd(originBB.getList());
-    //将目标函数中对arg的使用替换为call指令中对对应元素的使用
     for (int i = 0; i < funcArgs.size(); i++) {
       var tmparg = funcArgs.get(i);
       var callerArg = call.getOperands().get(i + 1);
-      tmparg.COReplaceAllUseWith(callerArg);
+      if (callerArg.getType().isI32()) {
+        var alloca = factory.buildAlloca(originBB, factory.getI32Ty());
+        factory.buildStore(callerArg, alloca, originBB);
+        var load = factory.buildLoad(factory.getI32Ty(), alloca, originBB);
+        tmparg.COReplaceAllUseWith(load);
+      } else {
+        tmparg.COReplaceAllUseWith(callerArg);
+      }
     }
+    br2entry.node.insertAtEnd(originBB.getList());
+    //将目标函数中对arg的使用替换为call指令中对对应元素的使用
     //根据返回类型设置返回逻辑
-    if (call.getType().isI32()) {
+    if (retType.isI32()) {
       //将对call的返回值的使用替换为对一个alloca的使用
       //将ret替换为对alloca的store
       //在arrive的开头插入一个对alloca的load将对ret值的使用替换为对load的使用
@@ -167,7 +178,7 @@ public class FunctionInline implements IRPass {
         ret.node.removeSelf();
       });
     }
-    if (call.getType().isVoidTy()) {
+    if (retType.isVoidTy()) {
       ArrayList<RetInst> rets = new ArrayList<>();
       copy.getList_().forEach(bbNode -> {
         bbNode.getVal().getList().forEach(instNode -> {
@@ -191,6 +202,18 @@ public class FunctionInline implements IRPass {
       bb.node_.insertBefore(arrive.node_);
     });
     //将所有alloca前提
+    ArrayList<Instruction> allocas = new ArrayList<>();
+    originFunc.getList_().forEach(bb -> bb.getVal().getList().forEach(inst -> {
+      if (inst.getVal() instanceof AllocaInst) {
+        allocas.add(inst.getVal());
+      }
+
+    }));
+    allocas.forEach(a -> {
+      a.node.removeSelf();
+      a.node.insertAtEntry(originFunc.getList_().getEntry().getVal().list_);
+    });
+    call.CORemoveAllOperand();
   }
 
 
