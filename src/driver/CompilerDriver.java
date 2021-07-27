@@ -40,7 +40,7 @@ public class CompilerDriver {
     config.isIRMode = res.get("emit");
     config.isDebugMode = res.get("debug");
     config.isOutPutMode = res.get("output");
-    config.isO2=res.get("O2");
+    config.isO2 = true;
     //only severe level msg will be recorded in console if not in debug mode
     Mylogger.loadLogConfig(config.isDebugMode);
   }
