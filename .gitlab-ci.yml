@@ -53,7 +53,7 @@ run_performance:
     - bash scripts/server_scripts/build_ayame_performance.sh
   tags:
     - x86
-  timeout: 3m
+  timeout: 10m
 
 #test_all_cases:   # Test & Judge all testcases
 
