@@ -15,6 +15,7 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.GEPInst;
+import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
@@ -239,6 +240,17 @@ public class FunctionInline implements IRPass {
     for (INode<BasicBlock, Function> bbNode : source.getList_()) {
       valueMap.put(bbNode.getVal(), factory.buildBasicBlock("", copy));
     }
+    source.getList_().forEach(bbnode -> {
+      var val = bbnode.getVal();
+      BasicBlock copyBB = (BasicBlock) findValue(val);
+      //复制predecessor和successor，用于生成phi指令
+      for (BasicBlock basicBlock : val.getPredecessor_()) {
+        copyBB.getPredecessor_().add((BasicBlock) findValue(basicBlock));
+      }
+      for (BasicBlock basicBlock : val.getSuccessor_()) {
+        copyBB.getSuccessor_().add((BasicBlock) findValue(basicBlock));
+      }
+    });
     //基于这么一个假设：function的Ilist中的bb是按照拓扑排序排列的，如果后续发现出现问题，我会把这个遍历改为bfs
     for (INode<BasicBlock, Function> bbNode : source.getList_()) {
       processBasicblock(bbNode.getVal(), (BasicBlock) valueMap.get(bbNode.getVal()));
@@ -272,6 +284,12 @@ public class FunctionInline implements IRPass {
               }
             }});
         case Zext -> factory.getZext(findValue(ops.get(0)));
+        case Phi -> new Phi(instruction.tag, instruction.getType(), instruction.getNumOP(),
+            (BasicBlock) findValue(instruction.getBB())) {{
+          for (int i = 0; i < ((Phi) instruction).getIncomingVals().size(); i++) {
+            setIncomingVals(i, findValue(((Phi) instruction).getIncomingVals().get(i)));
+          }
+        }};
         default -> throw new RuntimeException();
       };
     }
