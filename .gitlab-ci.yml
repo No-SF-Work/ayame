@@ -25,7 +25,7 @@
 #    - arm
 #  timeout: 3h
 
-run_functional:
+run_func_1:
   when: manual
   before_script:
     - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
@@ -41,7 +41,7 @@ run_functional:
     - x86
   timeout: 3m
 
-run_performance:
+run_perf_1:
   when: manual
   before_script:
     - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
@@ -57,7 +57,7 @@ run_performance:
     - x86
   timeout: 10m
 
-run_functional2:
+run_func_2:
   when: manual
   before_script:
     - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
@@ -73,7 +73,7 @@ run_functional2:
     - x86
   timeout: 3m
 
-run_performance2:
+run_perf_2:
   when: manual
   before_script:
     - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
