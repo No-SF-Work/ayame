@@ -17,6 +17,8 @@ import pass.ir.GVNGCM;
 import pass.ir.InterproceduralAnalysis;
 
 import pass.ir.Mem2reg;
+import pass.mc.ListScheduling;
+import pass.mc.PeepholeOptimization;
 import pass.mc.RegAllocator;
 import util.Mylogger;
 
@@ -35,7 +37,7 @@ public class PassManager {
     add("deadcodeemit");
     add("funcinline");
     add("RegAlloc");
-      add("ListScheduling");
+    add("ListScheduling");
 //    add("Peephole");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
@@ -46,26 +48,21 @@ public class PassManager {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new BBPredSucc());
     irPasses.add(new InterproceduralAnalysis());
-    irPasses.add(new EmitLLVM("beforeinline.ll"));
     irPasses.add(new FunctionInline());
-//    irPasses.add(new BBPredSucc());
-//    irPasses.add(new InterproceduralAnalysis());
+
     irPasses.add(new BBPredSucc());
     irPasses.add(new InterproceduralAnalysis());
-    irPasses.add(new EmitLLVM("afterinline.ll"));
-//    irPasses.add(new DeadCodeEmit());
-//    irPasses.add(new BranchOptimization());
     irPasses.add(new Mem2reg());
-//    irPasses.add(new EmitLLVM());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new BranchOptimization());
     irPasses.add(new DeadCodeEmit());
-    irPasses.add(new EmitLLVM("beforeconvert.ll"));
-//    irPasses.add(new EmitLLVM());
 
+    mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new RegAllocator());
-//    mcPasses.add(new PeepholeOptimization());
+    mcPasses.add(new PeepholeOptimization());
+    mcPasses.add(new ListScheduling());
+    mcPasses.add(new PeepholeOptimization());
   }
 
   public static PassManager getPassManager() {
