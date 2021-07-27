@@ -2,34 +2,24 @@ package pass.ir;
 
 import ir.MyFactoryBuilder;
 import ir.MyModule;
-import ir.Use;
-import ir.types.IntegerType;
 import ir.values.BasicBlock;
 import ir.values.Constant;
 import ir.values.Function;
-import ir.values.Function.Arg;
-import ir.values.User;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
-import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst;
-import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.stream.Collectors;
-import pass.Pass;
 import pass.Pass.IRPass;
-import util.IList;
 import util.IList.INode;
-import util.Mylogger;
 
 public class FunctionInline implements IRPass {
 
@@ -260,9 +250,10 @@ public class FunctionInline implements IRPass {
       }
     });
     //基于这么一个假设：function的Ilist中的bb是按照拓扑排序排列的，如果后续发现出现问题，我会把这个遍历改为bfs
-    for (INode<BasicBlock, Function> bbNode : source.getList_()) {
-      processBasicblock(bbNode.getVal(), (BasicBlock) valueMap.get(bbNode.getVal()));
-    }
+    //update
+    BasicBlock root = source.getList_().getEntry().getVal();
+    bbProcessor(root);
+    visitMap.clear();
     ArrayList<Phi> phis = new ArrayList<>();
     source.getList_().forEach(
         bblist -> {
@@ -280,6 +271,21 @@ public class FunctionInline implements IRPass {
     }
     return copy;
   }
+
+  HashMap<BasicBlock, Boolean> visitMap = new HashMap<>();
+
+  private void bbProcessor(BasicBlock bb) {
+    processBasicblock(bb, (BasicBlock) valueMap.get(bb));
+    if (!bb.getSuccessor_().isEmpty()) {
+      bb.getSuccessor_().stream().distinct().forEach(b -> {
+        if (visitMap.get(b)==null) {
+          visitMap.put(b, true);
+          bbProcessor(b);
+        }
+      });
+    }
+  }
+
 
   private void processBasicblock(BasicBlock source, BasicBlock target) {
     source.getList().forEach(node -> {
