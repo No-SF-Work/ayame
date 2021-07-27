@@ -15,6 +15,7 @@ import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.TerminatorInst.RetInst;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -741,7 +742,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var nxtBlock = f.buildBasicBlock(name + "_nxtBlock", curFunc_);
     var falseBlock = ctx.ELSE_KW() == null ? nxtBlock :
         f.buildBasicBlock(parentBB.getName() + "_else", curFunc_);
-
+    var ifIfEndWithRet=false;
     ctx.cond().falseblock = falseBlock;
     ctx.cond().trueblock = trueBlock;
     // Parse [cond]
@@ -750,12 +751,19 @@ public class Visitor extends SysYBaseVisitor<Void> {
     changeBB(trueBlock);
     visitStmt(ctx.stmt(0));
     f.buildBr(nxtBlock, curBB_);
-
+    if (curBB_.getList().getLast().getVal() instanceof RetInst){
+      ifIfEndWithRet=true;
+    }
     // Parse [else] branch
     if (ctx.ELSE_KW() != null) {
       changeBB(falseBlock);
       visitStmt(ctx.stmt(1));
       f.buildBr(nxtBlock, curBB_);
+      if (ifIfEndWithRet){
+        if (curBB_.getList().getLast().getVal() instanceof RetInst){
+          nxtBlock.node_.removeSelf();
+        }
+      }
     }
     curBB_ = nxtBlock;
     return null;

@@ -55,10 +55,15 @@ public class EmitLLVM implements IRPass {
               var bbval = bbNode.getVal();
               if (!val.getList_().getEntry().equals(bbNode)) {
                 sb.append(bbval.getName());
-
                 sb.append(":");
-                sb.append("       ; precessor_:[");
+                sb.append("       ; predecessor_:[");
                 bbval.getPredecessor_().forEach(b -> {
+                  sb.append(b.getName()).append(",");
+                });
+                sb.deleteCharAt(sb.length() - 1);
+                sb.append("]  ");
+                sb.append("successor:[");
+                bbval.getSuccessor_().forEach(b->{
                   sb.append(b.getName()).append(",");
                 });
                 sb.deleteCharAt(sb.length() - 1);

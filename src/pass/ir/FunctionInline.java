@@ -2,32 +2,24 @@ package pass.ir;
 
 import ir.MyFactoryBuilder;
 import ir.MyModule;
-import ir.Use;
-import ir.types.IntegerType;
 import ir.values.BasicBlock;
 import ir.values.Constant;
 import ir.values.Function;
-import ir.values.Function.Arg;
-import ir.values.User;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
+import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
-import ir.values.instructions.MemInst.GEPInst;
+import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst;
-import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.stream.Collectors;
-import pass.Pass;
 import pass.Pass.IRPass;
-import util.IList;
 import util.IList.INode;
-import util.Mylogger;
 
 public class FunctionInline implements IRPass {
 
@@ -130,6 +122,7 @@ public class FunctionInline implements IRPass {
     var br2entry = factory.getBr(copy.getList_().getEntry().getVal());
     var funcArgs = copy.getArgList();
     var tmp = call.node.getNext();
+    ArrayList<BasicBlock> originSuccStore = new ArrayList<>();
     //取出call指令后面的所有指令，放到arrive块中
     ArrayList<Instruction> toBeMoved = new ArrayList<>();
     while (tmp != null) {
@@ -145,27 +138,30 @@ public class FunctionInline implements IRPass {
       var tmparg = funcArgs.get(i);
       var callerArg = call.getOperands().get(i + 1);
       if (callerArg.getType().isI32()) {
-        //pass value
-        var alloca = factory.buildAlloca(originBB, factory.getI32Ty());
-        factory.buildStore(callerArg, alloca, originBB);
-        var load = factory.buildLoad(factory.getI32Ty(), alloca, originBB);
-        tmparg.COReplaceAllUseWith(load);
+        tmparg.COReplaceAllUseWith(callerArg);
       } else {
-
         tmparg.COReplaceAllUseWith(callerArg);
       }
     }
+    //维护originBB和funcEntry的前驱后继关系 fixme
     br2entry.node.insertAtEnd(originBB.getList());
+    arrive.getSuccessor_().addAll(originBB.getSuccessor_());
+    arrive.getSuccessor_().forEach(bb -> {
+      for (int i = 0; i < bb.getPredecessor_().size(); i++) {
+        if (bb.getPredecessor_().get(i).equals(originBB)) {
+          bb.getPredecessor_().set(i, arrive);
+        }
+      }
+    });
+    originBB.getSuccessor_().clear();
+    originBB.getSuccessor_().add(copy.getList_().getEntry().getVal());
+    copy.getList_().getEntry().getVal().getPredecessor_().add(originBB);
+
     //将目标函数中对arg的使用替换为call指令中对对应元素的使用
     //根据返回类型设置返回逻辑
     if (retType.isI32()) {
-      //将对call的返回值的使用替换为对一个alloca的使用
-      //将ret替换为对alloca的store
-      //在arrive的开头插入一个对alloca的load将对ret值的使用替换为对load的使用
-      var alloca = factory.buildAlloca(originBB, IntegerType.getI32());
-      var load = factory.getLoad(factory.getI32Ty(), alloca);
-      load.node.insertAtEntry(arrive.list_);
-      call.COReplaceAllUseWith(load);
+      var phi = new Phi(TAG_.Phi, factory.getI32Ty(), 0, arrive);
+      call.COReplaceAllUseWith(phi);
 
       ArrayList<RetInst> rets = new ArrayList<>();
       copy.getList_().forEach(bbNode -> {
@@ -176,10 +172,13 @@ public class FunctionInline implements IRPass {
         });
       });
       rets.forEach(ret -> {
-        var tmpstore = factory.getStore(ret.getOperands().get(0), alloca);
+        //var tmpstore = factory.getStore(ret.getOperands().get(0), alloca);
+        phi.COaddOperand(ret.getOperands().get(0));
+        arrive.getPredecessor_().add(ret.getBB());
+        ret.getBB().getSuccessor_().add(arrive);
         ret.CORemoveAllOperand();
         var tmpBr = factory.getBr(arrive);
-        tmpstore.node.insertBefore(ret.node);
+        //tmpstore.node.insertBefore(ret.node);
         tmpBr.node.insertBefore(ret.node);
         ret.node.removeSelf();
       });
@@ -194,6 +193,8 @@ public class FunctionInline implements IRPass {
         });
       });
       rets.forEach(ret -> {
+        arrive.getPredecessor_().add(ret.getBB());
+        ret.getBB().getSuccessor_().add(arrive);
         var tmpBr = factory.getBr(arrive);
         tmpBr.node.insertBefore(ret.node);
         ret.node.removeSelf();
@@ -239,12 +240,54 @@ public class FunctionInline implements IRPass {
     for (INode<BasicBlock, Function> bbNode : source.getList_()) {
       valueMap.put(bbNode.getVal(), factory.buildBasicBlock("", copy));
     }
+    source.getList_().forEach(bbnode -> {
+      var val = bbnode.getVal();
+      BasicBlock copyBB = (BasicBlock) findValue(val);
+      //复制predecessor和successor，用于生成phi指令
+      for (BasicBlock basicBlock : val.getPredecessor_()) {
+        copyBB.getPredecessor_().add((BasicBlock) findValue(basicBlock));
+      }
+      for (BasicBlock basicBlock : val.getSuccessor_()) {
+        copyBB.getSuccessor_().add((BasicBlock) findValue(basicBlock));
+      }
+    });
     //基于这么一个假设：function的Ilist中的bb是按照拓扑排序排列的，如果后续发现出现问题，我会把这个遍历改为bfs
-    for (INode<BasicBlock, Function> bbNode : source.getList_()) {
-      processBasicblock(bbNode.getVal(), (BasicBlock) valueMap.get(bbNode.getVal()));
+    //update
+    BasicBlock root = source.getList_().getEntry().getVal();
+    bbProcessor(root);
+    visitMap.clear();
+    ArrayList<Phi> phis = new ArrayList<>();
+    source.getList_().forEach(
+        bblist -> {
+          bblist.getVal().getList().forEach(instnode -> {
+            if (instnode.getVal() instanceof Phi) {
+              phis.add((Phi) instnode.getVal());
+            }
+          });
+        }
+    );
+    for (Phi phi : phis) {
+      for (int i = 0; i < ((Phi) phi).getIncomingVals().size(); i++) {
+        ((Phi) findValue(phi)).setIncomingVals(i, findValue(phi.getIncomingVals().get(i)));
+      }
     }
     return copy;
   }
+
+  HashMap<BasicBlock, Boolean> visitMap = new HashMap<>();
+
+  private void bbProcessor(BasicBlock bb) {
+    processBasicblock(bb, (BasicBlock) valueMap.get(bb));
+    if (!bb.getSuccessor_().isEmpty()) {
+      bb.getSuccessor_().stream().distinct().forEach(b -> {
+        if (visitMap.get(b)==null) {
+          visitMap.put(b, true);
+          bbProcessor(b);
+        }
+      });
+    }
+  }
+
 
   private void processBasicblock(BasicBlock source, BasicBlock target) {
     source.getList().forEach(node -> {
@@ -272,6 +315,7 @@ public class FunctionInline implements IRPass {
               }
             }});
         case Zext -> factory.getZext(findValue(ops.get(0)));
+        case Phi -> new Phi(instruction.tag, instruction.getType(), instruction.getNumOP());
         default -> throw new RuntimeException();
       };
     }
