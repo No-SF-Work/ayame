@@ -35,7 +35,7 @@ run_func_1:
     - chmod 700 ~/.ssh
   script:
     - mv testcases/functional_test/* testcases/
-    - bash scripts/server_scripts/build_ayame_functional.sh
+    - bash scripts/server_scripts/build_ayame.sh
     - bash scripts/send_to_pi_functional.sh
   tags:
     - x86
@@ -51,8 +51,24 @@ run_perf_1:
     - chmod 700 ~/.ssh
   script:
     - mv testcases/performance_test/* testcases/
-    - bash scripts/server_scripts/build_ayame_performance.sh
+    - bash scripts/server_scripts/build_ayame.sh
     - bash scripts/send_to_pi_performance.sh
+  tags:
+    - x86
+  timeout: 10m
+
+run_perf_1_pro:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/performance_test_pro/* testcases/
+    - bash scripts/server_scripts/build_ayame.sh
+    - bash scripts/send_to_pi_performance_pro.sh
   tags:
     - x86
   timeout: 10m
@@ -67,7 +83,7 @@ run_func_2:
     - chmod 700 ~/.ssh
   script:
     - mv testcases/functional_test/* testcases/
-    - bash scripts/server_scripts/build_ayame_functional.sh
+    - bash scripts/server_scripts/build_ayame.sh
     - bash scripts/send_to_pi_functional2.sh
   tags:
     - x86
@@ -83,13 +99,25 @@ run_perf_2:
     - chmod 700 ~/.ssh
   script:
     - mv testcases/performance_test/* testcases/
-    - bash scripts/server_scripts/build_ayame_performance.sh
+    - bash scripts/server_scripts/build_ayame.sh
     - bash scripts/send_to_pi_performance2.sh
   tags:
     - x86
   timeout: 10m
 
-#test_all_cases:   # Test & Judge all testcases
-
-#analyze_results: # analyze results
+run_perf_2_pro:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/performance_test_pro/* testcases/
+    - bash scripts/server_scripts/build_ayame.sh
+    - bash scripts/send_to_pi_performance2_pro.sh
+  tags:
+    - x86
+  timeout: 10m
 
