@@ -433,8 +433,8 @@ public class RegAllocator implements MCPass {
                     // heuristic
                     // var m = spillWorklist.iterator().next();
                     var m = spillWorklist.stream().max((l, r) -> {
-                        var value1 = degree.getOrDefault(l, 0).doubleValue() / Math.pow(1.3, loopDepth.getOrDefault(l, 0));
-                        var value2 = degree.getOrDefault(r, 0).doubleValue() / Math.pow(1.3, loopDepth.getOrDefault(r, 0));
+                        var value1 = degree.getOrDefault(l, 0).doubleValue() / Math.pow(1.5, loopDepth.getOrDefault(l, 0));
+                        var value2 = degree.getOrDefault(r, 0).doubleValue() / Math.pow(1.5, loopDepth.getOrDefault(r, 0));
 
                         return Double.compare(value1, value2);
                     }).get();
