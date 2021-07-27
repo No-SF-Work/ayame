@@ -380,6 +380,18 @@ public class PeepholeOptimization implements Pass.MCPass {
                 }
             }
         }
+        // make closure
+        for (boolean isClosure = false; !isClosure; ) {
+            isClosure = true;
+            for (var entry : replaceableBB.entrySet()) {
+                var key = entry.getKey();
+                var value = entry.getValue();
+                if (replaceableBB.containsKey(value)) {
+                    replaceableBB.put(key, replaceableBB.get(value));
+                    isClosure = false;
+                }
+            }
+        }
         return replaceableBB;
     }
 
@@ -449,18 +461,6 @@ public class PeepholeOptimization implements Pass.MCPass {
         boolean done;
 
         var replaceableBB = getReplaceableBB(manager);
-        // make closure
-        for (boolean isClosure = false; !isClosure; ) {
-            isClosure = true;
-            for (var entry : replaceableBB.entrySet()) {
-                var key = entry.getKey();
-                var value = entry.getValue();
-                if (replaceableBB.containsKey(value)) {
-                    replaceableBB.put(key, replaceableBB.get(value));
-                    isClosure = false;
-                }
-            }
-        }
         done = replaceableBB.isEmpty();
         replaceBB(manager, replaceableBB);
 
@@ -478,7 +478,7 @@ public class PeepholeOptimization implements Pass.MCPass {
         while (!done) {
             done = trivialPeephole(manager);
             done &= peepholeWithDataFlow(manager);
-            done &= removeUselessBB(manager);
+//            done &= removeUselessBB(manager);
         }
     }
 }
