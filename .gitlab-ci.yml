@@ -39,7 +39,7 @@ run_func_1:
     - bash scripts/send_to_pi_functional.sh
   tags:
     - x86
-  timeout: 3m
+  timeout: 10m
 
 run_perf_1:
   when: manual
@@ -55,7 +55,7 @@ run_perf_1:
     - bash scripts/send_to_pi_performance.sh
   tags:
     - x86
-  timeout: 10m
+  timeout: 15m
 
 run_perf_1_pro:
   when: manual
