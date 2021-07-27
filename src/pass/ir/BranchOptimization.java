@@ -9,6 +9,7 @@ import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst.BrInst;
+import ir.values.instructions.TerminatorInst.RetInst;
 import pass.Pass.IRPass;
 import util.Mylogger;
 
@@ -49,7 +50,7 @@ public class BranchOptimization implements IRPass {
 
             completed = removeUselessPhi(func);
             completed &= onlyOneUncondBr(func);
-//            completed &= endWithUncondBr(func);
+            completed &= endWithUncondBr(func);
             completed &= removeDeadBB(func);
             completed &= mergeCondBr(func);
 
@@ -205,6 +206,7 @@ public class BranchOptimization implements IRPass {
         }
         // 删掉 pred 原有的 br，修改 pred
         pred.getList().getLast().removeSelf();
+        assert pred.getList().getLast().getVal() instanceof BrInst || pred.getList().getLast().getVal() instanceof RetInst;
         // 维护 predecessor 和 successor 信息
         pred.setSuccessor_(succ.getSuccessor_());
         for (var bb : succ.getSuccessor_()) {

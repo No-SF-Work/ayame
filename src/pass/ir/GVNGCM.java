@@ -13,7 +13,9 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.*;
 import ir.values.instructions.SimplifyInstruction;
+import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
+import ir.values.instructions.TerminatorInst.RetInst;
 import pass.Pass.IRPass;
 import util.IList;
 import util.IList.INode;
@@ -262,6 +264,7 @@ public class GVNGCM implements IRPass {
       runGVNOnInstruction(instNode.getVal());
       instNode = tmp;
     }
+    assert bb.getList().getLast().getVal() instanceof BrInst || bb.getList().getLast().getVal() instanceof RetInst;
   }
 
   public void runGVNOnInstruction(Instruction inst) {
@@ -387,6 +390,8 @@ public class GVNGCM implements IRPass {
         // move instruction to the end of entry bb
         inst.node.removeSelf();
         inst.node.insertAtSecondToEnd(entryList);
+        assert entryList.getLast().getVal() instanceof BrInst || entryList.getLast()
+            .getVal() instanceof RetInst;
       }
 
       if (inst.isBinary() || inst.tag == TAG_.GEP || inst.tag == TAG_.Load) {
@@ -398,6 +403,8 @@ public class GVNGCM implements IRPass {
             if (opInst.getBB().getDomLevel() > inst.getBB().getDomLevel()) {
               inst.node.removeSelf();
               inst.node.insertAtSecondToEnd(opInst.getBB().getList());
+              assert opInst.getBB().getList().getLast().getVal() instanceof BrInst || opInst.getBB()
+                  .getList().getLast().getVal() instanceof RetInst;
             }
           }
         }
@@ -485,11 +492,13 @@ public class GVNGCM implements IRPass {
       }
       inst.node.removeSelf();
       inst.node.insertAtSecondToEnd(bestbb.getList());
+      assert bestbb.getList().getLast().getVal() instanceof BrInst || bestbb.getList().getLast()
+          .getVal() instanceof RetInst;
 
       // bestbb 是 lcabb 时，可能 use inst 的指令在 inst 前面，需要把 inst 往前稍稍
       for (INode<Instruction, BasicBlock> instNode : bestbb.getList()) {
         Instruction tmpInst = instNode.getVal();
-        if (tmpInst.tag != TAG_.Phi) {
+        if (tmpInst.tag != TAG_.Phi && tmpInst.tag != TAG_.MemPhi) {
           // 从 operands 里拿到 inst，和从 inst.getUsesList 里找是否有个 Use 的 user 是 tmpInst，应该没有区别吧
           if (tmpInst.getOperands().contains(inst)) {
             inst.node.removeSelf();
