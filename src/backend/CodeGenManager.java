@@ -3,6 +3,7 @@ package backend;
 import backend.machinecodes.*;
 import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
+import ir.Analysis.LoopInfo;
 import ir.MyModule;
 import ir.types.ArrayType;
 import ir.types.IntegerType;
@@ -151,6 +152,7 @@ public class CodeGenManager {
                 } else {
                     //如果true块有多个前驱块，那么只能在当前块和true块之间新建一个块插入waiting中的copy
                     MachineBlock newMB = new MachineBlock(mf);
+                    newMB.setLoopDepth(mb.getLoopDepth());
                     Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
                     while (mcIte.hasNext()) {
                         MachineCode mci = mcIte.next();
@@ -175,6 +177,7 @@ public class CodeGenManager {
             if (isVisit.containsKey(mb.getFalseSucc())) {
                 if (waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()) {
                     MachineBlock newMB = new MachineBlock(mf);
+                    newMB.setLoopDepth(mb.getLoopDepth());
                     Iterator<MachineCode> mcIte = waiting.get(falsePair).iterator();
                     while (mcIte.hasNext()) {
                         MachineCode mci = mcIte.next();
@@ -269,6 +272,7 @@ public class CodeGenManager {
                 } else {
                     //如果true块有多个前驱块，那么只能在当前块和true块之间新建一个块插入waiting中的copy
                     MachineBlock newMB = new MachineBlock(mf);
+                    newMB.setLoopDepth(mb.getLoopDepth());
                     Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
                     while (mcIte.hasNext()) {
                         MachineCode mci = mcIte.next();
@@ -293,6 +297,7 @@ public class CodeGenManager {
             if (isVisit.containsKey(mb.getFalseSucc())) {
                 if (waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()) {
                     MachineBlock newMB = new MachineBlock(mf);
+                    newMB.setLoopDepth(mb.getLoopDepth());
                     Iterator<MachineCode> mcIte = waiting.get(falsePair).iterator();
                     while (mcIte.hasNext()) {
                         MachineCode mci = mcIte.next();
@@ -576,6 +581,7 @@ public class CodeGenManager {
             INode<Function, MyModule> fNode = fIt.next();
             f = fNode.getVal();
             mf = fMap.get(f);
+            f.getLoopInfo().computeLoopInfo(f);
             if (f.isBuiltin_()) {
                 continue;
             }
@@ -590,6 +596,7 @@ public class CodeGenManager {
             while (bIt.hasNext()) {
                 BasicBlock b = bIt.next().getVal();
                 MachineBlock mb = bMap.get(b);
+                mb.setLoopDepth(f.getLoopInfo().getLoopDepthForBB(b));
                 Iterator<BasicBlock> bbIt = b.getPredecessor_().iterator();
                 while (bbIt.hasNext()) {
                     mb.addPred(bMap.get(bbIt.next()));
