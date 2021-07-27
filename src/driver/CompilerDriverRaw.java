@@ -74,7 +74,11 @@ public class CompilerDriverRaw {
       Visitor visitor = new Visitor(/* OptionsTable table */);
       visitor.visit(tree);
       if (source.contains("register_alloc")) {
-        pm.openedPasses_.removeIf(s -> s.equals("gvmgcm"));
+        pm.openedPasses_.removeIf(s -> s.equals("gvngcm"));
+      }
+      if (!Config.getInstance().isO2) {
+        pm.openedPasses_.removeIf(s -> s.equals("funcinline"));
+        pm.openedPasses_.removeIf(s -> s.equals("Peephole"));
       }
       pm.runIRPasses(MyModule.getInstance());
 
