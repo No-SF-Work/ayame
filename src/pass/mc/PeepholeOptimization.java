@@ -316,6 +316,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 // =>
                                 // move b y
                                 // str b [c, #x+i]
+                                // this situation should be avoided:
+                                // add/sub a c #i
+                                // move c y
+                                // str c [a, #x]
                                 var nxt2InstrEntry = nxtInstrEntry.getNext();
                                 if (nxt2InstrEntry == null) {
                                     continue;
@@ -328,8 +332,9 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     var storeInstr = (MCStore) nxt2Instr;
                                     var isSameData = moveInstr.getDst().equals(storeInstr.getData());
                                     var isSameDstAddr = storeInstr.getAddr().equals(binInstr.getDst());
+                                    var notSameLhsData = !binInstr.getLhs().equals(storeInstr.getData());
 
-                                    if (isSameData && isSameDstAddr) {
+                                    if (isSameData && isSameDstAddr && notSameLhsData) {
                                         var addImm = new MachineOperand(storeInstr.getOffset().getImm() + imm);
                                         var subImm = new MachineOperand(storeInstr.getOffset().getImm() - imm);
                                         storeInstr.setAddr(binInstr.getLhs());
