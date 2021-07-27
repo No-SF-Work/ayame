@@ -193,6 +193,8 @@ public class FunctionInline implements IRPass {
         });
       });
       rets.forEach(ret -> {
+        arrive.getPredecessor_().add(ret.getBB());
+        ret.getBB().getSuccessor_().add(arrive);
         var tmpBr = factory.getBr(arrive);
         tmpBr.node.insertBefore(ret.node);
         ret.node.removeSelf();

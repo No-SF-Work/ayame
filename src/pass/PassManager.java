@@ -48,12 +48,11 @@ public class PassManager {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new BBPredSucc());
     irPasses.add(new InterproceduralAnalysis());
-    irPasses.add(new EmitLLVM("beforemem2.ll"));
     irPasses.add(new Mem2reg());
-    irPasses.add(new EmitLLVM("before.ll"));
+    irPasses.add(new GVNGCM());
     irPasses.add(new FunctionInline());
+    irPasses.add(new GVNGCM());
     irPasses.add(new DeadCodeEmit());
-    irPasses.add(new EmitLLVM("after.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new BranchOptimization());
