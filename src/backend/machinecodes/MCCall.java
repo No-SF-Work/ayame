@@ -12,7 +12,7 @@ public class MCCall extends MachineCode{
         this.func = func;
     }
 
-    private MachineFunction func; 
+    private MachineFunction func;
 
     private static  int chi=0;
 
