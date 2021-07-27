@@ -34,7 +34,23 @@ run_functional:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
   script:
-    - bash scripts/server_scripts/build_ayame.sh
+    - mv testcases/functional_test/* testcases/
+    - bash scripts/server_scripts/build_ayame_functional.sh
+  tags:
+    - x86
+  timeout: 3m
+
+run_performance:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/performance_test/* testcases/
+    - bash scripts/server_scripts/build_ayame_performance.sh
   tags:
     - x86
   timeout: 3m
