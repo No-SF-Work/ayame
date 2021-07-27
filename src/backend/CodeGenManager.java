@@ -580,11 +580,11 @@ public class CodeGenManager {
         while (fIt.hasNext()) {
             INode<Function, MyModule> fNode = fIt.next();
             f = fNode.getVal();
-            mf = fMap.get(f);
-            f.getLoopInfo().computeLoopInfo(f);
             if (f.isBuiltin_()) {
                 continue;
             }
+            mf = fMap.get(f);
+            f.getLoopInfo().computeLoopInfo(f);
             machineFunctions.add(mf);
             IList<BasicBlock, Function> bList = f.getList_();
             Iterator<INode<BasicBlock, Function>> bIt = bList.iterator();
