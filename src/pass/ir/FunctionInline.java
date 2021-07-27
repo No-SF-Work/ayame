@@ -128,8 +128,8 @@ public class FunctionInline implements IRPass {
     arrive.node_.insertAfter(originBB.node_);
     //在call指令前面插入一个到目标函数的entry的跳转
     var br2entry = factory.getBr(copy.getList_().getEntry().getVal());
-    var tmp = call.node.getNext();
     var funcArgs = copy.getArgList();
+    var tmp = call.node.getNext();
     //取出call指令后面的所有指令，放到arrive块中
     ArrayList<Instruction> toBeMoved = new ArrayList<>();
     while (tmp != null) {
@@ -178,7 +178,6 @@ public class FunctionInline implements IRPass {
       rets.forEach(ret -> {
         var tmpstore = factory.getStore(ret.getOperands().get(0), alloca);
         ret.CORemoveAllOperand();
-        ret.COReplaceAllUseWith(alloca);
         var tmpBr = factory.getBr(arrive);
         tmpstore.node.insertBefore(ret.node);
         tmpBr.node.insertBefore(ret.node);
@@ -303,6 +302,9 @@ public class FunctionInline implements IRPass {
           }
         }
       }
+    }
+    if (copy == null) {
+      throw new RuntimeException();
     }
     return copy;
   }

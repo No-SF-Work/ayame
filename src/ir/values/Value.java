@@ -13,7 +13,7 @@ import java.util.LinkedList;
  * <p>
  * ***Use(以及Use的paramNum) 和 operand应该保持一致***
  * <p>
- * ***以CO开头的修改DU关系的方法是同步更新的***
+
  */
 public abstract class Value {
 
@@ -49,7 +49,8 @@ public abstract class Value {
   /**
    * 将所有对 this 的使用换为对v的使用，连带着更新User的Operand
    */
-  public void COReplaceAllUseWith(Value v) {
+  public void
+  COReplaceAllUseWith(Value v) {
     User usr;
     for (Use use : usesList) {
       use.getUser().CoSetOperand(use.getOperandRank(), v);
