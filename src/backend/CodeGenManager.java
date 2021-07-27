@@ -34,7 +34,7 @@ public class CodeGenManager {
     //ir moudle
     private static MyModule myModule;
 
-    private boolean ifPrintIR = false;
+    private boolean ifPrintIR = true;
 
     private static Logger logger;
 
@@ -243,8 +243,9 @@ public class CodeGenManager {
                 dfsTrueSerial(mb.getTrueSucc(), mf, isVisit);
             }
         } else {
-            //如果两个后继块都未被访问过，那么让之前的True块变成现在的false块，并放到当前块后面
-            if (!isVisit.containsKey(mb.getTrueSucc()) && !isVisit.containsKey(mb.getFalseSucc())) {
+            //和dfsFalseSerial不同，如果True块和False块都没被访问，也要交换，合并条件之后，条件变成
+            //只要True块没被访问，那就交换
+            if (!isVisit.containsKey(mb.getTrueSucc()) ) {
                 MachineBlock temp = mb.getTrueSucc();
                 mb.setTrueSucc(mb.getFalseSucc());
                 mb.setFalseSucc(temp);
@@ -258,10 +259,6 @@ public class CodeGenManager {
             //处理True后继
             if (waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()) {
 
-                //如果false块已经被访问，那么需要把条件跳转的条件翻转
-                if(isVisit.containsKey(mb.getFalseSucc())){
-
-                }
                 //如果true块只有一个前驱基本块，那么就可以把waiting中的copy插入true块的最前面
                 if (mb.getTrueSucc().getPred().size() == 1) {
                     Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
@@ -292,6 +289,7 @@ public class CodeGenManager {
 
             }
 
+            //如果此时false块依然在mblist中，那么说明两个块都在mblist中
             if (isVisit.containsKey(mb.getFalseSucc())) {
                 if (waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()) {
                     MachineBlock newMB = new MachineBlock(mf);
@@ -326,10 +324,10 @@ public class CodeGenManager {
             }
             //以上过程可能修改本基本块的True后继/False后继，所以重新判断是否被访问过
             if (!isVisit.containsKey(mb.getFalseSucc())) {
-                dfsFalseSerial(mb.getFalseSucc(), mf, isVisit);
+                dfsTrueSerial(mb.getFalseSucc(), mf, isVisit);
             }
             if (!isVisit.containsKey(mb.getTrueSucc())) {
-                dfsFalseSerial(mb.getTrueSucc(), mf, isVisit);
+                dfsTrueSerial(mb.getTrueSucc(), mf, isVisit);
             }
         }
     }
@@ -1205,7 +1203,7 @@ public class CodeGenManager {
 
             DFSSerialize s = () -> {
                 HashMap<MachineBlock, Boolean> isVisit = new HashMap<>();
-                dfsFalseSerial(bMap.get(f.getList_().getEntry().getVal()), mf, isVisit);
+                dfsTrueSerial(bMap.get(f.getList_().getEntry().getVal()), mf, isVisit);
             };
 
             s.dfsSerialize();
