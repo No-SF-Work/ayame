@@ -17,6 +17,4 @@ echo ""
 echo -e "\033[32m\033[1m[Running]\033[0m"
 python3 scripts/server_scripts/test_std.py
 
-
 echo ""
-bash scripts/send_to_pi_performance.sh

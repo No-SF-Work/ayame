@@ -36,6 +36,7 @@ run_functional:
   script:
     - mv testcases/functional_test/* testcases/
     - bash scripts/server_scripts/build_ayame_functional.sh
+    - bash scripts/send_to_pi_functional.sh
   tags:
     - x86
   timeout: 3m
@@ -51,6 +52,39 @@ run_performance:
   script:
     - mv testcases/performance_test/* testcases/
     - bash scripts/server_scripts/build_ayame_performance.sh
+    - bash scripts/send_to_pi_performance.sh
+  tags:
+    - x86
+  timeout: 10m
+
+run_functional2:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/functional_test/* testcases/
+    - bash scripts/server_scripts/build_ayame_functional.sh
+    - bash scripts/send_to_pi_functional2.sh
+  tags:
+    - x86
+  timeout: 3m
+
+run_performance2:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/performance_test/* testcases/
+    - bash scripts/server_scripts/build_ayame_performance.sh
+    - bash scripts/send_to_pi_performance2.sh
   tags:
     - x86
   timeout: 10m
