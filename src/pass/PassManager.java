@@ -57,6 +57,7 @@ public class PassManager {
     irPasses.add(new GVNGCM());
     irPasses.add(new BranchOptimization());
 
+
     mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new RegAllocator());
     mcPasses.add(new PeepholeOptimization());
