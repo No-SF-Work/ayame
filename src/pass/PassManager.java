@@ -2,10 +2,8 @@ package pass;
 
 import backend.CodeGenManager;
 import ir.MyModule;
-
 import java.util.ArrayList;
 import java.util.logging.Logger;
-
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
 import pass.ir.BBPredSucc;
@@ -15,7 +13,6 @@ import pass.ir.EmitLLVM;
 import pass.ir.FunctionInline;
 import pass.ir.GVNGCM;
 import pass.ir.InterproceduralAnalysis;
-
 import pass.ir.Mem2reg;
 import pass.mc.ListScheduling;
 import pass.mc.PeepholeOptimization;
@@ -37,7 +34,7 @@ public class PassManager {
     add("deadcodeemit");
     add("funcinline");
     add("RegAlloc");
-    add("ListScheduling");
+//    add("ListScheduling");
     add("Peephole");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
@@ -49,12 +46,15 @@ public class PassManager {
     irPasses.add(new BBPredSucc());
     irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new Mem2reg());
+    irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
     irPasses.add(new FunctionInline());
+    irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new DeadCodeEmit());
     irPasses.add(new BranchOptimization());
+    irPasses.add(new EmitLLVM());
 
     mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new RegAllocator());
