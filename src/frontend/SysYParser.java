@@ -2112,6 +2112,7 @@ public class SysYParser extends Parser {
 
     public BasicBlock falseblock;
     public BasicBlock trueblock;
+    public boolean isLoopCond = false;
 
     public LOrExpContext lOrExp() {
       return getRuleContext(LOrExpContext.class, 0);
@@ -3348,6 +3349,7 @@ public class SysYParser extends Parser {
 
   public static class LAndExpContext extends ParserRuleContext {
 
+    public boolean isFirstBlock = false;
     public BasicBlock falseblock;
     public BasicBlock trueblock;
 

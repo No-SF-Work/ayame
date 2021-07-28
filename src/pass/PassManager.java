@@ -34,7 +34,7 @@ public class PassManager {
     add("deadcodeemit");
     add("funcinline");
     add("RegAlloc");
-//    add("ListScheduling");
+    add("ListScheduling");
     add("Peephole");
   }};
   private ArrayList<IRPass> irPasses = new ArrayList<>() {
@@ -44,6 +44,7 @@ public class PassManager {
   private PassManager() {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new BBPredSucc());
+    irPasses.add(new EmitLLVM("tt.ll"));
     irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new Mem2reg());
     irPasses.add(new BranchOptimization());

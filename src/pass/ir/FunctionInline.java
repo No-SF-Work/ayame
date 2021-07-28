@@ -6,6 +6,7 @@ import ir.values.BasicBlock;
 import ir.values.Constant;
 import ir.values.Function;
 import ir.values.Value;
+import ir.values.ValueCloner;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
@@ -61,7 +62,13 @@ public class FunctionInline implements IRPass {
         var val = funcNode.getVal();
         if (!val.isBuiltin_() && !val.getName().equals("main")) {
           //只要caller和callee没有交集，就可以把这个func inline到parent里
-          if (val.getCalleeList().isEmpty()) {
+          ArrayList<Function> noBuiltInfuncs = new ArrayList<>();
+          val.getCalleeList().forEach(func -> {
+            if (!func.isBuiltin_()) {
+              noBuiltInfuncs.add(func);
+            }
+          });
+          if (noBuiltInfuncs.isEmpty()) {
             tobeProcessed.add(val);
           }
         }
@@ -115,7 +122,19 @@ public class FunctionInline implements IRPass {
     var retType = call.getType();
     var originFunc = call.getBB().getParent();
     var arrive = factory.getBasicBlock("");
-    var copy = getFunctionCopy((Function) call.getOperands().get(0));
+    var copy = new ValueCloner() {
+      @Override
+      public Value findValue(Value val) {
+        if (val instanceof Constant) {
+          return val;
+        } else {
+          if (this.valueMap.get(val) == null) {
+            throw new RuntimeException();
+          }
+          return this.valueMap.get(val);
+        }
+      }
+    }.getFunctionCopy((Function) call.getOperands().get(0));
     var originBB = call.getBB();
     arrive.node_.insertAfter(originBB.node_);
     //在call指令前面插入一个到目标函数的entry的跳转
@@ -224,153 +243,6 @@ public class FunctionInline implements IRPass {
   }
 
 
-  //因为使用的是双向侵入链表，对value的copy会有点复杂
-  private Function getFunctionCopy(Function source) {
-    valueMap.clear();
-    m.__globalVariables.forEach(gv -> {
-      valueMap.put(gv, gv);
-    });
-    var copy = factory.getFunction("", source.getType());//只要body,不要function的head
-    //初始化所有的bb,并且放到valueMap里面（由于Br指令的存在，basicBlock的对象需要在初始化之前就存在）
-    var sourceArgs = source.getArgList();
-    var copyArgs = copy.getArgList();
-    for (int i = 0; i < copy.getArgList().size(); i++) {
-      valueMap.put(sourceArgs.get(i), copyArgs.get(i));
-    }
-    for (INode<BasicBlock, Function> bbNode : source.getList_()) {
-      valueMap.put(bbNode.getVal(), factory.buildBasicBlock("", copy));
-    }
-    source.getList_().forEach(bbnode -> {
-      var val = bbnode.getVal();
-      BasicBlock copyBB = (BasicBlock) findValue(val);
-      //复制predecessor和successor，用于生成phi指令
-      for (BasicBlock basicBlock : val.getPredecessor_()) {
-        copyBB.getPredecessor_().add((BasicBlock) findValue(basicBlock));
-      }
-      for (BasicBlock basicBlock : val.getSuccessor_()) {
-        copyBB.getSuccessor_().add((BasicBlock) findValue(basicBlock));
-      }
-    });
-    //基于这么一个假设：function的Ilist中的bb是按照拓扑排序排列的，如果后续发现出现问题，我会把这个遍历改为bfs
-    //update
-    BasicBlock root = source.getList_().getEntry().getVal();
-    bbProcessor(root);
-    visitMap.clear();
-    ArrayList<Phi> phis = new ArrayList<>();
-    source.getList_().forEach(
-        bblist -> {
-          bblist.getVal().getList().forEach(instnode -> {
-            if (instnode.getVal() instanceof Phi) {
-              phis.add((Phi) instnode.getVal());
-            }
-          });
-        }
-    );
-    for (Phi phi : phis) {
-      for (int i = 0; i < ((Phi) phi).getIncomingVals().size(); i++) {
-        ((Phi) findValue(phi)).setIncomingVals(i, findValue(phi.getIncomingVals().get(i)));
-      }
-    }
-    return copy;
-  }
-
-  HashMap<BasicBlock, Boolean> visitMap = new HashMap<>();
-
-  private void bbProcessor(BasicBlock bb) {
-    processBasicblock(bb, (BasicBlock) valueMap.get(bb));
-    if (!bb.getSuccessor_().isEmpty()) {
-      bb.getSuccessor_().stream().distinct().forEach(b -> {
-        if (visitMap.get(b)==null) {
-          visitMap.put(b, true);
-          bbProcessor(b);
-        }
-      });
-    }
-  }
-
-
-  private void processBasicblock(BasicBlock source, BasicBlock target) {
-    source.getList().forEach(node -> {
-      var copy = getInstCopy(node.getVal());
-      valueMap.put(node.getVal(), copy);
-      copy.node.insertAtEnd(target.getList());
-    });
-  }
-
-  private Instruction getInstCopy(Instruction instruction) {
-    Instruction copy = null;
-    var ops = instruction.getOperands();
-    if (instruction instanceof BinaryInst) {
-      copy = factory.getBinary(instruction.tag, findValue(ops.get(0)), findValue(ops.get(1)));
-    }
-    if (instruction instanceof MemInst) {
-      copy = switch (instruction.tag) {
-        case Alloca -> factory.getAlloca(((AllocaInst) instruction).getAllocatedType());
-        case Load -> factory.getLoad(instruction.getType(), findValue(ops.get(0)));
-        case Store -> factory.getStore(findValue(ops.get(0)), findValue(ops.get(1)));
-        case GEP -> factory.getGEP(findValue(ops.get(0)),
-            new ArrayList<>() {{
-              for (int i = 1; i < ops.size(); i++) {
-                add(findValue(ops.get(i)));
-              }
-            }});
-        case Zext -> factory.getZext(findValue(ops.get(0)));
-        case Phi -> new Phi(instruction.tag, instruction.getType(), instruction.getNumOP());
-        default -> throw new RuntimeException();
-      };
-    }
-
-    if (instruction instanceof TerminatorInst) {
-      switch (instruction.tag) {
-        case Br -> {
-          if (ops.size() == 3) {
-            copy = factory.getBr(findValue(ops.get(0)), (BasicBlock) findValue(ops.get(1)),
-                (BasicBlock) findValue(ops.get(2)));
-          }
-          if (ops.size() == 1) {
-            copy = factory.getBr((BasicBlock) findValue(ops.get(0)));
-          }
-        }
-        case Call -> {
-          copy = factory.getFuncCall((Function) ops.get(0), new ArrayList<>() {{
-            for (int i = 1; i < ops.size(); i++) {
-              add(findValue(ops.get(i)));
-            }
-          }});
-        }
-        case Ret -> {
-          if (ops.size() == 1) {
-            copy = factory.getRet(findValue(ops.get(0)));
-          } else {
-            copy = factory.getRet();
-          }
-        }
-      }
-    }
-    if (copy == null) {
-      throw new RuntimeException();
-    }
-    return copy;
-  }
-
-  /*private void copyOperands(User dest, User from) {
-    dest.CORemoveAllOperand();
-  }
-*/
-  private Value findValue(Value val) {
-    if (val instanceof Constant) {
-      return val;
-    } else {
-      assert valueMap.get(val) != null;
-      if (valueMap.get(val) == null) {
-        throw new RuntimeException();
-      }
-      return valueMap.get(val);
-    }
-  }
-
-  //cast origin Value to copied value
-  private HashMap<Value, Value> valueMap = new HashMap<>();
 }
 
 
