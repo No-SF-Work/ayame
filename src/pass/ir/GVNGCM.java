@@ -211,9 +211,10 @@ public class GVNGCM implements IRPass {
   // TODO: 研究更好的算法 "A Sparse Algorithm for Predicated Global Value Numbering" describes a better algorithm
   public void runGVNGCM(Function func) {
     var bropt = new BranchOptimization();
+    int cnt = 0;
     do {
       ArrayAliasAnalysis.run(func);
-      log.info("GVMGCM: GVN for " + func.getName());
+      log.info(("GVMGCM: GVN for " + func.getName()));
       runGVN(func);
 
       // clear MemorySSA, dead code elimination, compute MemorySSA
@@ -222,10 +223,12 @@ public class GVNGCM implements IRPass {
       dce.runDCE(func);
       ArrayAliasAnalysis.run(func);
 
-      log.info("GVMGCM: GCM for " + func.getName());
+      log.info(("GVMGCM: GCM for " + func.getName()));
       runGCM(func);
       ArrayAliasAnalysis.clear(func);
+      cnt++;
     } while (bropt.runBranchOptimization(func));
+    System.out.println("Run GVNGCM for func " + func.getName() + " " + cnt + " times.");
   }
 
   // TODO: use better algebraic simplification and unreachable code elimination
