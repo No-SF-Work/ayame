@@ -47,6 +47,7 @@ public class PassManager {
   private PassManager() {
     //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new BBPredSucc());
+    irPasses.add(new EmitLLVM("tt.ll"));
     irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new Mem2reg());
     irPasses.add(new GVNGCM());
@@ -54,7 +55,7 @@ public class PassManager {
     irPasses.add(new FunctionInline());
     irPasses.add(new GVNGCM());
     irPasses.add(new DeadCodeEmit());
-    irPasses.add(new BranchOptimization());
+//    irPasses.add(new BranchOptimization());
 
 //    mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new RegAllocator());

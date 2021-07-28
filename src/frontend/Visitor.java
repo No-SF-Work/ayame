@@ -811,12 +811,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
     whileCondEntryBlock.getList().forEach(instNode -> {
       var val = instNode.getVal();
       for (Value operand : val.getOperands()) {
-        if (cloner.findValue(operand) == null) {
-          cloner.put(operand, operand);
+        if (cloner.findValue(operand)==null){
+          cloner.put(operand,operand);
         }
       }
-      var copy = cloner.getInstCopy(val);
-      cloner.put(val, copy);
+      var copy= cloner.getInstCopy(val);
+      cloner.put(val,copy);
       copy.node.insertAtEnd(curBB_.getList());
     });
 
