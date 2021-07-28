@@ -56,11 +56,11 @@ public class PassManager {
     irPasses.add(new DeadCodeEmit());
     irPasses.add(new BranchOptimization());
 
-    mcPasses.add(new PeepholeOptimization());
+//    mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new RegAllocator());
-    mcPasses.add(new PeepholeOptimization());
+//    mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new ListScheduling());
-    mcPasses.add(new PeepholeOptimization());
+//    mcPasses.add(new PeepholeOptimization());
   }
 
   public static PassManager getPassManager() {
