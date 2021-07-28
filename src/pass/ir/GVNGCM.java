@@ -210,20 +210,22 @@ public class GVNGCM implements IRPass {
   // Algorithm: Global Code Motion Global Value Numbering, Cliff Click
   // TODO: 研究更好的算法 "A Sparse Algorithm for Predicated Global Value Numbering" describes a better algorithm
   public void runGVNGCM(Function func) {
-    // ArrayAliasAnalysis 几乎不可用
-    ArrayAliasAnalysis.run(func);
-    log.info("GVMGCM: GVN for " + func.getName());
-    runGVN(func);
+    var bropt = new BranchOptimization();
+    do {
+      ArrayAliasAnalysis.run(func);
+      log.info("GVMGCM: GVN for " + func.getName());
+      runGVN(func);
 
-    // clear MemorySSA, dead code elimination, compute MemorySSA
-    ArrayAliasAnalysis.clear(func);
-    DeadCodeEmit dce = new DeadCodeEmit();
-    dce.runDCE(func);
-    ArrayAliasAnalysis.run(func);
+      // clear MemorySSA, dead code elimination, compute MemorySSA
+      ArrayAliasAnalysis.clear(func);
+      DeadCodeEmit dce = new DeadCodeEmit();
+      dce.runDCE(func);
+      ArrayAliasAnalysis.run(func);
 
-    log.info("GVMGCM: GCM for " + func.getName());
-    runGCM(func);
-    ArrayAliasAnalysis.clear(func);
+      log.info("GVMGCM: GCM for " + func.getName());
+      runGCM(func);
+      ArrayAliasAnalysis.clear(func);
+    } while (bropt.runBranchOptimization(func));
   }
 
   // TODO: use better algebraic simplification and unreachable code elimination
@@ -264,7 +266,8 @@ public class GVNGCM implements IRPass {
       runGVNOnInstruction(instNode.getVal());
       instNode = tmp;
     }
-    assert bb.getList().getLast().getVal() instanceof BrInst || bb.getList().getLast().getVal() instanceof RetInst;
+    assert bb.getList().getLast().getVal() instanceof BrInst || bb.getList().getLast()
+        .getVal() instanceof RetInst;
   }
 
   public void runGVNOnInstruction(Instruction inst) {

@@ -44,11 +44,13 @@ public class BranchOptimization implements IRPass {
         }
     }
 
-    public void runBranchOptimization(Function func) {
+    public boolean runBranchOptimization(Function func) {
+        boolean removePhi;
         while (true) {
-            boolean completed = true;
+            boolean completed;
 
             completed = removeUselessPhi(func);
+            removePhi = !completed;
             completed &= onlyOneUncondBr(func);
             completed &= endWithUncondBr(func);
             completed &= removeDeadBB(func);
@@ -58,6 +60,7 @@ public class BranchOptimization implements IRPass {
                 break;
             }
         }
+        return removePhi;
     }
 
     private boolean removeUselessPhi(Function func) {
@@ -77,6 +80,7 @@ public class BranchOptimization implements IRPass {
                     inst.COReplaceAllUseWith(inst.getOperands().get(0));
                     instNode.removeSelf();
                     inst.CORemoveAllOperand();
+                    completed = false;
                 }
 
                 instNode = tmp;
