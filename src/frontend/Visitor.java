@@ -16,6 +16,7 @@ import ir.values.Function;
 import ir.values.Value;
 import ir.values.ValueCloner;
 import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -784,7 +785,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var whileCondEntryBlock = f.buildBasicBlock(name + "_whileCondition", curFunc_);
     var trueBlock = f.buildBasicBlock(name + "_body", curFunc_);
     var nxtBlock = f.buildBasicBlock(name + "_nxtBlock", curFunc_);
-    ArrayList<Value> whileEntryContainer = new ArrayList<>();
     var cloner = new ValueCloner() {
       @Override
       public Value findValue(Value value) {
@@ -811,29 +811,40 @@ public class Visitor extends SysYBaseVisitor<Void> {
     whileCondEntryBlock.getList().forEach(instNode -> {
       var val = instNode.getVal();
       for (Value operand : val.getOperands()) {
-        if (cloner.findValue(operand)==null){
-          cloner.put(operand,operand);
+        if (cloner.findValue(operand) == null) {
+          cloner.put(operand, operand);
         }
       }
-      var copy= cloner.getInstCopy(val);
-      cloner.put(val,copy);
+      var copy = cloner.getInstCopy(val);
+      cloner.put(val, copy);
       copy.node.insertAtEnd(curBB_.getList());
     });
 
     //f.buildBr(whileCondEntryBlock, curBB_);
 
     // [Backpatch] for break & continue
-    backpatch(BreakInstructionMark, trueBlock, curBB_, nxtBlock);
-    backpatch(ContinueInstructionMark, trueBlock, curBB_, whileCondEntryBlock);
+    backpatch(BreakInstructionMark, trueBlock, curBB_, nxtBlock, whileCondEntryBlock);
+    backpatch(ContinueInstructionMark, trueBlock, curBB_, whileCondEntryBlock, whileCondEntryBlock);
     changeBB(nxtBlock);
 
     return null;
   }
 
   private void backpatch(String key, BasicBlock startBlock, BasicBlock endBlock,
-      BasicBlock targetBlock) {
+      BasicBlock targetBlock, BasicBlock whileEntry) {
+    ValueCloner cloner = new ValueCloner() {
+      @Override
+      public Value findValue(Value value) {
+        if (value instanceof Constant) {
+          return value;
+        } else {
+          return this.valueMap.get(value);
+        }
+      }
+    };
     var blockList = new LinkedList<BasicBlock>();
     var blockSet = new HashSet<BasicBlock>();
+    ArrayList<BrInst> toBeReplacedContinues = new ArrayList<>();
     blockSet.add(startBlock);
     blockList.add(startBlock);
 
@@ -858,8 +869,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var trueBlock = (BasicBlock) curInstr.getOperands().get(0);
 
             if (trueBlock.getName().equals(key)) {
-              curInstr.CoSetOperand(0, targetBlock);
-              trueBlock.node_.removeSelf();
+              if (trueBlock.getName().equals("_CONTINUE")) {
+                toBeReplacedContinues.add((BrInst) curInstr);
+                trueBlock.node_.removeSelf();
+              } else {
+                curInstr.CoSetOperand(0, targetBlock);
+                trueBlock.node_.removeSelf();
+              }
             } else if (trueBlock != endBlock && !blockSet
                 .contains(trueBlock)) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
               blockList.add(trueBlock);
@@ -870,10 +886,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
             // Check TrueBlock
             assert curInstr.getOperands().get(1) instanceof BasicBlock;
             var trueBlock = (BasicBlock) curInstr.getOperands().get(1);
-
             if (trueBlock.getName().equals(key)) {
-              curInstr.CoSetOperand(1, targetBlock);
-              trueBlock.node_.removeSelf();
+              if (trueBlock.getName().equals("_CONTINUE")) {
+                toBeReplacedContinues.add((BrInst) curInstr);
+                trueBlock.node_.removeSelf();
+              } else {
+                curInstr.CoSetOperand(1, targetBlock);
+                trueBlock.node_.removeSelf();
+              }
             } else if (trueBlock != endBlock && !blockSet.contains(trueBlock)) {
               blockList.add(trueBlock);
               blockSet.add(trueBlock);
@@ -884,8 +904,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var falseBlock = (BasicBlock) curInstr.getOperands().get(2);
 
             if (falseBlock.getName().equals(key)) {
-              curInstr.CoSetOperand(2, targetBlock);
-              falseBlock.node_.removeSelf();
+              if (falseBlock.getName().equals("_CONTINUE")) {
+                toBeReplacedContinues.add((BrInst) curInstr);
+                falseBlock.node_.removeSelf();
+              } else {
+                curInstr.CoSetOperand(2, targetBlock);
+                falseBlock.node_.removeSelf();
+              }
             } else if (falseBlock != endBlock && !blockSet.contains(falseBlock)) {
               blockList.add(falseBlock);
               blockSet.add(falseBlock);
@@ -893,8 +918,23 @@ public class Visitor extends SysYBaseVisitor<Void> {
           }
         }
       }
-
     }
+    toBeReplacedContinues.forEach(br -> {
+      whileEntry.getList().forEach(instNode -> {
+        var val = instNode.getVal();
+        for (Value operand : val.getOperands()) {
+          if (cloner.findValue(operand) == null) {
+            cloner.put(operand, operand);
+          }
+        }
+        var copy = cloner.getInstCopy(val);
+        cloner.put(val, copy);
+        copy.node.insertAtEnd(br.getBB().getList());
+      });
+      br.node.removeSelf();
+    });
+
+
   }
 
   /**
