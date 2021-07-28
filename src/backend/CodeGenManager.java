@@ -942,7 +942,7 @@ public class CodeGenManager {
                             MachineCode j = new MCJump(mb);
                             ((MCJump) j).setTarget(bMap.get(ir.getOperands().get(0)));
                             mb.setTrueSucc(bMap.get(ir.getOperands().get(0)));
-  
+
                         }
 
 
@@ -1385,7 +1385,9 @@ public class CodeGenManager {
         if (lhsIsConst && !rhsIsConst) {
             l = ir.getOperands().get(1);
             r = ir.getOperands().get(0);
-            cond = getOppoCond(cond);
+            if(cond!=CondType.Eq){
+                cond = getOppoCond(cond);
+            }
         } else {
             l = ir.getOperands().get(0);
             r = ir.getOperands().get(1);
