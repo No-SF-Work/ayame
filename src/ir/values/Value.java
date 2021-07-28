@@ -1,14 +1,9 @@
 package ir.values;
 
 import ir.MyModule;
-import ir.types.Type;
 import ir.Use;
-
-import ir.types.Type.NoType;
+import ir.types.Type;
 import ir.values.instructions.Instruction;
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 
 /**
@@ -18,7 +13,7 @@ import java.util.LinkedList;
  * <p>
  * ***Use(以及Use的paramNum) 和 operand应该保持一致***
  * <p>
- * ***以CO开头的修改DU关系的方法是同步更新的***
+
  */
 public abstract class Value {
 
@@ -54,11 +49,13 @@ public abstract class Value {
   /**
    * 将所有对 this 的使用换为对v的使用，连带着更新User的Operand
    */
-  public void COReplaceAllUseWith(Value v) {
+  public void
+  COReplaceAllUseWith(Value v) {
     User usr;
     for (Use use : usesList) {
       use.getUser().CoSetOperand(use.getOperandRank(), v);
     }
+    this.usesList.clear();
   }
 
   /**
@@ -109,7 +106,6 @@ public abstract class Value {
     return this instanceof Instruction;
   }
 
-  private Value parent;
   private LinkedList<Use> usesList;//记录使用这个Value的所有User
   private String name;
   private Type type;

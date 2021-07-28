@@ -1,5 +1,6 @@
 package pass.ir;
 
+import driver.Config;
 import ir.Analysis.ArrayAliasAnalysis;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
@@ -12,7 +13,9 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.*;
 import ir.values.instructions.SimplifyInstruction;
+import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
+import ir.values.instructions.TerminatorInst.RetInst;
 import pass.Pass.IRPass;
 import util.IList;
 import util.IList.INode;
@@ -107,15 +110,15 @@ public class GVNGCM implements IRPass {
       var key = valueTable.get(i).getFirst();
       var valueNumber = valueTable.get(i).getSecond();
       // FIXME: side_effect WA here!
-//      if (key instanceof LoadInst && !loadInst.equals(key)) {
-//        LoadInst keyInst = (LoadInst) key;
-//        var allSame =
-//            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
-//        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
-//        if (allSame) {
-//          return valueNumber;
-//        }
-//      } else
+      if (Config.getInstance().isO2 && key instanceof LoadInst && !loadInst.equals(key)) {
+        LoadInst keyInst = (LoadInst) key;
+        var allSame =
+            lookupOrAdd(loadInst.getPointer()) == lookupOrAdd(keyInst.getPointer());
+        allSame = allSame && loadInst.getUseStore() == keyInst.getUseStore();
+        if (allSame) {
+          return valueNumber;
+        }
+      }
       if (key instanceof StoreInst) {
         StoreInst keyInst = (StoreInst) key;
         var allSame =
@@ -207,20 +210,25 @@ public class GVNGCM implements IRPass {
   // Algorithm: Global Code Motion Global Value Numbering, Cliff Click
   // TODO: 研究更好的算法 "A Sparse Algorithm for Predicated Global Value Numbering" describes a better algorithm
   public void runGVNGCM(Function func) {
-    // ArrayAliasAnalysis 几乎不可用
-    ArrayAliasAnalysis.run(func);
-    log.info("GVMGCM: GVN for " + func.getName());
-    runGVN(func);
+    var bropt = new BranchOptimization();
+    int cnt = 0;
+    do {
+      ArrayAliasAnalysis.run(func);
+      log.info(("GVMGCM: GVN for " + func.getName()));
+      runGVN(func);
 
-    // clear MemorySSA, dead code elimination, compute MemorySSA
-    ArrayAliasAnalysis.clear(func);
-    DeadCodeEmit dce = new DeadCodeEmit();
-    dce.runDCE(func);
-    ArrayAliasAnalysis.run(func);
+      // clear MemorySSA, dead code elimination, compute MemorySSA
+      ArrayAliasAnalysis.clear(func);
+      DeadCodeEmit dce = new DeadCodeEmit();
+      dce.runDCE(func);
+      ArrayAliasAnalysis.run(func);
 
-    log.info("GVMGCM: GCM for " + func.getName());
-    runGCM(func);
-    ArrayAliasAnalysis.clear(func);
+      log.info(("GVMGCM: GCM for " + func.getName()));
+      runGCM(func);
+      ArrayAliasAnalysis.clear(func);
+      cnt++;
+    } while (bropt.runBranchOptimization(func));
+    System.out.println("Run GVNGCM for func " + func.getName() + " " + cnt + " times.");
   }
 
   // TODO: use better algebraic simplification and unreachable code elimination
@@ -261,6 +269,8 @@ public class GVNGCM implements IRPass {
       runGVNOnInstruction(instNode.getVal());
       instNode = tmp;
     }
+    assert bb.getList().getLast().getVal() instanceof BrInst || bb.getList().getLast()
+        .getVal() instanceof RetInst;
   }
 
   public void runGVNOnInstruction(Instruction inst) {
@@ -386,6 +396,8 @@ public class GVNGCM implements IRPass {
         // move instruction to the end of entry bb
         inst.node.removeSelf();
         inst.node.insertAtSecondToEnd(entryList);
+        assert entryList.getLast().getVal() instanceof BrInst || entryList.getLast()
+            .getVal() instanceof RetInst;
       }
 
       if (inst.isBinary() || inst.tag == TAG_.GEP || inst.tag == TAG_.Load) {
@@ -397,6 +409,8 @@ public class GVNGCM implements IRPass {
             if (opInst.getBB().getDomLevel() > inst.getBB().getDomLevel()) {
               inst.node.removeSelf();
               inst.node.insertAtSecondToEnd(opInst.getBB().getList());
+              assert opInst.getBB().getList().getLast().getVal() instanceof BrInst || opInst.getBB()
+                  .getList().getLast().getVal() instanceof RetInst;
             }
           }
         }
@@ -474,21 +488,23 @@ public class GVNGCM implements IRPass {
       BasicBlock bestbb = lcabb;
       Integer bestbbLoopDepth = func.getLoopInfo().getLoopDepthForBB(bestbb);
       while (lcabb != inst.getBB()) {
+        lcabb = lcabb.getIdomer();
+        assert lcabb != null;
         int currLoopDepth = func.getLoopInfo().getLoopDepthForBB(lcabb);
         if (currLoopDepth < bestbbLoopDepth) {
           bestbb = lcabb;
           bestbbLoopDepth = currLoopDepth;
         }
-        assert lcabb != null;
-        lcabb = lcabb.getIdomer();
       }
       inst.node.removeSelf();
       inst.node.insertAtSecondToEnd(bestbb.getList());
+      assert bestbb.getList().getLast().getVal() instanceof BrInst || bestbb.getList().getLast()
+          .getVal() instanceof RetInst;
 
       // bestbb 是 lcabb 时，可能 use inst 的指令在 inst 前面，需要把 inst 往前稍稍
       for (INode<Instruction, BasicBlock> instNode : bestbb.getList()) {
         Instruction tmpInst = instNode.getVal();
-        if (tmpInst.tag != TAG_.Phi) {
+        if (tmpInst.tag != TAG_.Phi && tmpInst.tag != TAG_.MemPhi) {
           // 从 operands 里拿到 inst，和从 inst.getUsesList 里找是否有个 Use 的 user 是 tmpInst，应该没有区别吧
           if (tmpInst.getOperands().contains(inst)) {
             inst.node.removeSelf();

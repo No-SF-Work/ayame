@@ -4,8 +4,10 @@ import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.MachineOperand;
 import pass.Pass;
+import util.Pair;
 
-import java.util.HashMap;
+import java.util.*;
+import java.util.function.Supplier;
 
 import static backend.machinecodes.ArmAddition.CondType.*;
 import static backend.machinecodes.ArmAddition.ShiftType.*;
@@ -17,13 +19,8 @@ public class PeepholeOptimization implements Pass.MCPass {
         return "Peephole";
     }
 
-    private boolean isSameOperand(MachineOperand a, MachineOperand b) {
-        return a.getState().equals(imm) ?
-                a.equals(b) :
-                a.getState().equals(b.getState()) && a.getName().equals(b.getName());
-    }
-
-    private void trivialPeephole(CodeGenManager manager) {
+    private boolean trivialPeephole(CodeGenManager manager) {
+        boolean done = true;
         for (var func : manager.getMachineFunctions()) {
             for (var blockEntry : func.getmbList()) {
                 var block = blockEntry.getVal();
@@ -33,18 +30,20 @@ public class PeepholeOptimization implements Pass.MCPass {
                     var preInstrEntry = instrEntry.getPrev();
                     var nxtInstrEntry = instrEntry.getNext();
                     var instr = instrEntry.getVal();
+                    boolean hasNoCond = instr.getCond() == Any;
+                    boolean hasNoShift = instr.getShift().getType() == None || instr.getShift().getImm() == 0;
 
                     if (instr instanceof MCBinary) {
                         // add(sub) dst dst 0 (to be remove)
                         MCBinary binInstr = (MCBinary) instr;
                         boolean isAddOrSub = binInstr.getTag() == MachineCode.TAG.Add ||
                                 binInstr.getTag() == MachineCode.TAG.Sub;
-                        boolean isSameDstLhs = isSameOperand(binInstr.getDst(), binInstr.getLhs());
-                        boolean hasZeroOperand = isSameOperand(binInstr.getRhs(),MachineOperand.zeroImm);
-                        boolean hasNoShift = binInstr.getShift().isNone();
+                        boolean isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
+                        boolean hasZeroOperand = binInstr.getRhs().getState() == imm && binInstr.getRhs().getImm() == 0;
 
-                        if (isAddOrSub && isSameDstLhs && hasZeroOperand && hasNoShift) {
+                        if (isAddOrSub && isSameDstLhs && hasZeroOperand) {
                             instrEntryIter.remove();
+                            done = false;
                         }
                     }
 
@@ -56,8 +55,23 @@ public class PeepholeOptimization implements Pass.MCPass {
                         var nxtBB = blockEntry.getNext() == null ? null : blockEntry.getNext().getVal();
                         boolean isSameTargetNxtBB = jumpInstr.getTarget().equals(nxtBB);
 
-                        if (isSameTargetNxtBB) {
+                        if (isSameTargetNxtBB && hasNoCond) {
                             instrEntryIter.remove();
+                            done = false;
+                        }
+                    }
+
+                    if (instr instanceof MCBranch) {
+                        // B1:
+                        // br target (to be remove)
+                        // target:
+                        MCBranch brInstr = (MCBranch) instr;
+                        var nxtBB = blockEntry.getNext() == null ? null : blockEntry.getNext().getVal();
+                        boolean isSameTargetNxtBB = brInstr.getTarget().equals(nxtBB);
+
+                        if (isSameTargetNxtBB && hasNoCond) {
+                            instrEntryIter.remove();
+                            done = false;
                         }
                     }
 
@@ -71,55 +85,55 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                         if (preInstrEntry != null && preInstrEntry.getVal() instanceof MCStore) {
                             MCStore preStore = (MCStore) preInstrEntry.getVal();
-                            boolean isSameAddr = isSameOperand(preStore.getAddr(), curLoad.getAddr());
-                            boolean isSameOffset = isSameOperand(preStore.getOffset(), curLoad.getOffset());
+                            boolean isSameAddr = preStore.getAddr().equals(curLoad.getAddr());
+                            boolean isSameOffset = preStore.getOffset().equals(curLoad.getOffset());
                             boolean isSameShift = preStore.getShift().equals(curLoad.getShift());
 
                             if (isSameAddr && isSameOffset && isSameShift) {
                                 var moveInstr = new MCMove();
                                 moveInstr.setDst(curLoad.getDst());
                                 moveInstr.setRhs(preStore.getData());
+                                moveInstr.setCond(curLoad.getCond());
 
                                 moveInstr.insertAfterNode(preInstrEntry.getVal());
                                 instrEntryIter.remove();
+                                done = false;
                             }
                         }
                     }
 
                     if (instr instanceof MCMove) {
                         MCMove curMove = (MCMove) instr;
-                        boolean isSimple = curMove.getCond() == Any && curMove.getShift().getType() == None;
 
-                        if (!isSimple) {
-                            continue;
-                        }
-
-                        if (isSameOperand(curMove.getDst(), curMove.getRhs())) {
+                        if (curMove.getDst().equals(curMove.getRhs()) && hasNoShift) {
                             // move a a (to be remove)
                             instrEntryIter.remove();
+                            done = false;
                         } else {
-                            if (nxtInstrEntry != null && nxtInstrEntry.getVal() instanceof MCMove) {
+                            if (nxtInstrEntry != null && nxtInstrEntry.getVal() instanceof MCMove && hasNoCond && hasNoShift) {
                                 // move a b (cur, to be remove)
                                 // move a c
                                 // Warning: the following situation should not be optimized
                                 // move a b
                                 // move a a
                                 var nxtMove = (MCMove) nxtInstrEntry.getVal();
-                                boolean isSameDst = isSameOperand(nxtMove.getDst(), curMove.getDst());
-                                boolean nxtInstrNotIdentity = !isSameOperand(nxtMove.getRhs(), nxtMove.getDst());
+                                boolean isSameDst = nxtMove.getDst().equals(curMove.getDst());
+                                boolean nxtInstrNotIdentity = !nxtMove.getRhs().equals(nxtMove.getDst());
                                 if (isSameDst && nxtInstrNotIdentity) {
                                     instrEntryIter.remove();
+                                    done = false;
                                 }
                             }
 
-                            if (preInstrEntry != null && preInstrEntry.getVal() instanceof MCMove) {
+                            if (preInstrEntry != null && preInstrEntry.getVal() instanceof MCMove && hasNoShift) {
                                 // move a b
                                 // move b a (cur, to be remove)
                                 MCMove preMove = (MCMove) preInstrEntry.getVal();
-                                boolean isSameA = isSameOperand(preMove.getDst(), curMove.getRhs());
-                                boolean isSameB = isSameOperand(preMove.getRhs(), curMove.getDst());
+                                boolean isSameA = preMove.getDst().equals(curMove.getRhs());
+                                boolean isSameB = preMove.getRhs().equals(curMove.getDst());
                                 if (isSameA && isSameB) {
                                     instrEntryIter.remove();
+                                    done = false;
                                 }
                             }
                         }
@@ -127,66 +141,496 @@ public class PeepholeOptimization implements Pass.MCPass {
                 }
             }
         }
+
+        return done;
     }
 
-    private HashMap<MachineCode, MachineCode> getLiveRange(MachineFunction func) {
+    private Pair<HashMap<MachineOperand, MachineCode>, HashMap<MachineCode, MachineCode>> getLiveRangeInBlock(MachineBlock block) {
         var lastDefMap = new HashMap<MachineOperand, MachineCode>();
         var lastNeedInstrMap = new HashMap<MachineCode, MachineCode>();
+        for (var instrEntry : block.getmclist()) {
+            var instr = instrEntry.getVal();
+
+            var defs = instr.getMCDef();
+            var uses = instr.getMCUse();
+            var hasSideEffect = instr instanceof MCBranch ||
+                    instr instanceof MCCall ||
+                    instr instanceof MCJump ||
+                    instr instanceof MCStore ||
+                    instr instanceof MCReturn ||
+                    instr instanceof MCComment;
+
+            uses.stream().filter(lastDefMap::containsKey).forEach(use -> lastNeedInstrMap.put(lastDefMap.get(use), instr));
+            defs.forEach(def -> lastDefMap.put(def, instr));
+            lastNeedInstrMap.put(instr, hasSideEffect ? instr : null);
+        }
+        return new Pair<>(lastDefMap, lastNeedInstrMap);
+    }
+
+    private static class BlockLiveInfo {
+        private final HashSet<MachineOperand> liveUse = new HashSet<>();
+        private final HashSet<MachineOperand> liveDef = new HashSet<>();
+        private HashSet<MachineOperand> liveIn = new HashSet<>();
+        private HashSet<MachineOperand> liveOut = new HashSet<>();
+
+        BlockLiveInfo(MachineBlock block) {
+        }
+    }
+
+    private HashMap<MachineBlock, BlockLiveInfo> livenessAnalysis(MachineFunction func) {
+        var liveInfoMap = new HashMap<MachineBlock, BlockLiveInfo>();
         for (var blockEntry : func.getmbList()) {
             var block = blockEntry.getVal();
+            var blockLiveInfo = new BlockLiveInfo(block);
+            liveInfoMap.put(block, blockLiveInfo);
 
             for (var instrEntry : block.getmclist()) {
                 var instr = instrEntry.getVal();
+                instr.getUse().stream()
+                        .filter(use -> !blockLiveInfo.liveDef.contains(use))
+                        .forEach(blockLiveInfo.liveUse::add);
+                instr.getDef().stream()
+                        .filter(def -> !blockLiveInfo.liveUse.contains(def))
+                        .forEach(blockLiveInfo.liveDef::add);
+            }
 
-                var defs = instr.getMCDef();
-                var uses = instr.getMCUse();
-                var hasSideEffect = instr instanceof MCBranch ||
-                        instr instanceof MCCall ||
-                        instr instanceof MCJump ||
-                        instr instanceof MCStore ||
-                        instr instanceof MCReturn ||
-                        instr instanceof MCComment;
+            blockLiveInfo.liveIn.addAll(blockLiveInfo.liveUse);
+        }
 
-                uses.stream().filter(lastDefMap::containsKey).forEach(use -> lastNeedInstrMap.put(lastDefMap.get(use), instr));
-                defs.forEach(def -> lastDefMap.put(def, instr));
-                lastNeedInstrMap.put(instr, hasSideEffect ? instr : null);
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+                var blockLiveInfo = liveInfoMap.get(block);
+                var newLiveOut = new HashSet<MachineOperand>();
+
+                if (block.getTrueSucc() != null) {
+                    var succBlockInfo = liveInfoMap.get(block.getTrueSucc());
+                    newLiveOut.addAll(succBlockInfo.liveIn);
+                }
+
+                if (block.getFalseSucc() != null) {
+                    var succBlockInfo = liveInfoMap.get(block.getFalseSucc());
+                    newLiveOut.addAll(succBlockInfo.liveIn);
+                }
+
+                if (!newLiveOut.equals(blockLiveInfo.liveOut)) {
+                    changed = true;
+                    blockLiveInfo.liveOut = newLiveOut;
+
+                    blockLiveInfo.liveIn = new HashSet<>(blockLiveInfo.liveUse);
+                    blockLiveInfo.liveOut.stream()
+                            .filter(MachineOperand -> !blockLiveInfo.liveDef.contains(MachineOperand))
+                            .forEach(blockLiveInfo.liveIn::add);
+                }
             }
         }
-        return lastNeedInstrMap;
+
+        return liveInfoMap;
     }
 
-    private void peepholeWithDefUse(CodeGenManager manager) {
+
+    private void replaceUseReg(MachineCode instr, MachineOperand origin, MachineOperand target) {
+        if (instr instanceof MCBinary) {
+            var binaryInstr = (MCBinary) instr;
+            if (binaryInstr.getLhs().equals(origin)) {
+                binaryInstr.setLhs(target);
+            }
+            if (binaryInstr.getRhs().equals(origin)) {
+                binaryInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCCompare) {
+            var compareInstr = (MCCompare) instr;
+            if (compareInstr.getLhs().equals(origin)) {
+                compareInstr.setLhs(target);
+            }
+            if (compareInstr.getRhs().equals(origin)) {
+                compareInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCFma) {
+            var fmaInstr = (MCFma) instr;
+            if (fmaInstr.getLhs().equals(origin)) {
+                fmaInstr.setLhs(target);
+            }
+            if (fmaInstr.getRhs().equals(origin)) {
+                fmaInstr.setRhs(target);
+            }
+            if (fmaInstr.getAcc().equals(origin)) {
+                fmaInstr.setAcc(target);
+            }
+        } else if (instr instanceof MCLoad) {
+            var loadInstr = (MCLoad) instr;
+            if (loadInstr.getAddr().equals(origin)) {
+                loadInstr.setAddr(target);
+            }
+            if (loadInstr.getOffset().equals(origin)) {
+                loadInstr.setOffset(target);
+            }
+        } else if (instr instanceof MCLongMul) {
+            var longMulInstr = (MCLongMul) instr;
+            if (longMulInstr.getLhs().equals(origin)) {
+                longMulInstr.setLhs(target);
+            }
+            if (longMulInstr.getRhs().equals(origin)) {
+                longMulInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCMove) {
+            var moveInstr = (MCMove) instr;
+            if (moveInstr.getRhs().equals(origin)) {
+                moveInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCStore) {
+            var storeInstr = (MCStore) instr;
+            if (storeInstr.getAddr().equals(origin)) {
+                storeInstr.setAddr(target);
+            }
+            if (storeInstr.getOffset().equals(origin)) {
+                storeInstr.setOffset(target);
+            }
+            if (storeInstr.getData().equals(origin)) {
+                storeInstr.setData(target);
+            }
+        }
+    }
+
+    private boolean peepholeWithDataFlow(CodeGenManager manager) {
+        boolean done = true;
         for (var func : manager.getMachineFunctions()) {
-            var liveRanges = getLiveRange(func);
+            var liveInfoMap = livenessAnalysis(func);
 
             for (var blockEntry : func.getmbList()) {
                 var block = blockEntry.getVal();
+                var liveRangePair = getLiveRangeInBlock(block);
+                var lastDefMap = liveRangePair.getFirst();
+                var liveRangeInBlock = liveRangePair.getSecond();
+                var liveout = liveInfoMap.get(block).liveOut;
 
                 for (var instrEntryIter = block.getmclist().iterator(); instrEntryIter.hasNext(); ) {
                     var instrEntry = instrEntryIter.next();
                     var instr = instrEntry.getVal();
+                    boolean hasNoCond = instr.getCond() == Any;
+                    boolean hasNoShift = instr.getShift().getType() == None || instr.getShift().getImm() == 0;
 
                     // Remove unused instr
-                    var lastUseInstr = liveRanges.get(instr);
-                    if (lastUseInstr == null) {
-                        instrEntryIter.remove();
+                    var lastUser = liveRangeInBlock.get(instr);
+                    var isLastDefInstr = instr.getDef().stream().allMatch(def -> lastDefMap.get(def).equals(instr));
+                    var defRegInLiveout = instr.getDef().stream().anyMatch(liveout::contains);
+
+                    if (!(isLastDefInstr && defRegInLiveout) && hasNoCond) { // is last instr and will be used in the future
+                        if (lastUser == null && hasNoShift) {
+                            instrEntryIter.remove();
+                            done = false;
+                        } else {
+                            Supplier<Boolean> addSubLdrStr = () -> {
+                                // add/sub a c #i
+                                // ldr b [a, #x]
+                                // =>
+                                // ldr b [c, #x+i]
+                                // ---------------
+                                // add/sub a c #i
+                                // move b x
+                                // str b [a, #x]
+                                // =>
+                                // move b x
+                                // str b [c, #x+i]
+                                if (!hasNoShift) {
+                                    return true;
+                                }
+
+                                var isCurAddSub = instr.getTag().equals(MachineCode.TAG.Add) || instr.getTag().equals(MachineCode.TAG.Sub);
+                                if (!isCurAddSub) {
+                                    return true;
+                                }
+
+                                assert instr instanceof MCBinary;
+                                var binInstr = (MCBinary) instr;
+//                            var isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
+                                var hasImmRhs = binInstr.getRhs().getState() == imm;
+
+                                if (!hasImmRhs) {
+                                    return true;
+                                }
+
+                                var isAdd = instr.getTag().equals(MachineCode.TAG.Add);
+                                var imm = binInstr.getRhs().getImm();
+
+                                var nxtInstrEntry = instrEntry.getNext();
+                                if (nxtInstrEntry == null) {
+                                    return true;
+                                }
+                                var nxtInstr = nxtInstrEntry.getVal();
+                                if (!Objects.equals(lastUser, nxtInstr)) {
+                                    return true;
+                                }
+
+                                if (nxtInstr instanceof MCLoad) {
+                                    // add/sub a c #i
+                                    // ldr b [a, #x]
+                                    // =>
+                                    // ldr b [c, #x+i]
+                                    var loadInstr = (MCLoad) nxtInstr;
+                                    var isSameDstAddr = loadInstr.getAddr().equals(binInstr.getDst());
+
+                                    if (isSameDstAddr) {
+                                        var addImm = new MachineOperand(loadInstr.getOffset().getImm() + imm);
+                                        var subImm = new MachineOperand(loadInstr.getOffset().getImm() - imm);
+                                        loadInstr.setAddr(binInstr.getLhs());
+                                        loadInstr.setOffset(isAdd ? addImm : subImm);
+                                        instrEntryIter.remove();
+                                        return false;
+                                    }
+                                } else if (nxtInstr instanceof MCMove) {
+                                    // add/sub a c #i
+                                    // move b y
+                                    // str b [a, #x]
+                                    // =>
+                                    // move b y
+                                    // str b [c, #x+i]
+                                    // this situation should be avoided:
+                                    // add/sub a c #i
+                                    // move c y
+                                    // str c [a, #x]
+                                    var nxt2InstrEntry = nxtInstrEntry.getNext();
+                                    if (nxt2InstrEntry == null) {
+                                        return true;
+                                    }
+                                    var nxt2Instr = nxt2InstrEntry.getVal();
+                                    if (!Objects.equals(lastUser, nxt2Instr)) {
+                                        return true;
+                                    }
+
+                                    var moveInstr = (MCMove) nxtInstr;
+                                    if (nxt2Instr instanceof MCStore) {
+                                        var storeInstr = (MCStore) nxt2Instr;
+                                        var isSameData = moveInstr.getDst().equals(storeInstr.getData());
+                                        var isSameDstAddr = storeInstr.getAddr().equals(binInstr.getDst());
+                                        var notSameLhsData = !binInstr.getLhs().equals(storeInstr.getData()); // attention
+
+                                        if (isSameData && isSameDstAddr && notSameLhsData) {
+                                            var addImm = new MachineOperand(storeInstr.getOffset().getImm() + imm);
+                                            var subImm = new MachineOperand(storeInstr.getOffset().getImm() - imm);
+                                            storeInstr.setAddr(binInstr.getLhs());
+                                            storeInstr.setOffset(isAdd ? addImm : subImm);
+                                            instrEntryIter.remove();
+                                            return false;
+                                        }
+                                    }
+                                }
+                                return true;
+                            };
+
+                            Supplier<Boolean> movIns = () -> {
+                                // mov a, b
+                                // anything
+                                // =>
+                                // anything (replaced)
+                                if (!hasNoShift) {
+                                    return true;
+                                }
+
+                                if (!(instr instanceof MCMove)) {
+                                    return true;
+                                }
+                                var movInstr = (MCMove) instr;
+
+                                if (movInstr.getRhs().getState() == imm) { // dont replace imm
+                                    return true;
+                                }
+
+                                var nxtInstrEntry = instrEntry.getNext();
+                                if (nxtInstrEntry == null) {
+                                    return true;
+                                }
+                                var nxtInstr = nxtInstrEntry.getVal();
+                                var nxtHasSideEffect = nxtInstr instanceof MCCall || nxtInstr instanceof MCReturn;
+                                if (!Objects.equals(lastUser, nxtInstr) || nxtHasSideEffect) {
+                                    return true;
+                                }
+
+                                replaceUseReg(nxtInstr, movInstr.getDst(), movInstr.getRhs());
+
+                                instrEntryIter.remove();
+                                return false;
+                            };
+
+                            Supplier<Boolean> addLdr = () -> {
+                                // add a, b, c, shift
+                                // ldr x, [a, #0]
+                                // =>
+                                // ldr x, [b, c, shift]
+                                if (!(instr.getTag() == MachineCode.TAG.Add)) {
+                                    return true;
+                                }
+                                assert instr instanceof MCBinary;
+                                var addInstr = (MCBinary) instr;
+
+                                var nxtInstrEntry = instrEntry.getNext();
+                                if (nxtInstrEntry == null) {
+                                    return true;
+                                }
+                                var nxtInstr = nxtInstrEntry.getVal();
+                                if (!Objects.equals(lastUser, nxtInstr)) {
+                                    return true;
+                                }
+
+                                if (!(nxtInstr instanceof MCLoad)) {
+                                    return true;
+                                }
+                                var loadInstr = (MCLoad) nxtInstr;
+
+                                var isSameDstAddr = addInstr.getDst().equals(loadInstr.getAddr());
+                                var isOffsetZero = loadInstr.getOffset().getState() == imm && loadInstr.getOffset().getImm() == 0;
+
+                                if (isSameDstAddr && isOffsetZero) {
+                                    loadInstr.setAddr(addInstr.getLhs());
+                                    loadInstr.setOffset(addInstr.getRhs());
+                                    loadInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
+                                    instrEntryIter.remove();
+                                    return false;
+                                }
+
+                                return true;
+                            };
+
+                            done &= addSubLdrStr.get();
+                            done &= movIns.get();
+                            done &= addLdr.get();
+                        }
+                    }
+                }
+            }
+        }
+
+        return done;
+    }
+
+    private HashMap<MachineBlock, MachineBlock> getReplaceableBB(CodeGenManager manager) {
+        var replaceableBB = new HashMap<MachineBlock, MachineBlock>();
+
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+                var mcCount = block.getmclist().getNumNode();
+
+                if (mcCount == 1) {
+                    var instrEntry = block.getmclist().getEntry();
+                    var instr = instrEntry.getVal();
+
+                    if (instr.getCond() == Any && (instr instanceof MCJump || instr instanceof MCBranch)) {
+                        MachineBlock target;
+
+                        if (instr instanceof MCJump) {
+                            target = ((MCJump) instr).getTarget();
+                        } else {
+                            target = ((MCBranch) instr).getTarget();
+                        }
+
+                        replaceableBB.put(block, target);
+                        instrEntry.removeSelf();
+                    }
+                }
+            }
+        }
+        // make closure
+        for (boolean isClosure = false; !isClosure; ) {
+            isClosure = true;
+            for (var entry : replaceableBB.entrySet()) {
+                var key = entry.getKey();
+                var value = entry.getValue();
+                if (replaceableBB.containsKey(value)) {
+                    replaceableBB.put(key, replaceableBB.get(value));
+                    isClosure = false;
+                }
+            }
+        }
+        return replaceableBB;
+    }
+
+    private HashMap<MachineBlock, MachineBlock> getEmptyReplaceableBB(CodeGenManager manager) {
+        var replaceableBB = new HashMap<MachineBlock, MachineBlock>();
+
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
+                var mcCount = block.getmclist().getNumNode();
+
+                if (mcCount == 0) {
+                    if (blockEntry.getNext() != null) {
+                        replaceableBB.put(block, blockEntry.getNext().getVal());
                     } else {
-                        var nxtInstrEntry = instrEntry.getNext();
+                        replaceableBB.put(block, null);
+                    }
+                }
+            }
+        }
+        return replaceableBB;
+    }
 
-                        // todo
-                        // add a a #i
-                        // ldr b [a, #0]
-                        // =>
-                        // ldr b [a, #i]
+    private void replaceBB(CodeGenManager manager, HashMap<MachineBlock, MachineBlock> replaceableBB) {
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntry : func.getmbList()) {
+                var block = blockEntry.getVal();
 
+                for (var instrEntry : block.getmclist()) {
+                    var instr = instrEntry.getVal();
+
+                    if (instr instanceof MCJump) {
+                        var jumpInstr = (MCJump) instr;
+                        var target = jumpInstr.getTarget();
+
+                        if (replaceableBB.containsKey(target)) {
+                            jumpInstr.setTarget(replaceableBB.get(target));
+                        }
+                    } else if (instr instanceof MCBranch) {
+                        var brInstr = (MCBranch) instr;
+                        var target = brInstr.getTarget();
+
+                        if (replaceableBB.containsKey(target)) {
+                            brInstr.setTarget(replaceableBB.get(target));
+                        }
                     }
                 }
             }
         }
     }
 
+    private void removeEmptyBB(CodeGenManager manager) {
+        for (var func : manager.getMachineFunctions()) {
+            for (var blockEntryIter = func.getmbList().iterator(); blockEntryIter.hasNext(); ) {
+                var blockEntry = blockEntryIter.next();
+                var block = blockEntry.getVal();
+
+                if (block.getmclist().getNumNode() == 0) {
+                    blockEntryIter.remove();
+                }
+            }
+        }
+    }
+
+    private boolean removeUselessBB(CodeGenManager manager) {
+        // todo
+        boolean done;
+
+        var replaceableBB = getReplaceableBB(manager);
+        done = replaceableBB.isEmpty();
+        replaceBB(manager, replaceableBB);
+
+//        replaceableBB = getEmptyReplaceableBB(manager);
+//        replaceableBB.isEmpty();
+//        replaceBB(manager, replaceableBB);
+//        removeEmptyBB(manager);
+
+        return done;
+    }
+
     public void run(CodeGenManager manager) {
-        trivialPeephole(manager);
-        peepholeWithDefUse(manager);
+        boolean done = false;
+
+        while (!done) {
+            done = trivialPeephole(manager);
+            done &= peepholeWithDataFlow(manager);
+//            done &= removeUselessBB(manager);
+        }
     }
 }

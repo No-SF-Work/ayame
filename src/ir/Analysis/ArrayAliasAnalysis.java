@@ -487,10 +487,9 @@ public class ArrayAliasAnalysis {
       for (var instNode = bb.getList().getEntry(); instNode != null; ) {
         var tmp = instNode.getNext();
         Instruction inst = instNode.getVal();
-        if (!(inst instanceof MemPhi)) {
-          break;
+        if (inst instanceof MemPhi || inst instanceof LoadDepInst) {
+          instNode.removeSelf();
         }
-        instNode.removeSelf();
         instNode = tmp;
       }
     }

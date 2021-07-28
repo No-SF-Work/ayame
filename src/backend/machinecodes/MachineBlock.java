@@ -16,6 +16,16 @@ public class MachineBlock {
 
     private static int index=0;
 
+    private int loopDepth;
+
+    public void setLoopDepth(int l){
+        this.loopDepth=l;
+    }
+
+    public int getLoopDepth(){
+        return loopDepth;
+    }
+
     private String name;
 
     //basic struct

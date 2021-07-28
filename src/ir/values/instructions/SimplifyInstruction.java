@@ -1,13 +1,13 @@
 package ir.values.instructions;
 
 import ir.MyFactoryBuilder;
-import ir.values.BasicBlock;
 import ir.values.Constants.ConstantInt;
 import ir.values.GlobalVariable;
 import ir.values.UndefValue;
 import ir.values.Value;
 import ir.values.instructions.Instruction.TAG_;
 
+// 参考：LLVM InstructionSimplify
 public class SimplifyInstruction {
 
   public static MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
@@ -68,6 +68,7 @@ public class SimplifyInstruction {
     }
 
     var targetBB = inst.getBB();
+    var targetEndInst = targetBB.getList().getLast().getVal();
 
     // try fold and swap
     Value c = foldConstant(inst.tag, lhs, rhs);
@@ -75,8 +76,9 @@ public class SimplifyInstruction {
       return c;
     }
     if (lhs instanceof ConstantInt || lhs.getType().isNoTy()) {
-      inst.getOperands().set(0, rhs);
-      inst.getOperands().set(1, lhs);
+      inst.CORemoveAllOperand();
+      inst.COaddOperand(rhs);
+      inst.COaddOperand(lhs);
       lhs = inst.getOperands().get(0);
       rhs = inst.getOperands().get(1);
     }
@@ -127,19 +129,22 @@ public class SimplifyInstruction {
         // X + (Y - Z) -> (X + Y) - Z or (X - Z) + Y
         var subLhs = subInst.getOperands().get(0);
         var subRhs = subInst.getOperands().get(1);
-        BinaryInst tmpInst = new BinaryInst(TAG_.Add, factory.getI32Ty(), lhs, subLhs, targetBB);
+        BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), lhs,
+            subLhs);
         Value simpleAdd = simplifyAddInst(tmpInst, false);
         if (simpleAdd != tmpInst) {
           return simplifySubInst(
-              new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subRhs, targetBB), false);
+              new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), simpleAdd, subRhs),
+              false);
 //          return new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subRhs, targetBB);
         }
 
-        tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), lhs, subRhs, targetBB);
+        tmpInst = new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), lhs, subRhs);
         Value simpleSub = simplifySubInst(tmpInst, false);
         if (simpleSub != tmpInst) {
           return simplifyAddInst(
-              new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subLhs, targetBB), false);
+              new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), simpleSub, subLhs),
+              false);
 //          return new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subLhs, targetBB);
         }
       }
@@ -154,19 +159,22 @@ public class SimplifyInstruction {
         // (X - Y) + Z -> (X + Z) - Y or (Z - Y) + X
         var subLhs = subInst.getOperands().get(0);
         var subRhs = subInst.getOperands().get(1);
-        BinaryInst tmpInst = new BinaryInst(TAG_.Add, factory.getI32Ty(), subLhs, rhs, targetBB);
+        BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), subLhs,
+            rhs);
         Value simpleAdd = simplifyAddInst(tmpInst, false);
         if (simpleAdd != tmpInst) {
           return simplifySubInst(
-              new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subRhs, targetBB), false);
+              new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), simpleAdd, subRhs),
+              false);
 //          return new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subRhs, targetBB);
         }
 
-        tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), rhs, subRhs, targetBB);
+        tmpInst = new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), rhs, subRhs);
         Value simpleSub = simplifySubInst(tmpInst, false);
         if (simpleSub != tmpInst) {
           return simplifyAddInst(
-              new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subLhs, targetBB), false);
+              new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), simpleSub, subLhs),
+              false);
 //          return new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subLhs, targetBB);
         }
       }
@@ -188,6 +196,7 @@ public class SimplifyInstruction {
     }
 
     var targetBB = inst.getBB();
+    var targetEndInst = targetBB.getList().getLast().getVal();
 
     Value c = foldConstant(inst.tag, lhs, rhs);
     if (c != null) {
@@ -209,6 +218,14 @@ public class SimplifyInstruction {
       return ConstantInt.newOne(factory.getI32Ty(), 0);
     }
 
+    // lhs - C -> lhs + (-C)
+    if (rhs instanceof ConstantInt) {
+      int rhsVal = ((ConstantInt) rhs).getVal();
+      ConstantInt negRhs = ConstantInt.newOne(factory.getI32Ty(), -rhsVal);
+      return simplifyAddInst(
+          new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), lhs, negRhs), true);
+    }
+
     // 要做吗？ 0 - rhs -> rhs if rhs is 0 or the minimum signed value.
 
     if (!canRecur) {
@@ -222,12 +239,14 @@ public class SimplifyInstruction {
           BinaryInst addInst = (BinaryInst) lhs;
           for (var i = 0; i < 2; i++) {
             var x = addInst.getOperands().get(i);
-            BinaryInst tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), x, rhs, targetBB);
+            BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), x,
+                rhs);
             Value simpleSub = simplifySubInst(tmpInst, false);
             if (simpleSub != tmpInst) {
               return simplifyAddInst(
-                  new BinaryInst(TAG_.Add, factory.getI32Ty(), addInst.getOperands().get(1 - i),
-                      simpleSub, targetBB), false);
+                  new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(),
+                      addInst.getOperands().get(1 - i),
+                      simpleSub), false);
 //              return new BinaryInst(TAG_.Add, factory.getI32Ty(), addInst.getOperands().get(1 - i),
 //                  simpleSub, targetBB);
             }
@@ -240,19 +259,22 @@ public class SimplifyInstruction {
           BinaryInst subInst = (BinaryInst) lhs;
           var subLhs = subInst.getOperands().get(0);
           var subRhs = subInst.getOperands().get(1);
-          BinaryInst tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), subLhs, rhs, targetBB);
+          BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), subLhs,
+              rhs);
           Value simpleSub = simplifySubInst(tmpInst, false);
           if (simpleSub != tmpInst) {
             return simplifySubInst(
-                new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleSub, subRhs, targetBB), false);
+                new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), simpleSub, subRhs),
+                false);
 //            return new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleSub, subRhs, targetBB);
           }
 
-          tmpInst = new BinaryInst(TAG_.Add, factory.getI32Ty(), subRhs, rhs, targetBB);
+          tmpInst = new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), subRhs, rhs);
           Value simpleAdd = simplifyAddInst(tmpInst, false);
           if (simpleAdd != tmpInst) {
             return simplifySubInst(
-                new BinaryInst(TAG_.Sub, factory.getI32Ty(), subLhs, simpleAdd, targetBB), false);
+                new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), subLhs, simpleAdd),
+                false);
 //            return new BinaryInst(TAG_.Sub, factory.getI32Ty(), subLhs, simpleAdd, targetBB);
           }
         }
@@ -266,11 +288,13 @@ public class SimplifyInstruction {
           var addInst = (BinaryInst) rhs;
           for (var i = 0; i < 2; i++) {
             var x = addInst.getOperands().get(i);
-            BinaryInst tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), lhs, x, targetBB);
+            BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), lhs,
+                x);
             Value simpleSub = simplifySubInst(tmpInst, false);
             if (simpleSub != tmpInst) {
-              return simplifySubInst(new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleSub,
-                  addInst.getOperands().get(1 - i), targetBB), false);
+              return simplifySubInst(
+                  new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), simpleSub,
+                      addInst.getOperands().get(1 - i)), false);
 //              return new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleSub,
 //                  addInst.getOperands().get(1 - i), targetBB);
             }
@@ -282,19 +306,22 @@ public class SimplifyInstruction {
           var subInst = (BinaryInst) rhs;
           var subLhs = subInst.getOperands().get(0);
           var subRhs = subInst.getOperands().get(1);
-          BinaryInst tmpInst = new BinaryInst(TAG_.Sub, factory.getI32Ty(), lhs, subLhs, targetBB);
+          BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), lhs,
+              subLhs);
           Value simpleSub = simplifySubInst(tmpInst, false);
           if (simpleSub != tmpInst) {
             return simplifyAddInst(
-                new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subRhs, targetBB), false);
+                new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), simpleSub, subRhs),
+                false);
 //            return new BinaryInst(TAG_.Add, factory.getI32Ty(), simpleSub, subRhs, targetBB);
           }
 
-          tmpInst = new BinaryInst(TAG_.Add, factory.getI32Ty(), lhs, subRhs, targetBB);
+          tmpInst = new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), lhs, subRhs);
           Value simpleAdd = simplifyAddInst(tmpInst, false);
           if (simpleAdd != tmpInst) {
             return simplifySubInst(
-                new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subLhs, targetBB), false);
+                new BinaryInst(targetEndInst, TAG_.Sub, factory.getI32Ty(), simpleAdd, subLhs),
+                false);
 //            return new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subLhs, targetBB);
           }
         }
@@ -321,8 +348,9 @@ public class SimplifyInstruction {
       return c;
     }
     if (lhs instanceof ConstantInt || lhs.getType().isNoTy()) {
-      inst.getOperands().set(0, rhs);
-      inst.getOperands().set(1, lhs);
+      inst.CORemoveAllOperand();
+      inst.COaddOperand(rhs);
+      inst.COaddOperand(lhs);
       lhs = inst.getOperands().get(0);
       rhs = inst.getOperands().get(1);
     }
@@ -371,6 +399,11 @@ public class SimplifyInstruction {
 
     if (!canRecur) {
       return inst;
+    }
+
+    // lhs / 1 -> lhs
+    if (rhs instanceof ConstantInt && ((ConstantInt) rhs).getVal() == 1) {
+      return lhs;
     }
 
     return inst;

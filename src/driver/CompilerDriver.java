@@ -40,6 +40,7 @@ public class CompilerDriver {
     config.isIRMode = res.get("emit");
     config.isDebugMode = res.get("debug");
     config.isOutPutMode = res.get("output");
+    config.isO2 = true;
     //only severe level msg will be recorded in console if not in debug mode
     Mylogger.loadLogConfig(config.isDebugMode);
   }
@@ -58,6 +59,7 @@ public class CompilerDriver {
         .help("write llvm ir to debug_{$source file name}.ll");
     argParser.addArgument("-d", "--debug").action(Arguments.storeTrue())
         .help("use debug mode,which will record actions in current path");
+    argParser.addArgument("-O2").action(Arguments.storeTrue());
     //新的可选指令加在上面
     argParser.addArgument("source");
     argParser.addArgument("target");
@@ -66,7 +68,7 @@ public class CompilerDriver {
       Mylogger.init();
       setConfig(config, res);
       logger = Mylogger.getLogger(CompilerDriver.class);
-      logger.info("Config -> " + res);
+      logger.warning("Config -> " + res);
       String source = res.get("source");
       String target = res.get("target");
       CharStream input = CharStreams.fromFileName(source);

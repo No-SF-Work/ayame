@@ -138,6 +138,9 @@ public class MachineCode {
         if (this.getCond() != ArmAddition.CondType.Any) {
             uses.add(cond);
         }
+        if (this instanceof MCCall) {
+            uses.add(new PhyReg(13));
+        }
         return uses;
     }
 

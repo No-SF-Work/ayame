@@ -4,8 +4,8 @@ import ir.Analysis.DomInfo;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.values.BasicBlock;
+import ir.values.Constants;
 import ir.values.Function;
-import ir.values.UndefValue;
 import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
@@ -13,15 +13,12 @@ import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.MemInst.StoreInst;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Stack;
-import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.IList.INode;
 import util.Mylogger;
+
+import java.util.*;
+import java.util.logging.Logger;
 
 public class Mem2reg implements IRPass {
 
@@ -139,7 +136,8 @@ public class Mem2reg implements IRPass {
     log.info("mem2reg: variable renaming");
     ArrayList<Value> values = new ArrayList<>();
     for (int i = 0; i < allocas.size(); i++) {
-      values.add(new UndefValue());
+//      values.add(new UndefValue());
+      values.add(Constants.ConstantInt.newOne(factory.getI32Ty(), 0));
     }
     for (INode<BasicBlock, Function> bbNode : func.getList_()) {
       bbNode.getVal().setDirty(false);

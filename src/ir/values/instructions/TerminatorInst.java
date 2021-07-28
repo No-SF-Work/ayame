@@ -1,19 +1,32 @@
 package ir.values.instructions;
 
-import ir.Analysis.ArrayAliasAnalysis;
 import ir.types.FunctionType;
+import ir.types.PointerType;
 import ir.types.Type;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Function;
 import ir.values.Value;
-
+import ir.values.instructions.MemInst.GEPInst;
+import ir.values.instructions.MemInst.LoadInst;
 import java.util.ArrayList;
 
 public abstract class TerminatorInst extends Instruction {
 
+  public TerminatorInst(TAG_ tag, Type type, int numOP) {
+    super(tag, type, numOP);
+  }
+
   public TerminatorInst(TAG_ tag, Type type, int numOP, BasicBlock parent) {//这些指令只会出现在bb的结尾
     super(tag, type, numOP, parent);
+  }
+
+  public TerminatorInst(TAG_ tag, Type type, int numOP, Instruction prev) {
+    super(tag, type, numOP, prev);
+  }
+
+  public TerminatorInst(Instruction next, TAG_ tag, Type type, int numOP) {
+    super(next, tag, type, numOP);
   }
 
   public static class CallInst extends TerminatorInst {
@@ -33,14 +46,27 @@ public abstract class TerminatorInst extends Instruction {
       }
     }
 
+    public CallInst(Function func, ArrayList<Value> args) {
+      super(TAG_.Call, func.getType().getRetType(), args.size() + 1);
+      assert func.getNumArgs() == args.size();
+      if (this.getType().isVoidTy()) {
+        needname = false;
+      }
+      CoSetOperand(0, func);//op1 is func
+      for (int i = 0; i < args.size(); i++) {
+        CoSetOperand(i + 1, args.get(i));//args
+      }
+    }
+
     public boolean isPureCall() {
       Function func = (Function) this.getOperands().get(0);
       if (func.isHasSideEffect() || func.isUsedGlobalVariable()) {
         return false;
       }
       for (Value val : this.getOperands()) {
-        if (ArrayAliasAnalysis.getArrayValue(val) != null) {
-//        if (val instanceof MemInst.GEPInst) {
+//        if (ArrayAliasAnalysis.getArrayValue(val) != null) {
+        if (val instanceof GEPInst || (val instanceof LoadInst && !val.getType().isI32()
+            && !((PointerType) val.getType()).getContained().isI32())) {
           return false;
         }
       }
@@ -92,6 +118,14 @@ public abstract class TerminatorInst extends Instruction {
       needname = false;
     }
 
+    public BrInst(Value cond, BasicBlock trueBlock, BasicBlock falseBlock) {
+      super(TAG_.Br, VoidType.getType(), 3);
+      this.CoSetOperand(0, cond);
+      this.CoSetOperand(1, trueBlock);
+      this.CoSetOperand(2, falseBlock);
+      needname = false;
+    }
+
     /**
      * 无条件转移
      */
@@ -99,6 +133,12 @@ public abstract class TerminatorInst extends Instruction {
       super(TAG_.Br, Type.VoidType.getType(), 1, parent);
       needname = false;
       this.CoSetOperand(0, trueBlock);
+    }
+
+    public BrInst(BasicBlock trueblock) {
+      super(TAG_.Br, Type.VoidType.getType(), 1);
+      this.CoSetOperand(0, trueblock);
+      needname = false;
     }
 
     @Override
@@ -132,14 +172,25 @@ public abstract class TerminatorInst extends Instruction {
       needname = false;
     }
 
+    public RetInst(Value val) {
+      super(TAG_.Ret, VoidType.getType(), 1);
+      this.CoSetOperand(0, val);
+      needname = false;
+    }
+
     /**
      * ret void 插在bb末尾
      */
     public RetInst(BasicBlock parent) {
       super(TAG_.Ret, VoidType.getType(), 0, parent);
       needname = false;
-
     }
+
+    public RetInst() {
+      super(TAG_.Ret, VoidType.getType(), 0);
+      needname = false;
+    }
+
 
     @Override
     public String toString() {

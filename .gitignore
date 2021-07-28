@@ -19,6 +19,9 @@ test.s
 *.ll
 test.sh
 !testcases/*
+!testcases/functional_test/*
+!testcases/performance_test/*
+!testcases/performance_test_pro/*
 *.class
 __pycache__
 .DS_Store

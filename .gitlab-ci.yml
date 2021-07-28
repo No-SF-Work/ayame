@@ -1,38 +1,123 @@
 # variables:
 
-#stages:
-#  - build
-#  - test
-#  - analyze
+#default:
+#  image: roife/compiler-judger
+#
+#update_std: # Update the compiler of THU/USTC & Run test
+#  when: manual
+#  script:
+#    - bash scripts/fetch_thu.sh
+#    - bash scripts/fetch_ustc.sh
+#    - bash scripts/fetch_ustc_no_vec.sh
+#    - bash scripts/fetch_sysyruntimelibrary.sh
+#    - python3 scripts/test_std.py
+#  cache:
+#    paths:
+#      - build/bin/*
+#      - build/include/*
+#      - build/lib/*
+#      - build/log/*
+#      - build/test_results/*
+#  artifacts:
+#    paths:
+#      - build/log/*
+#  tags:
+#    - arm
+#  timeout: 3h
 
-default:
-  image: roife/compiler-judger
-
-update_std: # Update the compiler of THU/USTC & Run test
+run_func_1:
   when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
   script:
-    - bash scripts/fetch_thu.sh
-    - bash scripts/fetch_ustc.sh
-    - bash scripts/fetch_ustc_no_vec.sh
-    - bash scripts/fetch_sysyruntimelibrary.sh
-    - python3 scripts/test_std.py
-  cache:
-    paths:
-      - build/bin/*
-      - build/include/*
-      - build/lib/*
-      - build/log/*
-      - build/test_results/*
-  artifacts:
-    paths:
-      - build/log/*
+    - mv testcases/functional_test/* testcases/
+    - bash scripts/server_scripts/build_ayame.sh
+    - bash scripts/send_to_pi_functional.sh
   tags:
-    - arm
-  timeout: 3h
+    - x86
+  timeout: 10m
 
-#build_compiler:  # build NSFW
+run_perf_1:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/performance_test/* testcases/
+    - bash scripts/server_scripts/build_ayame.sh
+    - bash scripts/send_to_pi_performance.sh
+  tags:
+    - x86
+  timeout: 15m
 
-#test_all_cases:   # Test & Judge all testcases
+run_perf_1_pro:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/performance_test_pro/* testcases/
+    - bash scripts/server_scripts/build_ayame.sh
+    - bash scripts/send_to_pi_performance_pro.sh
+  tags:
+    - x86
+  timeout: 20m
 
-#analyze_results: # analyze results
+run_func_2:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/functional_test/* testcases/
+    - bash scripts/server_scripts/build_ayame.sh
+    - bash scripts/send_to_pi_functional2.sh
+  tags:
+    - x86
+  timeout: 3m
+
+run_perf_2:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/performance_test/* testcases/
+    - bash scripts/server_scripts/build_ayame.sh
+    - bash scripts/send_to_pi_performance2.sh
+  tags:
+    - x86
+  timeout: 10m
+
+run_perf_2_pro:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/performance_test_pro/* testcases/
+    - bash scripts/server_scripts/build_ayame.sh
+    - bash scripts/send_to_pi_performance2_pro.sh
+  tags:
+    - x86
+  timeout: 20m
 

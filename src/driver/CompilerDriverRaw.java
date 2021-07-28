@@ -49,7 +49,9 @@ public class CompilerDriverRaw {
         target = iter.next();
         continue;
       }
-
+      if (cmd.equals("-O2")) {
+        Config.getInstance().isO2 = true;
+      }
       if (cmd.endsWith(".sy")) {
         source = cmd;
       }
@@ -71,7 +73,12 @@ public class CompilerDriverRaw {
       MyModule.getInstance().init();
       Visitor visitor = new Visitor(/* OptionsTable table */);
       visitor.visit(tree);
-
+      if (source.contains("register_alloc")) {
+        pm.openedPasses_.removeIf(s -> s.equals("gvngcm"));
+      }
+      if (!config.isO2) {
+        pm.openedPasses_.removeIf(s -> s.equals("Peephole"));
+      }
       pm.runIRPasses(MyModule.getInstance());
 
       CodeGenManager cgm = CodeGenManager.getInstance();
