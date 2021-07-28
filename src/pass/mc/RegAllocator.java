@@ -18,7 +18,7 @@ import pass.Pass.MCPass;
 // Graph-Coloring
 public class RegAllocator implements MCPass {
     private final int INF = 0x3f3f3f3f;
-    private final int K = 12;
+    private final int K = 13;
 
     @Override
     public String getName() {
