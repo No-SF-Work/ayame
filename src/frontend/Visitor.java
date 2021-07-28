@@ -14,6 +14,7 @@ import ir.values.Constants.ConstantArray;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
+import ir.values.ValueCloner;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.TerminatorInst.RetInst;
 import java.math.BigInteger;
@@ -162,7 +163,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
     scope_.put("starttime",
         f.buildFunction("_sysy_starttime", f.getFuncTy(voidType, params_empty), true));
     scope_
-        .put("stoptime", f.buildFunction("_sysy_stoptime", f.getFuncTy(voidType, params_empty), true));
+        .put("stoptime",
+            f.buildFunction("_sysy_stoptime", f.getFuncTy(voidType, params_empty), true));
 
     return super.visitProgram(ctx);
   }
@@ -742,7 +744,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var nxtBlock = f.buildBasicBlock(name + "_nxtBlock", curFunc_);
     var falseBlock = ctx.ELSE_KW() == null ? nxtBlock :
         f.buildBasicBlock(parentBB.getName() + "_else", curFunc_);
-    var ifIfEndWithRet=false;
+    var ifIfEndWithRet = false;
     ctx.cond().falseblock = falseBlock;
     ctx.cond().trueblock = trueBlock;
     // Parse [cond]
@@ -751,16 +753,16 @@ public class Visitor extends SysYBaseVisitor<Void> {
     changeBB(trueBlock);
     visitStmt(ctx.stmt(0));
     f.buildBr(nxtBlock, curBB_);
-    if (curBB_.getList().getLast().getVal() instanceof RetInst){
-      ifIfEndWithRet=true;
+    if (curBB_.getList().getLast().getVal() instanceof RetInst) {
+      ifIfEndWithRet = true;
     }
     // Parse [else] branch
     if (ctx.ELSE_KW() != null) {
       changeBB(falseBlock);
       visitStmt(ctx.stmt(1));
       f.buildBr(nxtBlock, curBB_);
-      if (ifIfEndWithRet){
-        if (curBB_.getList().getLast().getVal() instanceof RetInst){
+      if (ifIfEndWithRet) {
+        if (curBB_.getList().getLast().getVal() instanceof RetInst) {
           nxtBlock.node_.removeSelf();
         }
       }
@@ -779,25 +781,50 @@ public class Visitor extends SysYBaseVisitor<Void> {
   public Void visitWhileStmt(WhileStmtContext ctx) {
     var parentBB = curBB_;
     var name = "";
-    var whileCondBlock = f.buildBasicBlock(name + "_whileCondition", curFunc_);
+    var whileCondEntryBlock = f.buildBasicBlock(name + "_whileCondition", curFunc_);
     var trueBlock = f.buildBasicBlock(name + "_body", curFunc_);
     var nxtBlock = f.buildBasicBlock(name + "_nxtBlock", curFunc_);
-
-    f.buildBr(whileCondBlock, parentBB);
+    ArrayList<Value> whileEntryContainer = new ArrayList<>();
+    var cloner = new ValueCloner() {
+      @Override
+      public Value findValue(Value value) {
+        if (value instanceof Constant) {
+          return value;
+        } else {
+          return this.valueMap.get(value);
+        }
+      }
+    };
+    f.buildBr(whileCondEntryBlock, parentBB);
 
     // Parse [whileCond]
     ctx.cond().falseblock = nxtBlock;
     ctx.cond().trueblock = trueBlock;
-    changeBB(whileCondBlock);
+    changeBB(whileCondEntryBlock);
+    //条件分支优化
+    ctx.cond().isLoopCond = true;
     visitCond(ctx.cond());
     // Parse [loop]
     changeBB(trueBlock);
     visitStmt(ctx.stmt());
-    f.buildBr(whileCondBlock, curBB_);
+    //保持几个Inst之间的use关系不乱，并且让使用了其他value的inst能够找到那些inst
+    whileCondEntryBlock.getList().forEach(instNode -> {
+      var val = instNode.getVal();
+      for (Value operand : val.getOperands()) {
+        if (cloner.findValue(operand) == null) {
+          cloner.put(operand, operand);
+        }
+      }
+      var copy = cloner.getInstCopy(val);
+      cloner.put(val, copy);
+      copy.node.insertAtEnd(curBB_.getList());
+    });
+
+    //f.buildBr(whileCondEntryBlock, curBB_);
 
     // [Backpatch] for break & continue
     backpatch(BreakInstructionMark, trueBlock, curBB_, nxtBlock);
-    backpatch(ContinueInstructionMark, trueBlock, curBB_, whileCondBlock);
+    backpatch(ContinueInstructionMark, trueBlock, curBB_, whileCondEntryBlock);
     changeBB(nxtBlock);
 
     return null;
@@ -1370,6 +1397,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
    */
   @Override
   public Void visitLOrExp(LOrExpContext ctx) {
+    ctx.lAndExp(0).isFirstBlock = true;
     for (int i = 0; i < ctx.lAndExp().size() - 1; i++) {
       var nb = f.buildBasicBlock("", curFunc_);
       ctx.lAndExp(i).trueblock = ctx.trueblock;
