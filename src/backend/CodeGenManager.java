@@ -1387,6 +1387,24 @@ public class CodeGenManager {
         }
     }
 
+    private CondType getEqualOppCond(CondType cond){
+        if(cond==CondType.Eq){
+            return CondType.Eq;
+        }else if(cond==CondType.Ne){
+            return CondType.Ne;
+        }else if(cond==CondType.Ge){
+            return CondType.Le;
+        }else if(cond==CondType.Gt){
+            return CondType.Lt;
+        }else if(cond==CondType.Le){
+            return CondType.Ge;
+        }else if(cond==CondType.Lt){
+            return CondType.Gt;
+        }else {
+            return CondType.Any;
+        }
+    }
+
     //处理Cond，addMove为是否生成move指令
     private CondType dealCond(BinaryInst ir, MachineBlock mb, boolean addMove) {
         boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
@@ -1399,9 +1417,7 @@ public class CodeGenManager {
         if (lhsIsConst && !rhsIsConst) {
             l = ir.getOperands().get(1);
             r = ir.getOperands().get(0);
-            if (cond != CondType.Eq) {
-                cond = getOppoCond(cond);
-            }
+            cond = getEqualOppCond(cond);
         } else {
             l = ir.getOperands().get(0);
             r = ir.getOperands().get(1);
