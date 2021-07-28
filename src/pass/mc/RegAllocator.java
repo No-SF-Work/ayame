@@ -618,7 +618,7 @@ public class RegAllocator implements MCPass {
                                     }
                                 });
 
-                                if (cntInstr > 40) {
+                                if (cntInstr > 25) {
                                     checkPoint.run();
                                 }
 
