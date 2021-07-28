@@ -1,13 +1,14 @@
 package ir.values.instructions;
 
-import ir.Analysis.ArrayAliasAnalysis;
 import ir.types.FunctionType;
+import ir.types.PointerType;
 import ir.types.Type;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
 import ir.values.Function;
 import ir.values.Value;
-
+import ir.values.instructions.MemInst.GEPInst;
+import ir.values.instructions.MemInst.LoadInst;
 import java.util.ArrayList;
 
 public abstract class TerminatorInst extends Instruction {
@@ -44,25 +45,28 @@ public abstract class TerminatorInst extends Instruction {
         CoSetOperand(i + 1, args.get(i));//args
       }
     }
-  public CallInst(Function func,ArrayList<Value> args){
-      super(TAG_.Call,func.getType().getRetType(), args.size()+1);
-    assert func.getNumArgs()==args.size();
-    if (this.getType().isVoidTy()){
-      needname=false;
+
+    public CallInst(Function func, ArrayList<Value> args) {
+      super(TAG_.Call, func.getType().getRetType(), args.size() + 1);
+      assert func.getNumArgs() == args.size();
+      if (this.getType().isVoidTy()) {
+        needname = false;
+      }
+      CoSetOperand(0, func);//op1 is func
+      for (int i = 0; i < args.size(); i++) {
+        CoSetOperand(i + 1, args.get(i));//args
+      }
     }
-    CoSetOperand(0, func);//op1 is func
-    for (int i = 0; i < args.size(); i++) {
-      CoSetOperand(i + 1, args.get(i));//args
-    }
-    }
+
     public boolean isPureCall() {
       Function func = (Function) this.getOperands().get(0);
       if (func.isHasSideEffect() || func.isUsedGlobalVariable()) {
         return false;
       }
       for (Value val : this.getOperands()) {
-        if (ArrayAliasAnalysis.getArrayValue(val) != null) {
-//        if (val instanceof MemInst.GEPInst) {
+//        if (ArrayAliasAnalysis.getArrayValue(val) != null) {
+        if (val instanceof GEPInst || (val instanceof LoadInst && !val.getType().isI32()
+            && !((PointerType) val.getType()).getContained().isI32())) {
           return false;
         }
       }
@@ -167,7 +171,8 @@ public abstract class TerminatorInst extends Instruction {
       this.CoSetOperand(0, val);
       needname = false;
     }
-    public RetInst(Value val){
+
+    public RetInst(Value val) {
       super(TAG_.Ret, VoidType.getType(), 1);
       this.CoSetOperand(0, val);
       needname = false;
@@ -180,6 +185,7 @@ public abstract class TerminatorInst extends Instruction {
       super(TAG_.Ret, VoidType.getType(), 0, parent);
       needname = false;
     }
+
     public RetInst() {
       super(TAG_.Ret, VoidType.getType(), 0);
       needname = false;
