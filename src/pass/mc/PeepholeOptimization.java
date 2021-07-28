@@ -4,10 +4,10 @@ import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.MachineOperand;
 import pass.Pass;
-import util.IList;
 import util.Pair;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 import static backend.machinecodes.ArmAddition.CondType.*;
 import static backend.machinecodes.ArmAddition.ShiftType.*;
@@ -39,7 +39,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                         boolean isAddOrSub = binInstr.getTag() == MachineCode.TAG.Add ||
                                 binInstr.getTag() == MachineCode.TAG.Sub;
                         boolean isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
-                        boolean hasZeroOperand = binInstr.getRhs().equals(MachineOperand.zeroImm);
+                        boolean hasZeroOperand = binInstr.getRhs().getState() == imm && binInstr.getRhs().getImm() == 0;
 
                         if (isAddOrSub && isSameDstLhs && hasZeroOperand) {
                             instrEntryIter.remove();
@@ -230,6 +230,70 @@ public class PeepholeOptimization implements Pass.MCPass {
         return liveInfoMap;
     }
 
+
+    private void replaceUseReg(MachineCode instr, MachineOperand origin, MachineOperand target) {
+        if (instr instanceof MCBinary) {
+            var binaryInstr = (MCBinary) instr;
+            if (binaryInstr.getLhs().equals(origin)) {
+                binaryInstr.setLhs(target);
+            }
+            if (binaryInstr.getRhs().equals(origin)) {
+                binaryInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCCompare) {
+            var compareInstr = (MCCompare) instr;
+            if (compareInstr.getLhs().equals(origin)) {
+                compareInstr.setLhs(target);
+            }
+            if (compareInstr.getRhs().equals(origin)) {
+                compareInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCFma) {
+            var fmaInstr = (MCFma) instr;
+            if (fmaInstr.getLhs().equals(origin)) {
+                fmaInstr.setLhs(target);
+            }
+            if (fmaInstr.getRhs().equals(origin)) {
+                fmaInstr.setRhs(target);
+            }
+            if (fmaInstr.getAcc().equals(origin)) {
+                fmaInstr.setAcc(target);
+            }
+        } else if (instr instanceof MCLoad) {
+            var loadInstr = (MCLoad) instr;
+            if (loadInstr.getAddr().equals(origin)) {
+                loadInstr.setAddr(target);
+            }
+            if (loadInstr.getOffset().equals(origin)) {
+                loadInstr.setOffset(target);
+            }
+        } else if (instr instanceof MCLongMul) {
+            var longMulInstr = (MCLongMul) instr;
+            if (longMulInstr.getLhs().equals(origin)) {
+                longMulInstr.setLhs(target);
+            }
+            if (longMulInstr.getRhs().equals(origin)) {
+                longMulInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCMove) {
+            var moveInstr = (MCMove) instr;
+            if (moveInstr.getRhs().equals(origin)) {
+                moveInstr.setRhs(target);
+            }
+        } else if (instr instanceof MCStore) {
+            var storeInstr = (MCStore) instr;
+            if (storeInstr.getAddr().equals(origin)) {
+                storeInstr.setAddr(target);
+            }
+            if (storeInstr.getOffset().equals(origin)) {
+                storeInstr.setOffset(target);
+            }
+            if (storeInstr.getData().equals(origin)) {
+                storeInstr.setData(target);
+            }
+        }
+    }
+
     private boolean peepholeWithDataFlow(CodeGenManager manager) {
         boolean done = true;
         for (var func : manager.getMachineFunctions()) {
@@ -253,97 +317,185 @@ public class PeepholeOptimization implements Pass.MCPass {
                     var isLastDefInstr = instr.getDef().stream().allMatch(def -> lastDefMap.get(def).equals(instr));
                     var defRegInLiveout = instr.getDef().stream().anyMatch(liveout::contains);
 
-                    if (!(isLastDefInstr && defRegInLiveout) && hasNoCond && hasNoShift) { // is last instr and will be used in the future
-                        if (lastUser == null) {
+                    if (!(isLastDefInstr && defRegInLiveout) && hasNoCond) { // is last instr and will be used in the future
+                        if (lastUser == null && hasNoShift) {
                             instrEntryIter.remove();
                             done = false;
                         } else {
-                            // add/sub a c #i
-                            // ldr b [a, #x]
-                            // =>
-                            // ldr b [c, #x+i]
-                            // ---------------
-                            // add/sub a c #i
-                            // move b x
-                            // str b [a, #x]
-                            // =>
-                            // move b x
-                            // str b [c, #x+i]
-                            var isCurAddSub = instr.getTag().equals(MachineCode.TAG.Add) || instr.getTag().equals(MachineCode.TAG.Sub);
-                            if (!isCurAddSub) {
-                                continue;
-                            }
-
-                            assert instr instanceof MCBinary;
-                            var binInstr = (MCBinary) instr;
-//                            var isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
-                            var hasImmRhs = binInstr.getRhs().getState() == imm;
-
-                            if (!hasImmRhs) {
-                                continue;
-                            }
-
-                            var isAdd = instr.getTag().equals(MachineCode.TAG.Add);
-                            var imm = binInstr.getRhs().getImm();
-
-                            var nxtInstrEntry = instrEntry.getNext();
-                            if (nxtInstrEntry == null) {
-                                continue;
-                            }
-
-                            var nxtInstr = nxtInstrEntry.getVal();
-
-                            if (nxtInstr instanceof MCLoad && Objects.equals(lastUser, nxtInstr)) {
+                            Supplier<Boolean> addSubLdrStr = () -> {
                                 // add/sub a c #i
                                 // ldr b [a, #x]
                                 // =>
                                 // ldr b [c, #x+i]
-                                var loadInstr = (MCLoad) nxtInstr;
-                                var isSameDstAddr = loadInstr.getAddr().equals(binInstr.getDst());
-
-                                if (isSameDstAddr) {
-                                    var addImm = new MachineOperand(loadInstr.getOffset().getImm() + imm);
-                                    var subImm = new MachineOperand(loadInstr.getOffset().getImm() - imm);
-                                    loadInstr.setAddr(binInstr.getLhs());
-                                    loadInstr.setOffset(isAdd ? addImm : subImm);
-                                    instrEntryIter.remove();
-                                    done = false;
-                                }
-                            } else if (nxtInstr instanceof MCMove) {
+                                // ---------------
                                 // add/sub a c #i
-                                // move b y
+                                // move b x
                                 // str b [a, #x]
                                 // =>
-                                // move b y
+                                // move b x
                                 // str b [c, #x+i]
-                                // this situation should be avoided:
-                                // add/sub a c #i
-                                // move c y
-                                // str c [a, #x]
-                                var nxt2InstrEntry = nxtInstrEntry.getNext();
-                                if (nxt2InstrEntry == null) {
-                                    continue;
+                                if (!hasNoShift) {
+                                    return true;
                                 }
 
-                                var nxt2Instr = nxt2InstrEntry.getVal();
+                                var isCurAddSub = instr.getTag().equals(MachineCode.TAG.Add) || instr.getTag().equals(MachineCode.TAG.Sub);
+                                if (!isCurAddSub) {
+                                    return true;
+                                }
 
-                                var moveInstr = (MCMove) nxtInstr;
-                                if (nxt2Instr instanceof MCStore) {
-                                    var storeInstr = (MCStore) nxt2Instr;
-                                    var isSameData = moveInstr.getDst().equals(storeInstr.getData());
-                                    var isSameDstAddr = storeInstr.getAddr().equals(binInstr.getDst());
-                                    var notSameLhsData = !binInstr.getLhs().equals(storeInstr.getData());
+                                assert instr instanceof MCBinary;
+                                var binInstr = (MCBinary) instr;
+//                            var isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
+                                var hasImmRhs = binInstr.getRhs().getState() == imm;
 
-                                    if (isSameData && isSameDstAddr && notSameLhsData) {
-                                        var addImm = new MachineOperand(storeInstr.getOffset().getImm() + imm);
-                                        var subImm = new MachineOperand(storeInstr.getOffset().getImm() - imm);
-                                        storeInstr.setAddr(binInstr.getLhs());
-                                        storeInstr.setOffset(isAdd ? addImm : subImm);
+                                if (!hasImmRhs) {
+                                    return true;
+                                }
+
+                                var isAdd = instr.getTag().equals(MachineCode.TAG.Add);
+                                var imm = binInstr.getRhs().getImm();
+
+                                var nxtInstrEntry = instrEntry.getNext();
+                                if (nxtInstrEntry == null) {
+                                    return true;
+                                }
+                                var nxtInstr = nxtInstrEntry.getVal();
+                                if (!Objects.equals(lastUser, nxtInstr)) {
+                                    return true;
+                                }
+
+                                if (nxtInstr instanceof MCLoad) {
+                                    // add/sub a c #i
+                                    // ldr b [a, #x]
+                                    // =>
+                                    // ldr b [c, #x+i]
+                                    var loadInstr = (MCLoad) nxtInstr;
+                                    var isSameDstAddr = loadInstr.getAddr().equals(binInstr.getDst());
+
+                                    if (isSameDstAddr) {
+                                        var addImm = new MachineOperand(loadInstr.getOffset().getImm() + imm);
+                                        var subImm = new MachineOperand(loadInstr.getOffset().getImm() - imm);
+                                        loadInstr.setAddr(binInstr.getLhs());
+                                        loadInstr.setOffset(isAdd ? addImm : subImm);
                                         instrEntryIter.remove();
-                                        done = false;
+                                        return false;
+                                    }
+                                } else if (nxtInstr instanceof MCMove) {
+                                    // add/sub a c #i
+                                    // move b y
+                                    // str b [a, #x]
+                                    // =>
+                                    // move b y
+                                    // str b [c, #x+i]
+                                    // this situation should be avoided:
+                                    // add/sub a c #i
+                                    // move c y
+                                    // str c [a, #x]
+                                    var nxt2InstrEntry = nxtInstrEntry.getNext();
+                                    if (nxt2InstrEntry == null) {
+                                        return true;
+                                    }
+                                    var nxt2Instr = nxt2InstrEntry.getVal();
+                                    if (!Objects.equals(lastUser, nxt2Instr)) {
+                                        return true;
+                                    }
+
+                                    var moveInstr = (MCMove) nxtInstr;
+                                    if (nxt2Instr instanceof MCStore) {
+                                        var storeInstr = (MCStore) nxt2Instr;
+                                        var isSameData = moveInstr.getDst().equals(storeInstr.getData());
+                                        var isSameDstAddr = storeInstr.getAddr().equals(binInstr.getDst());
+                                        var notSameLhsData = !binInstr.getLhs().equals(storeInstr.getData()); // attention
+
+                                        if (isSameData && isSameDstAddr && notSameLhsData) {
+                                            var addImm = new MachineOperand(storeInstr.getOffset().getImm() + imm);
+                                            var subImm = new MachineOperand(storeInstr.getOffset().getImm() - imm);
+                                            storeInstr.setAddr(binInstr.getLhs());
+                                            storeInstr.setOffset(isAdd ? addImm : subImm);
+                                            instrEntryIter.remove();
+                                            return false;
+                                        }
                                     }
                                 }
-                            }
+                                return true;
+                            };
+
+                            Supplier<Boolean> movIns = () -> {
+                                // mov a, b
+                                // anything
+                                // =>
+                                // anything (replaced)
+                                if (!hasNoShift) {
+                                    return true;
+                                }
+
+                                if (!(instr instanceof MCMove)) {
+                                    return true;
+                                }
+                                var movInstr = (MCMove) instr;
+
+                                if (movInstr.getRhs().getState() == imm) { // dont replace imm
+                                    return true;
+                                }
+
+                                var nxtInstrEntry = instrEntry.getNext();
+                                if (nxtInstrEntry == null) {
+                                    return true;
+                                }
+                                var nxtInstr = nxtInstrEntry.getVal();
+                                var nxtHasSideEffect = nxtInstr instanceof MCCall || nxtInstr instanceof MCReturn;
+                                if (!Objects.equals(lastUser, nxtInstr) || nxtHasSideEffect) {
+                                    return true;
+                                }
+
+                                replaceUseReg(nxtInstr, movInstr.getDst(), movInstr.getRhs());
+
+                                instrEntryIter.remove();
+                                return false;
+                            };
+
+                            Supplier<Boolean> addLdr = () -> {
+                                // add a, b, c, shift
+                                // ldr x, [a, #0]
+                                // =>
+                                // ldr x, [b, c, shift]
+                                if (!(instr.getTag() == MachineCode.TAG.Add)) {
+                                    return true;
+                                }
+                                assert instr instanceof MCBinary;
+                                var addInstr = (MCBinary) instr;
+
+                                var nxtInstrEntry = instrEntry.getNext();
+                                if (nxtInstrEntry == null) {
+                                    return true;
+                                }
+                                var nxtInstr = nxtInstrEntry.getVal();
+                                if (!Objects.equals(lastUser, nxtInstr)) {
+                                    return true;
+                                }
+
+                                if (!(nxtInstr instanceof MCLoad)) {
+                                    return true;
+                                }
+                                var loadInstr = (MCLoad) nxtInstr;
+
+                                var isSameDstAddr = addInstr.getDst().equals(loadInstr.getAddr());
+                                var isOffsetZero = loadInstr.getOffset().getState() == imm && loadInstr.getOffset().getImm() == 0;
+
+                                if (isSameDstAddr && isOffsetZero) {
+                                    loadInstr.setAddr(addInstr.getLhs());
+                                    loadInstr.setOffset(addInstr.getRhs());
+                                    loadInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
+                                    instrEntryIter.remove();
+                                    return false;
+                                }
+
+                                return true;
+                            };
+
+                            done &= addSubLdrStr.get();
+                            done &= movIns.get();
+                            done &= addLdr.get();
                         }
                     }
                 }

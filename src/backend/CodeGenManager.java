@@ -35,7 +35,7 @@ public class CodeGenManager {
     //ir moudle
     private static MyModule myModule;
 
-    private boolean ifPrintIR = true;
+    private boolean ifPrintIR = false;
 
     private static Logger logger;
 
