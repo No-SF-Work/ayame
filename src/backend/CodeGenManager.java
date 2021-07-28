@@ -942,7 +942,7 @@ public class CodeGenManager {
                             MachineCode j = new MCJump(mb);
                             ((MCJump) j).setTarget(bMap.get(ir.getOperands().get(0)));
                             mb.setTrueSucc(bMap.get(ir.getOperands().get(0)));
- 
+  
                         }
 
 
