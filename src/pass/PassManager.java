@@ -56,11 +56,11 @@ public class PassManager {
     irPasses.add(new GVNGCM());
     irPasses.add(new DeadCodeEmit());
 //    irPasses.add(new BranchOptimization());
-
+    irPasses.add(new EmitLLVM("BEFORECONVERT.ll"));
 //    mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new RegAllocator());
 //    mcPasses.add(new PeepholeOptimization());
-    mcPasses.add(new ListScheduling());
+//    mcPasses.add(new ListScheduling());
 //    mcPasses.add(new PeepholeOptimization());
   }
 
