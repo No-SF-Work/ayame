@@ -126,6 +126,6 @@ public abstract class Instruction extends User {
   }
 
   public INode<Instruction, BasicBlock> node;//(BasicBlock)parent =node.getparent.getval;
-  public final TAG_ tag; //TAG作为分辨指令的凭据
+  public TAG_ tag; //TAG作为分辨指令的凭据
   public final int handle;//fixme 生成一个全局唯一的表示符作为从module中的container里存取的依据
 }
