@@ -1,6 +1,7 @@
 package frontend;
 
 
+import driver.Config;
 import frontend.SysYParser.*;
 import ir.MyFactoryBuilder;
 import ir.types.FunctionType;
@@ -809,19 +810,22 @@ public class Visitor extends SysYBaseVisitor<Void> {
         changeBB(trueBlock);
         visitStmt(ctx.stmt());
         //保持几个Inst之间的use关系不乱，并且让使用了其他value的inst能够找到那些inst
-        whileCondEntryBlock.getList().forEach(instNode -> {
-            var val = instNode.getVal();
-            for (Value operand : val.getOperands()) {
-                if (cloner.findValue(operand) == null) {
-                    cloner.put(operand, operand);
+        if (Config.getInstance().isO2) {
+            whileCondEntryBlock.getList().forEach(instNode -> {
+                var val = instNode.getVal();
+                for (Value operand : val.getOperands()) {
+                    if (cloner.findValue(operand) == null) {
+                        cloner.put(operand, operand);
+                    }
                 }
-            }
-            var copy = cloner.getInstCopy(val);
-            cloner.put(val, copy);
-            copy.node.insertAtEnd(curBB_.getList());
-        });
+                var copy = cloner.getInstCopy(val);
+                cloner.put(val, copy);
+                copy.node.insertAtEnd(curBB_.getList());
+            });
+        } else {
+            f.buildBr(whileCondEntryBlock, curBB_);
+        }
 
-//        f.buildBr(whileCondEntryBlock, curBB_);
 
         // [Backpatch] for break & continue
         backpatch(BreakInstructionMark, trueBlock, curBB_, nxtBlock, whileCondEntryBlock);
@@ -870,13 +874,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
                         var trueBlock = (BasicBlock) curInstr.getOperands().get(0);
 
                         if (trueBlock.getName().equals(key)) {
-//              if (trueBlock.getName().equals("_CONTINUE")) {
-//                toBeReplacedContinues.add((BrInst) curInstr);
-//                trueBlock.node_.removeSelf();
-//              } else {
-                            curInstr.CoSetOperand(0, targetBlock);
-                            trueBlock.node_.removeSelf();
-//              }
+                            if (Config.getInstance().isO2) {
+                                if (trueBlock.getName().equals("_CONTINUE")) {
+                                    toBeReplacedContinues.add((BrInst) curInstr);
+                                    trueBlock.node_.removeSelf();
+                                }
+                            } else {
+                                curInstr.CoSetOperand(0, targetBlock);
+                                trueBlock.node_.removeSelf();
+                            }
                         } else if (trueBlock != endBlock && !blockSet
                                 .contains(trueBlock)) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
                             blockList.add(trueBlock);
@@ -888,13 +894,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
                         assert curInstr.getOperands().get(1) instanceof BasicBlock;
                         var trueBlock = (BasicBlock) curInstr.getOperands().get(1);
                         if (trueBlock.getName().equals(key)) {
-//              if (trueBlock.getName().equals("_CONTINUE")) {
-//                toBeReplacedContinues.add((BrInst) curInstr);
-//                trueBlock.node_.removeSelf();
-//              } else {
-                            curInstr.CoSetOperand(1, targetBlock);
-                            trueBlock.node_.removeSelf();
-//              }
+                            if (Config.getInstance().isO2) {
+                                if (trueBlock.getName().equals("_CONTINUE")) {
+                                    toBeReplacedContinues.add((BrInst) curInstr);
+                                    trueBlock.node_.removeSelf();
+                                }
+                            } else {
+                                curInstr.CoSetOperand(1, targetBlock);
+                                trueBlock.node_.removeSelf();
+                            }
                         } else if (trueBlock != endBlock && !blockSet.contains(trueBlock)) {
                             blockList.add(trueBlock);
                             blockSet.add(trueBlock);
@@ -905,13 +913,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
                         var falseBlock = (BasicBlock) curInstr.getOperands().get(2);
 
                         if (falseBlock.getName().equals(key)) {
-//              if (falseBlock.getName().equals("_CONTINUE")) {
-//                toBeReplacedContinues.add((BrInst) curInstr);
-//                falseBlock.node_.removeSelf();
-//              } else {
-                            curInstr.CoSetOperand(2, targetBlock);
-                            falseBlock.node_.removeSelf();
-//              }
+                            if (Config.getInstance().isO2) {
+                                if (falseBlock.getName().equals("_CONTINUE")) {
+                                    toBeReplacedContinues.add((BrInst) curInstr);
+                                    falseBlock.node_.removeSelf();
+                                }
+                            } else {
+                                curInstr.CoSetOperand(2, targetBlock);
+                                falseBlock.node_.removeSelf();
+                            }
                         } else if (falseBlock != endBlock && !blockSet.contains(falseBlock)) {
                             blockList.add(falseBlock);
                             blockSet.add(falseBlock);
@@ -920,22 +930,22 @@ public class Visitor extends SysYBaseVisitor<Void> {
                 }
             }
         }
-//    toBeReplacedContinues.forEach(br -> {
-//      whileEntry.getList().forEach(instNode -> {
-//        var val = instNode.getVal();
-//        for (Value operand : val.getOperands()) {
-//          if (cloner.findValue(operand) == null) {
-//            cloner.put(operand, operand);
-//          }
-//        }
-//        var copy = cloner.getInstCopy(val);
-//        cloner.put(val, copy);
-//        copy.node.insertAtEnd(br.getBB().getList());
-//      });
-//      br.node.removeSelf();
-//    });
-
-
+        if (Config.getInstance().isO2) {
+            toBeReplacedContinues.forEach(br -> {
+                whileEntry.getList().forEach(instNode -> {
+                    var val = instNode.getVal();
+                    for (Value operand : val.getOperands()) {
+                        if (cloner.findValue(operand) == null) {
+                            cloner.put(operand, operand);
+                        }
+                    }
+                    var copy = cloner.getInstCopy(val);
+                    cloner.put(val, copy);
+                    copy.node.insertAtEnd(br.getBB().getList());
+                });
+                br.node.removeSelf();
+            });
+        }
     }
 
     /**
