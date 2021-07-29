@@ -168,7 +168,7 @@ public class BinaryInst extends Instruction {
         this.tag == TAG_.Ge || this.tag == TAG_.Eq || this.tag == TAG_.Ne;
   }
 
-  public String SecondName;
+  public String secondName;
   public String thirdName;
 
   @Override
