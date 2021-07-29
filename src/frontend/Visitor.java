@@ -809,7 +809,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         changeBB(trueBlock);
         visitStmt(ctx.stmt());
         //保持几个Inst之间的use关系不乱，并且让使用了其他value的inst能够找到那些inst
-        whileCondEntryBlock.getList().forEach(instNode -> {
+    /*    whileCondEntryBlock.getList().forEach(instNode -> {
             var val = instNode.getVal();
             for (Value operand : val.getOperands()) {
                 if (cloner.findValue(operand) == null) {
@@ -819,9 +819,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var copy = cloner.getInstCopy(val);
             cloner.put(val, copy);
             copy.node.insertAtEnd(curBB_.getList());
-        });
+        });*/
 
-        //f.buildBr(whileCondEntryBlock, curBB_);
+        f.buildBr(whileCondEntryBlock, curBB_);
 
         // [Backpatch] for break & continue
         backpatch(BreakInstructionMark, trueBlock, curBB_, nxtBlock, whileCondEntryBlock);
