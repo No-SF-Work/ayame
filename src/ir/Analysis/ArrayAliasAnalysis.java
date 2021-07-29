@@ -152,6 +152,7 @@ public class ArrayAliasAnalysis {
       return true;
     }
     for (Value arg : callinst.getOperands()) {
+      // FIXME: maybe bug here
       if (arg instanceof GEPInst) {
         GEPInst gepInst = (GEPInst) arg;
         if (alias(arr, getArrayValue(gepInst))) {
