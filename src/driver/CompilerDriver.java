@@ -94,8 +94,8 @@ public class CompilerDriver {
             Visitor visitor = new Visitor(/* OptionsTable table */);
             visitor.visit(tree);
 
-
-
+            //Driver只用来自测,强制开了
+            config.isO2 = true;
             pm.openedPasses_.add("bbPredSucc");
             pm.openedPasses_.add("interproceduralAnalysis");
             pm.openedPasses_.add("Mem2reg");
@@ -109,7 +109,6 @@ public class CompilerDriver {
                 pm.openedPasses_.add("ListScheduling");
                 pm.openedPasses_.add("Peephole");
             }
-
 
 
             logger.info("running MIR passes");
