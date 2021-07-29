@@ -1417,7 +1417,7 @@ public class CodeGenManager {
         if (lhsIsConst && !rhsIsConst) {
             l = ir.getOperands().get(1);
             r = ir.getOperands().get(0);
-            cond = getOppoCond(cond);
+            cond = getEqualOppCond(cond);
         } else {
             l = ir.getOperands().get(0);
             r = ir.getOperands().get(1);
