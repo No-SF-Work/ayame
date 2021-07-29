@@ -1316,9 +1316,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }
         if (ctx.mulOp(i - 1).MOD() != null) {
           //x%y=x - (x/y)*y
-          var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
-          var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
-          lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
+          //  var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+          //  var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
+          //  lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
+          lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
         }
         tmp_ = lhs;
       }
