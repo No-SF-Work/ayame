@@ -409,6 +409,16 @@ public class SimplifyInstruction {
     return inst;
   }
 
+  private static TAG_ getOppTag(TAG_ t) {
+    return switch (t) {
+      case Lt -> TAG_.Gt;
+      case Le -> TAG_.Ge;
+      case Gt -> TAG_.Lt;
+      case Ge -> TAG_.Le;
+      default -> t;
+    };
+  }
+
   public static Value simplifyLtInst(Instruction inst, boolean canRecur) {
     Value lhs = inst.getOperands().get(0);
     Value rhs = inst.getOperands().get(1);
@@ -422,6 +432,13 @@ public class SimplifyInstruction {
     Value c = foldConstant(inst.tag, lhs, rhs);
     if (c != null) {
       return c;
+    }
+
+    if (lhs instanceof ConstantInt) {
+      inst.CORemoveAllOperand();
+      inst.COaddOperand(rhs);
+      inst.COaddOperand(lhs);
+      inst.tag = getOppTag(inst.tag);
     }
 
     return inst;
@@ -442,6 +459,13 @@ public class SimplifyInstruction {
       return c;
     }
 
+    if (lhs instanceof ConstantInt) {
+      inst.CORemoveAllOperand();
+      inst.COaddOperand(rhs);
+      inst.COaddOperand(lhs);
+      inst.tag = getOppTag(inst.tag);
+    }
+
     return inst;
   }
 
@@ -460,6 +484,13 @@ public class SimplifyInstruction {
       return c;
     }
 
+    if (lhs instanceof ConstantInt) {
+      inst.CORemoveAllOperand();
+      inst.COaddOperand(rhs);
+      inst.COaddOperand(lhs);
+      inst.tag = getOppTag(inst.tag);
+    }
+
     return inst;
   }
 
@@ -476,6 +507,13 @@ public class SimplifyInstruction {
     Value c = foldConstant(inst.tag, lhs, rhs);
     if (c != null) {
       return c;
+    }
+
+    if (lhs instanceof ConstantInt) {
+      inst.CORemoveAllOperand();
+      inst.COaddOperand(rhs);
+      inst.COaddOperand(lhs);
+      inst.tag = getOppTag(inst.tag);
     }
 
     return inst;
