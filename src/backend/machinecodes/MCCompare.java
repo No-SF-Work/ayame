@@ -7,10 +7,15 @@ import backend.reg.VirtualReg;
 public class MCCompare extends MachineCode{
 
     private MachineOperand lhs;
+    private boolean isCmn = false;
 
     @Override
     public ArmAddition.CondType getCond() {
         return cond;
+    }
+
+    public void setCmn() {
+        this.isCmn = true;
     }
 
     public void setCond(ArmAddition.CondType cond) {
@@ -41,7 +46,12 @@ public class MCCompare extends MachineCode{
 
     @Override
     public String toString(){
-        String res="\tcmp\t"+lhs.getName()+",\t"+rhs.getName()+"\n";
+        String res;
+        if(isCmn){
+            res="\tcmn\t"+lhs.getName()+",\t"+rhs.getName()+getShift().toString()+"\n";
+        }else{
+            res="\tcmp\t"+lhs.getName()+",\t"+rhs.getName()+getShift().toString()+"\n";
+        }
         CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
