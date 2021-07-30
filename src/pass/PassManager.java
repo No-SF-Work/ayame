@@ -2,24 +2,16 @@ package pass;
 
 import backend.CodeGenManager;
 import ir.MyModule;
-
-import java.util.ArrayList;
-import java.util.logging.Logger;
-
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
-import pass.ir.BBPredSucc;
-import pass.ir.BranchOptimization;
-import pass.ir.DeadCodeEmit;
-import pass.ir.EmitLLVM;
-import pass.ir.FunctionInline;
-import pass.ir.GVNGCM;
-import pass.ir.InterproceduralAnalysis;
-import pass.ir.Mem2reg;
+import pass.ir.*;
 import pass.mc.ListScheduling;
 import pass.mc.PeepholeOptimization;
 import pass.mc.RegAllocator;
 import util.Mylogger;
+
+import java.util.ArrayList;
+import java.util.logging.Logger;
 
 public class PassManager {
 

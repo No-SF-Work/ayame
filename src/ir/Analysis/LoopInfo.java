@@ -38,7 +38,11 @@ public class LoopInfo {
 
   public Boolean isLoopHeader(BasicBlock bb) {
     // Notice: use `==` instead of `equals` just for speed.
-    return bbLoopMap.get(bb).getHeader() == bb;
+    var loop = bbLoopMap.get(bb);
+    if (loop == null) {
+      return false;
+    }
+    return loop.getHeader() == bb;
   }
 
   // Algorithm: Testing flow graph reducibility, Tarjan
@@ -96,7 +100,7 @@ public class LoopInfo {
 
             subloop.setParentLoop(loop);
             for (BasicBlock subHeaderPred : subloop.getHeader().getPredecessor_()) {
-              Loop tmp  = bbLoopMap.get(subHeaderPred);
+              Loop tmp = bbLoopMap.get(subHeaderPred);
               if (tmp == null || !tmp.equals(subloop)) {
                 backEdgeTo.push(subHeaderPred);
               }
