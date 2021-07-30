@@ -470,9 +470,9 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                             Supplier<Boolean> addLdrShift = () -> {
                                 // add a, b, c, shift
-                                // ldr x, [a, #0]
+                                // ldr/str x, [a, #0]
                                 // =>
-                                // ldr x, [b, c, shift]
+                                // ldr/str x, [b, c, shift]
                                 if (!(instr.getTag() == MachineCode.TAG.Add)) {
                                     return true;
                                 }
@@ -489,20 +489,32 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     return true;
                                 }
 
-                                if (!(nxtInstr instanceof MCLoad)) {
-                                    return true;
-                                }
-                                var loadInstr = (MCLoad) nxtInstr;
+                                if (nxtInstr instanceof MCLoad) {
+                                    var loadInstr = (MCLoad) nxtInstr;
 
-                                var isSameDstAddr = addInstr.getDst().equals(loadInstr.getAddr());
-                                var isOffsetZero = loadInstr.getOffset().getState() == imm && loadInstr.getOffset().getImm() == 0;
+                                    var isSameDstAddr = addInstr.getDst().equals(loadInstr.getAddr());
+                                    var isOffsetZero = loadInstr.getOffset().getState() == imm && loadInstr.getOffset().getImm() == 0;
 
-                                if (isSameDstAddr && isOffsetZero) {
-                                    loadInstr.setAddr(addInstr.getLhs());
-                                    loadInstr.setOffset(addInstr.getRhs());
-                                    loadInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
-                                    instrEntryIter.remove();
-                                    return false;
+                                    if (isSameDstAddr && isOffsetZero) {
+                                        loadInstr.setAddr(addInstr.getLhs());
+                                        loadInstr.setOffset(addInstr.getRhs());
+                                        loadInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
+                                        instrEntryIter.remove();
+                                        return false;
+                                    }
+                                } else if (nxtInstr instanceof MCStore) {
+                                    var storeInstr = (MCStore) nxtInstr;
+
+                                    var isSameDstAddr = addInstr.getDst().equals(storeInstr.getAddr());
+                                    var isOffsetZero = storeInstr.getOffset().getState() == imm && storeInstr.getOffset().getImm() == 0;
+
+                                    if (isSameDstAddr && isOffsetZero) {
+                                        storeInstr.setAddr(addInstr.getLhs());
+                                        storeInstr.setOffset(addInstr.getRhs());
+                                        storeInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
+                                        instrEntryIter.remove();
+                                        return false;
+                                    }
                                 }
 
                                 return true;
@@ -561,7 +573,18 @@ public class PeepholeOptimization implements Pass.MCPass {
                             Supplier<Boolean> mulAddSub = () -> {
                                 // mul a, b, c
                                 // add a, x, a
-                                // todo
+                                if (!hasNoShift) {
+                                    return true;
+                                }
+
+                                if (!(instr.getTag() == MachineCode.TAG.Mul)) {
+                                    return true;
+                                }
+                                assert instr instanceof MCBinary;
+                                var mulInstr = (MCBinary) instr;
+
+
+
                                 return true;
                             };
 
