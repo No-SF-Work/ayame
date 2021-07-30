@@ -596,8 +596,8 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     var nxtNoShift = nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0;
 
                                     if (isSameDstRhs && nxtNoShift) {
-                                        binInstr.setRhs(movInstr.getDst());
-                                        binInstr.setShift(binInstr.getShift().getType(), binInstr.getShift().getImm());
+                                        binInstr.setRhs(movInstr.getRhs());
+                                        binInstr.setShift(movInstr.getShift().getType(), movInstr.getShift().getImm());
                                         instrEntryIter.remove();
                                         return false;
                                     }
@@ -612,7 +612,7 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                                     if (isSameDstOffset && nxtNoShift) {
                                         loadInstr.setOffset(movInstr.getRhs());
-                                        loadInstr.setShift(loadInstr.getShift().getType(), loadInstr.getShift().getImm());
+                                        loadInstr.setShift(movInstr.getShift().getType(), movInstr.getShift().getImm());
                                         instrEntryIter.remove();
                                         return false;
                                     }
@@ -627,7 +627,7 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                                     if (isSameDstOffset && nxtNoShift) {
                                         storeInstr.setOffset(movInstr.getRhs());
-                                        storeInstr.setShift(storeInstr.getShift().getType(), storeInstr.getShift().getImm());
+                                        storeInstr.setShift(movInstr.getShift().getType(), movInstr.getShift().getImm());
                                         instrEntryIter.remove();
                                         return false;
                                     }
@@ -640,8 +640,8 @@ public class PeepholeOptimization implements Pass.MCPass {
                             done &= addLdrShift.get();
 //                            done &= mulAddSub.get();
                             done &= movReplace.get();
-//                            done &= movCmp.get();
-//                            done &= movShift.get();
+                            done &= movCmp.get();
+                            done &= movShift.get();
                         }
                     }
                 }
