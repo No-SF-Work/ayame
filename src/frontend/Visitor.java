@@ -878,6 +878,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
                 if (trueBlock.getName().equals("_CONTINUE")) {
                   toBeReplacedContinues.add((BrInst) curInstr);
                   trueBlock.node_.removeSelf();
+                } else {
+                  curInstr.CoSetOperand(0, targetBlock);
+                  trueBlock.node_.removeSelf();
                 }
               } else {
                 curInstr.CoSetOperand(0, targetBlock);
@@ -898,6 +901,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
                 if (trueBlock.getName().equals("_CONTINUE")) {
                   toBeReplacedContinues.add((BrInst) curInstr);
                   trueBlock.node_.removeSelf();
+                } else {
+                  curInstr.CoSetOperand(1, targetBlock);
+                  trueBlock.node_.removeSelf();
                 }
               } else {
                 curInstr.CoSetOperand(1, targetBlock);
@@ -916,6 +922,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
               if (Config.getInstance().isO2) {
                 if (falseBlock.getName().equals("_CONTINUE")) {
                   toBeReplacedContinues.add((BrInst) curInstr);
+                  falseBlock.node_.removeSelf();
+                } else {
+                  curInstr.CoSetOperand(2, targetBlock);
                   falseBlock.node_.removeSelf();
                 }
               } else {
