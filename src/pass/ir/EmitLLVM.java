@@ -85,7 +85,7 @@ public class EmitLLVM implements IRPass {
                       sb.append(inst.thirdName).append(" = mul i32 ")
                           .append(inst.secondName).append(",")
                           .append(inst.getOperands().get(1).getName()).append("   ;MOD \n");
-                      sb.append(inst.getName()).append(" = sub i32")
+                      sb.append(inst.getName()).append(" = sub i32 ")
                           .append(inst.getOperands().get(0).getName()).append(",")
                           .append(inst.thirdName).append(" ").append(";----------- \n");
                     } else {
