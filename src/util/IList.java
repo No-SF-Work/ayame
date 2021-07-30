@@ -124,6 +124,10 @@ public class IList<T, P> implements Iterable<INode<T, P>> {
       return val;
     }
 
+    public void setVal(T newVal) {
+      this.val = newVal;
+    }
+
     public void setParent(IList<T, P> parent) {
       this.parent = parent;
     }

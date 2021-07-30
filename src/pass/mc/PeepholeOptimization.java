@@ -470,9 +470,9 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                             Supplier<Boolean> addLdrShift = () -> {
                                 // add a, b, c, shift
-                                // ldr x, [a, #0]
+                                // ldr/str x, [a, #0]
                                 // =>
-                                // ldr x, [b, c, shift]
+                                // ldr/str x, [b, c, shift]
                                 if (!(instr.getTag() == MachineCode.TAG.Add)) {
                                     return true;
                                 }
@@ -489,20 +489,32 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     return true;
                                 }
 
-                                if (!(nxtInstr instanceof MCLoad)) {
-                                    return true;
-                                }
-                                var loadInstr = (MCLoad) nxtInstr;
+                                if (nxtInstr instanceof MCLoad) {
+                                    var loadInstr = (MCLoad) nxtInstr;
 
-                                var isSameDstAddr = addInstr.getDst().equals(loadInstr.getAddr());
-                                var isOffsetZero = loadInstr.getOffset().getState() == imm && loadInstr.getOffset().getImm() == 0;
+                                    var isSameDstAddr = addInstr.getDst().equals(loadInstr.getAddr());
+                                    var isOffsetZero = loadInstr.getOffset().getState() == imm && loadInstr.getOffset().getImm() == 0;
 
-                                if (isSameDstAddr && isOffsetZero) {
-                                    loadInstr.setAddr(addInstr.getLhs());
-                                    loadInstr.setOffset(addInstr.getRhs());
-                                    loadInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
-                                    instrEntryIter.remove();
-                                    return false;
+                                    if (isSameDstAddr && isOffsetZero) {
+                                        loadInstr.setAddr(addInstr.getLhs());
+                                        loadInstr.setOffset(addInstr.getRhs());
+                                        loadInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
+                                        instrEntryIter.remove();
+                                        return false;
+                                    }
+                                } else if (nxtInstr instanceof MCStore) {
+                                    var storeInstr = (MCStore) nxtInstr;
+
+                                    var isSameDstAddr = addInstr.getDst().equals(storeInstr.getAddr());
+                                    var isOffsetZero = storeInstr.getOffset().getState() == imm && storeInstr.getOffset().getImm() == 0;
+
+                                    if (isSameDstAddr && isOffsetZero) {
+                                        storeInstr.setAddr(addInstr.getLhs());
+                                        storeInstr.setOffset(addInstr.getRhs());
+                                        storeInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
+                                        instrEntryIter.remove();
+                                        return false;
+                                    }
                                 }
 
                                 return true;
@@ -560,9 +572,86 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                             Supplier<Boolean> mulAddSub = () -> {
                                 // mul a, b, c
-                                // add a, x, a
-                                // todo
-                                return true;
+                                // add/sub d, x, a (add d, a, x)
+                                // =>
+                                // mla/mls d, b, c, x
+                                if (!hasNoShift) {
+                                    return true;
+                                }
+
+                                if (!(instr.getTag() == MachineCode.TAG.Mul)) {
+                                    return true;
+                                }
+                                assert instr instanceof MCBinary;
+                                var mulInstr = (MCBinary) instr;
+
+                                var nxtInstrEntry = instrEntry.getNext();
+                                if (nxtInstrEntry == null) {
+                                    return true;
+                                }
+                                var nxtInstr = nxtInstrEntry.getVal();
+                                if (!Objects.equals(lastUser, nxtInstr)) {
+                                    return true;
+                                }
+
+                                var nxtNoShift = nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0;
+                                var nxtNoCond = nxtInstr.getCond() == Any;
+                                if (!(nxtNoShift && nxtNoCond)) {
+                                    return true;
+                                }
+
+                                if (!(nxtInstr.getTag() == MachineCode.TAG.Add || nxtInstr.getTag() == MachineCode.TAG.Sub)) {
+                                    return true;
+                                }
+                                assert nxtInstr instanceof MCBinary;
+                                var binInstr = (MCBinary) nxtInstr;
+
+                                var fmaInstr = new MCFma();
+                                fmaInstr.setDst(binInstr.getDst());
+                                fmaInstr.setLhs(mulInstr.getLhs());
+                                fmaInstr.setRhs(mulInstr.getRhs());
+                                fmaInstr.setSign(false);
+
+                                if (binInstr.getTag() == MachineCode.TAG.Add) {
+                                    fmaInstr.setAdd(true);
+                                    if (binInstr.getRhs().equals(mulInstr.getDst())) {
+                                        fmaInstr.setAcc(binInstr.getLhs());
+                                    } else if (binInstr.getLhs().equals(mulInstr.getDst())) {
+                                        fmaInstr.setAcc(binInstr.getRhs());
+                                    } else {
+                                        return true;
+                                    }
+                                } else if (binInstr.getTag() == MachineCode.TAG.Sub) {
+                                    if (binInstr.getRhs().equals(mulInstr.getDst())) {
+                                        fmaInstr.setAdd(false);
+                                        fmaInstr.setAcc(binInstr.getLhs());
+                                    } else {
+                                        return true;
+                                    }
+                                } else {
+                                    return true;
+                                }
+
+                                var nxtInstrNode = nxtInstr.getNode();
+                                nxtInstrNode.setVal(fmaInstr);
+                                fmaInstr.setNode(nxtInstrNode);
+                                fmaInstr.mb = block;
+                                fmaInstr.mf = func;
+
+                                // maintain data flow info
+                                if (liveRangeInBlock.containsKey(nxtInstr)) {
+                                    liveRangeInBlock.put(fmaInstr, liveRangeInBlock.get(nxtInstr));
+                                    liveRangeInBlock.remove(nxtInstr);
+                                }
+
+                                if (lastDefMap.containsValue(nxtInstr)) {
+                                    var key = fmaInstr.getDef().get(0);
+                                    assert key != null;
+                                    lastDefMap.put(key, fmaInstr);
+                                }
+
+                                instrEntryIter.remove();
+                                return false;
                             };
 
                             Supplier<Boolean> movShift = () -> {
@@ -592,12 +681,16 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     // =>
                                     // add c d b shift
                                     var binInstr = (MCBinary) nxtInstr;
+                                    if (binInstr.getTag() == MachineCode.TAG.Div || binInstr.getTag() == MachineCode.TAG.Mul) {
+                                        return true;
+                                    }
+
                                     var isSameDstRhs = movInstr.getDst().equals(binInstr.getRhs());
                                     var nxtNoShift = nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0;
 
                                     if (isSameDstRhs && nxtNoShift) {
-                                        binInstr.setRhs(movInstr.getDst());
-                                        binInstr.setShift(binInstr.getShift().getType(), binInstr.getShift().getImm());
+                                        binInstr.setRhs(movInstr.getRhs());
+                                        binInstr.setShift(movInstr.getShift().getType(), movInstr.getShift().getImm());
                                         instrEntryIter.remove();
                                         return false;
                                     }
@@ -612,7 +705,7 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                                     if (isSameDstOffset && nxtNoShift) {
                                         loadInstr.setOffset(movInstr.getRhs());
-                                        loadInstr.setShift(loadInstr.getShift().getType(), loadInstr.getShift().getImm());
+                                        loadInstr.setShift(movInstr.getShift().getType(), movInstr.getShift().getImm());
                                         instrEntryIter.remove();
                                         return false;
                                     }
@@ -627,7 +720,7 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                                     if (isSameDstOffset && nxtNoShift) {
                                         storeInstr.setOffset(movInstr.getRhs());
-                                        storeInstr.setShift(storeInstr.getShift().getType(), storeInstr.getShift().getImm());
+                                        storeInstr.setShift(movInstr.getShift().getType(), movInstr.getShift().getImm());
                                         instrEntryIter.remove();
                                         return false;
                                     }
@@ -638,10 +731,10 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                             done &= addSubLdrStr.get();
                             done &= addLdrShift.get();
-//                            done &= mulAddSub.get();
+                            done &= mulAddSub.get();
                             done &= movReplace.get();
-//                            done &= movCmp.get();
-//                            done &= movShift.get();
+                            done &= movCmp.get();
+                            done &= movShift.get();
                         }
                     }
                 }
