@@ -94,7 +94,7 @@ public class ListScheduling implements Pass.MCPass {
         public int compareTo(Node rhs) {
             return rhs.criticalLatency == this.criticalLatency ?
                     rhs.latency - this.latency :
-                    rhs.criticalLatency - this.latency;
+                    rhs.criticalLatency - this.criticalLatency;
         }
     }
 
