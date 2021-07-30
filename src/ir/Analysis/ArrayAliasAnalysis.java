@@ -152,6 +152,7 @@ public class ArrayAliasAnalysis {
       return true;
     }
     for (Value arg : callinst.getOperands()) {
+      // FIXME: maybe bug here
       if (arg instanceof GEPInst) {
         GEPInst gepInst = (GEPInst) arg;
         if (alias(arr, getArrayValue(gepInst))) {
@@ -201,6 +202,7 @@ public class ArrayAliasAnalysis {
           // 这里对 Load/Store/Call 进行分组，粒度决定了后面分析的精度和速度
           if (inst.tag == TAG_.Store) {
             StoreInst storeInst = (StoreInst) inst;
+            // FIXME: 传参进来的数组，不能对着 alloca 的地方 alias，不然会出现对传进来的数组的 store 影响了对 alloca 的地方的指针的 load
             if (alias(array, getArrayValue(storeInst.getOperands().get(1)))) {
               storeInst.hasAlias = true;
               arrayDefUse.defs.add(storeInst);
