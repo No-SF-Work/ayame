@@ -615,6 +615,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     // =>
                                     // add c d b shift
                                     var binInstr = (MCBinary) nxtInstr;
+                                    if (binInstr.getTag() == MachineCode.TAG.Div || binInstr.getTag() == MachineCode.TAG.Mul) {
+                                        return true;
+                                    }
+
                                     var isSameDstRhs = movInstr.getDst().equals(binInstr.getRhs());
                                     var nxtNoShift = nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0;
 
