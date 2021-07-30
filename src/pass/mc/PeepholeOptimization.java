@@ -572,7 +572,9 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                             Supplier<Boolean> mulAddSub = () -> {
                                 // mul a, b, c
-                                // add a, x, a
+                                // add/sub d, x, a (add d, a, x)
+                                // =>
+                                // mla/mls d, b, c, x
                                 if (!hasNoShift) {
                                     return true;
                                 }
@@ -583,9 +585,73 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 assert instr instanceof MCBinary;
                                 var mulInstr = (MCBinary) instr;
 
+                                var nxtInstrEntry = instrEntry.getNext();
+                                if (nxtInstrEntry == null) {
+                                    return true;
+                                }
+                                var nxtInstr = nxtInstrEntry.getVal();
+                                if (!Objects.equals(lastUser, nxtInstr)) {
+                                    return true;
+                                }
 
+                                var nxtNoShift = nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0;
+                                var nxtNoCond = nxtInstr.getCond() == Any;
+                                if (!(nxtNoShift && nxtNoCond)) {
+                                    return true;
+                                }
 
-                                return true;
+                                if (!(nxtInstr.getTag() == MachineCode.TAG.Add || nxtInstr.getTag() == MachineCode.TAG.Sub)) {
+                                    return true;
+                                }
+                                assert nxtInstr instanceof MCBinary;
+                                var binInstr = (MCBinary) nxtInstr;
+
+                                var fmaInstr = new MCFma();
+                                fmaInstr.setDst(binInstr.getDst());
+                                fmaInstr.setLhs(mulInstr.getLhs());
+                                fmaInstr.setRhs(mulInstr.getRhs());
+                                fmaInstr.setSign(false);
+
+                                if (binInstr.getTag() == MachineCode.TAG.Add) {
+                                    fmaInstr.setAdd(true);
+                                    if (binInstr.getRhs().equals(mulInstr.getDst())) {
+                                        fmaInstr.setAcc(binInstr.getLhs());
+                                    } else if (binInstr.getLhs().equals(mulInstr.getDst())) {
+                                        fmaInstr.setAcc(binInstr.getRhs());
+                                    } else {
+                                        return true;
+                                    }
+                                } else if (binInstr.getTag() == MachineCode.TAG.Sub) {
+                                    if (binInstr.getRhs().equals(mulInstr.getDst())) {
+                                        fmaInstr.setAdd(false);
+                                        fmaInstr.setAcc(binInstr.getLhs());
+                                    } else {
+                                        return true;
+                                    }
+                                } else {
+                                    return true;
+                                }
+
+                                var nxtInstrNode = nxtInstr.getNode();
+                                nxtInstrNode.setVal(fmaInstr);
+                                fmaInstr.setNode(nxtInstrNode);
+                                fmaInstr.mb = block;
+                                fmaInstr.mf = func;
+
+                                // maintain data flow info
+                                if (liveRangeInBlock.containsKey(nxtInstr)) {
+                                    liveRangeInBlock.put(fmaInstr, liveRangeInBlock.get(nxtInstr));
+                                    liveRangeInBlock.remove(nxtInstr);
+                                }
+
+                                if (lastDefMap.containsValue(nxtInstr)) {
+                                    var key = fmaInstr.getDef().get(0);
+                                    assert key != null;
+                                    lastDefMap.put(key, fmaInstr);
+                                }
+
+                                instrEntryIter.remove();
+                                return false;
                             };
 
                             Supplier<Boolean> movShift = () -> {
@@ -665,7 +731,7 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                             done &= addSubLdrStr.get();
                             done &= addLdrShift.get();
-//                            done &= mulAddSub.get();
+                            done &= mulAddSub.get();
                             done &= movReplace.get();
                             done &= movCmp.get();
                             done &= movShift.get();

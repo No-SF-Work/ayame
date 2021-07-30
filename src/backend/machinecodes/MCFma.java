@@ -60,6 +60,10 @@ public class MCFma extends MachineCode {
         super(TAG.FMA, mb);
     }
 
+    public MCFma(){
+        super(TAG.FMA);
+    }
+
     public MachineOperand getDst() {
         return dst;
     }
