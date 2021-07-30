@@ -77,13 +77,14 @@ public class EmitLLVM implements IRPass {
                       BinaryInst inst = (BinaryInst) instNode.getVal();
                       sb.append(inst.secondName).append(" = sdiv i32 ")
                           .append(inst.getOperands().get(0).getName()).append(",")
-                          .append(inst.getOperands().get(1).getName()).append(" \n");
+                          .append(inst.getOperands().get(1).getName()).append(" ;-----------")
+                          .append("\n");
                       sb.append(inst.thirdName).append(" = mul i32 ")
                           .append(inst.secondName).append(",")
-                          .append(inst.getOperands().get(1).getName()).append(" \n");
+                          .append(inst.getOperands().get(1).getName()).append("   ;MOD \n");
                       sb.append(inst.getName()).append(" = sub ")
                           .append(inst.getOperands().get(0)).append(",")
-                          .append(inst.thirdName).append(" \n");
+                          .append(inst.thirdName).append(" ").append(";----------- \n");
                     } else {
                       var instVal = instNode.getVal();
                       sb.append(instVal.toString()).append("\n");
