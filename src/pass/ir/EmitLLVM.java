@@ -3,12 +3,8 @@ package pass.ir;
 import ir.MyModule;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction.TAG_;
-import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
-import java.util.HashMap;
 import java.util.logging.Logger;
-import javax.swing.text.Style;
 import pass.Pass.IRPass;
 import util.Mylogger;
 
@@ -49,6 +45,7 @@ public class EmitLLVM implements IRPass {
     m.__functions.forEach(func -> {
       var val = func.getVal();
       if (!val.isBuiltin_()) {
+        val.getLoopInfo().computeLoopInfo(val);
         sb.append("define dso_local ")
             .append(val)
             .append("{\n");
@@ -69,7 +66,13 @@ public class EmitLLVM implements IRPass {
                   sb.append(b.getName()).append(",");
                 });
                 sb.deleteCharAt(sb.length() - 1);
-                sb.append("]\n");
+                sb.append("]");
+                if (val.getLoopInfo().isLoopHeader(bbval)) {
+                  sb.append(", is LOOP HEADER");
+                }
+                sb.append(", loop depth: ");
+                sb.append(val.getLoopInfo().getLoopDepthForBB(bbval));
+                sb.append("\n");
               }
               bbval.getList().forEach(
                   instNode -> {
