@@ -1,6 +1,8 @@
 package pass.ir;
 
 import ir.MyModule;
+import ir.values.instructions.BinaryInst;
+import ir.values.instructions.Instruction.TAG_;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -14,7 +16,7 @@ public class EmitLLVM implements IRPass {
 
 
   public EmitLLVM(String outputName) {
-   this.outputName = outputName;
+    this.outputName = outputName;
     sb = new StringBuilder();
   }
 
@@ -63,7 +65,7 @@ public class EmitLLVM implements IRPass {
                 sb.deleteCharAt(sb.length() - 1);
                 sb.append("]  ");
                 sb.append("successor:[");
-                bbval.getSuccessor_().forEach(b->{
+                bbval.getSuccessor_().forEach(b -> {
                   sb.append(b.getName()).append(",");
                 });
                 sb.deleteCharAt(sb.length() - 1);
@@ -71,8 +73,22 @@ public class EmitLLVM implements IRPass {
               }
               bbval.getList().forEach(
                   instNode -> {
-                    var instVal = instNode.getVal();
-                    sb.append(instVal.toString()).append("\n");
+                    if (instNode.getVal().tag.equals(TAG_.Mod)) {
+                      BinaryInst inst = (BinaryInst) instNode.getVal();
+                      sb.append(inst.secondName).append(" = sdiv i32 ")
+                          .append(inst.getOperands().get(0).getName()).append(",")
+                          .append(inst.getOperands().get(1).getName()).append(" ;-----------")
+                          .append("\n");
+                      sb.append(inst.thirdName).append(" = mul i32 ")
+                          .append(inst.secondName).append(",")
+                          .append(inst.getOperands().get(1).getName()).append("   ;MOD \n");
+                      sb.append(inst.getName()).append(" = sub ")
+                          .append(inst.getOperands().get(0)).append(",")
+                          .append(inst.thirdName).append(" ").append(";----------- \n");
+                    } else {
+                      var instVal = instNode.getVal();
+                      sb.append(instVal.toString()).append("\n");
+                    }
                   }
               );
             }
@@ -97,7 +113,7 @@ public class EmitLLVM implements IRPass {
 
   private void nameVariable(MyModule m) {
     m.__globalVariables.forEach(gv -> {
-      if (!gv.getName().startsWith("@")){
+      if (!gv.getName().startsWith("@")) {
         gv.setName("@" + gv.getName());
       }
     });
@@ -115,7 +131,11 @@ public class EmitLLVM implements IRPass {
               //}
               bbInode.getVal().getList().forEach(
                   instNode -> {
-                    if (instNode.getVal().needname) {
+                    if (instNode.getVal().tag.equals(TAG_.Mod)) {
+                      ((BinaryInst) instNode.getVal()).secondName = "%" + newName();
+                      ((BinaryInst) instNode.getVal()).thirdName = "%" + newName();
+                      instNode.getVal().setName("%" + newName());
+                    } else if (instNode.getVal().needname) {
                       instNode.getVal().setName("%" + newName());
                     }
                   }
