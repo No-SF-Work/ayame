@@ -1329,7 +1329,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var num = ((ConstantInt) rhs).getVal();
             if (Math.abs(num) == 1) {
               lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
-            } else if ((Math.abs(num) & Math.abs(num - 1)) == 0) {
+            } else if ((Math.abs(num) & (Math.abs(num) - 1)) == 0) {
               lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
             } else if (num < 0) {
               var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);

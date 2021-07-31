@@ -64,7 +64,18 @@ public class ListScheduling implements Pass.MCPass {
                 // binary
                 case Compare -> 1;
                 case FMA -> 4;
-                case Mv -> instr.getCond() == Any ? 1 : 2; // fixme movw & movt
+                case Mv -> {
+                    var cond = (instr.getCond() == Any ? 1 : 2);
+
+                    var rhs = ((MCMove) instr).getRhs();
+                    var isImm = rhs.getState() == MachineOperand.state.imm;
+                    var imm = rhs.getImm();
+                    var canEncode = !isImm ||
+                            CodeGenManager.canEncodeImm(~imm) ||
+                            CodeGenManager.canEncodeImm(imm) ||
+                            (imm >>> 16) == 0;
+                    yield cond * (canEncode ? 1 : 2);
+                }
                 case Branch, Jump, Return, Call -> 1;
                 case Load -> 4;
                 case Store -> 3;
@@ -75,7 +86,7 @@ public class ListScheduling implements Pass.MCPass {
                 case Add, Sub, Rsb, And, Or -> instr.getShift().getType() == None ? A72FUType.Integer : A72FUType.Multiple;
                 case Mul, Div, LongMul, FMA -> A72FUType.Multiple;
                 // binary
-                case Mv -> A72FUType.Integer; // fixme movw & movt
+                case Mv -> A72FUType.Integer;
                 case Compare -> A72FUType.Integer;
                 case Branch, Jump, Return, Call -> A72FUType.Branch;
                 case Load -> A72FUType.Load;
