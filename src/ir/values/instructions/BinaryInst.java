@@ -75,6 +75,8 @@ public class BinaryInst extends Instruction {
         return lhsVal - rhsVal;
       case Rsb:
         return rhsVal - lhsVal;
+      case Mod:
+        return lhsVal % rhsVal;
       case Mul:
         return lhsVal * rhsVal;
       case Div:
@@ -119,6 +121,8 @@ public class BinaryInst extends Instruction {
   public boolean isDiv() {
     return this.tag == TAG_.Div;
   }
+
+  public boolean isMod() { return this.tag == TAG_.Mod; }
 
 
   public boolean isCommutative() {

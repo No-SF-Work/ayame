@@ -16,6 +16,7 @@ public class SimplifyInstruction {
     return switch (instruction.tag) {
       case Add -> simplifyAddInst(instruction, true);
       case Sub -> simplifySubInst(instruction, true);
+      case Mod -> simplifyModInst(instruction, true);
       case Mul -> simplifyMulInst(instruction, true);
       case Div -> simplifyDivInst(instruction, true);
       case Lt -> simplifyLtInst(instruction, true);
@@ -325,6 +326,31 @@ public class SimplifyInstruction {
 //            return new BinaryInst(TAG_.Sub, factory.getI32Ty(), simpleAdd, subLhs, targetBB);
           }
         }
+      }
+    }
+
+    return inst;
+  }
+
+  public static Value simplifyModInst(Instruction inst, boolean canRecur) {
+    Value lhs = inst.getOperands().get(0);
+    Value rhs = inst.getOperands().get(1);
+    if (lhs instanceof GlobalVariable) {
+      lhs = ((GlobalVariable) lhs).init;
+    }
+    if (rhs instanceof GlobalVariable) {
+      rhs = ((GlobalVariable) rhs).init;
+    }
+
+    Value c = foldConstant(inst.tag, lhs, rhs);
+    if (c != null) {
+      return c;
+    }
+
+    if (rhs instanceof ConstantInt) {
+      int rhsVal = ((ConstantInt) rhs).getVal();
+      if (rhsVal == 1 || rhsVal == -1) {
+        return ConstantInt.newOne(factory.getI32Ty(), 0);
       }
     }
 
