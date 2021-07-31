@@ -38,7 +38,7 @@ public class CodeGenManager {
 
     private boolean isO2 = false;
 
-    private boolean ifPrintIR = true;
+    private boolean ifPrintIR = false;
 
     private static Logger logger;
 
@@ -341,7 +341,7 @@ public class CodeGenManager {
         }
     }
 
-    private void fixStack(MachineFunction mf) {
+    public void fixStack(MachineFunction mf) {
         var useRegs = mf.getUsedRegIdxs();
         for (int idx : useRegs) {
             for (int i = 4; i <= 12; i++) {
@@ -390,7 +390,8 @@ public class CodeGenManager {
             this.mcOffset = 0;
             globalLoad.clear();
             MachineFunction mf = mfIte.next();
-            fixStack(mf);
+            // fixed: move to reg alloc
+            // fixStack(mf);
             arm += "\n.global\t";
             arm += mf.getName() + "\n";
             arm += mf.getName() + ":\n";
