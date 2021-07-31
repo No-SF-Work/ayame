@@ -38,11 +38,11 @@ public class PassManager {
         irPasses.add(new BranchOptimization());
         irPasses.add(new EmitLLVM());
 
-        mcPasses.add(new PeepholeOptimization());
+        mcPasses.add(new PeepholeOptimization(false));
         mcPasses.add(new RegAllocator());
-        mcPasses.add(new PeepholeOptimization());
+        mcPasses.add(new PeepholeOptimization(true));
         mcPasses.add(new ListScheduling());
-        mcPasses.add(new PeepholeOptimization());
+        mcPasses.add(new PeepholeOptimization(true));
         mcPasses.add(new IfToCond());
     }
 

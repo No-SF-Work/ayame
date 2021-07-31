@@ -3,11 +3,9 @@ package pass.mc;
 import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.MachineOperand;
-import ir.values.instructions.BinaryInst;
 import pass.Pass;
 import util.Pair;
 
-import java.lang.reflect.AnnotatedArrayType;
 import java.util.*;
 import java.util.function.Supplier;
 
@@ -16,6 +14,12 @@ import static backend.machinecodes.ArmAddition.ShiftType.*;
 import static backend.reg.MachineOperand.state.*;
 
 public class PeepholeOptimization implements Pass.MCPass {
+    private boolean openMoveRelated;
+
+    public PeepholeOptimization(boolean openMoveRelated) {
+        this.openMoveRelated = openMoveRelated;
+    }
+
     @Override
     public String getName() {
         return "Peephole";
@@ -755,7 +759,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 return true;
                             };
 
-                            Supplier<Boolean> movMov = () -> {
+                            Supplier<Boolean> subSub = () -> {
                                 // sub a, b, a
                                 // sub b, b, a
                                 if (!hasNoShift) {
@@ -831,13 +835,15 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 }
                             }
 
+                            if (this.openMoveRelated) {
+                                done &= movReplace.get();
+                                done &= movCmp.get();
+                                done &= movShift.get();
+                            }
                             done &= addSubLdrStr.get();
                             done &= addLdrShift.get();
                             done &= mulAddSub.get();
-                            done &= movReplace.get();
-                            done &= movCmp.get();
-                            done &= movShift.get();
-                            done &= movMov.get();
+                            done &= subSub.get();
                         }
                     }
                 }
