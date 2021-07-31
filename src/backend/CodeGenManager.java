@@ -833,16 +833,14 @@ public class CodeGenManager {
             mc4.setLhs(mc3.getDst());
             mc4.setRhs(lhs);
             mc4.setShift(ArmAddition.ShiftType.Lsr, 31);
-            if (imm < 0) {
-                MCBinary rsb = new MCBinary(MachineCode.TAG.Rsb, mb);
-                mc4.setDst(v);
-                rsb.setDst(dst);
-                rsb.setLhs(v);
-                rsb.setRhs(new MachineOperand(0));
-            }
-            divMap.put(new Pair<>(lhs, new MachineOperand(imm)), (VirtualReg) dst);
         }
-
+        if (imm < 0) {
+            MCBinary rsb = new MCBinary(MachineCode.TAG.Rsb, mb);
+            rsb.setDst(dst);
+            rsb.setLhs(dst);
+            rsb.setRhs(new MachineOperand(0));
+        }
+        divMap.put(new Pair<>(lhs, new MachineOperand(imm)), (VirtualReg) dst);
     }
 
     private void processBB(BasicBlock bb) {
@@ -912,23 +910,29 @@ public class CodeGenManager {
                 }
                 VirtualReg v=new VirtualReg();
                 mf.addVirtualReg(v);
-                MCMove mv1 = new MCMove(mb);
-                mv1.setDst(v);
-                mv1.setRhs(lhs);
-                mv1.setShift(ArmAddition.ShiftType.Asr, 31);
+                if(abs!=2){
+                    MCMove mv1 = new MCMove(mb);
+                    mv1.setDst(v);
+                    mv1.setRhs(lhs);
+                    mv1.setShift(ArmAddition.ShiftType.Asr, 31);
+                }
                 MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
                 add.setDst(v);
                 add.setLhs(lhs);
-                add.setRhs(v);
+                if(abs!=2){
+                    add.setRhs(v);
+                }else{
+                    add.setRhs(lhs);
+                }
                 add.setShift(ArmAddition.ShiftType.Lsr, 32 - l);
                 MCBinary mc1=new MCBinary(MachineCode.TAG.Bic,mb);
                 mc1.setDst(v);
                 mc1.setLhs(add.getDst());
-                mc1.setRhs(new MachineOperand(abs-1));
-                MCBinary mc2 = new MCBinary(MachineCode.TAG.Sub,mb);
-                mc2.setDst(dst);
-                mc2.setRhs(v);
-                mc2.setLhs(lhs);
+                mc1.setRhs(new MachineOperand(~(abs-1)));
+//                MCBinary mc2 = new MCBinary(MachineCode.TAG.Sub,mb);
+//                mc2.setDst(dst);
+//                mc2.setRhs(v);
+//                mc2.setLhs(lhs);
             }else if (ir instanceof BinaryInst && ((BinaryInst) ir).isMul()) {
                 boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                 boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
