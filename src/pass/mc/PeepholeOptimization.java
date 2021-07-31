@@ -834,9 +834,9 @@ public class PeepholeOptimization implements Pass.MCPass {
                             done &= mulAddSub.get();
                             done &= subSub.get();
 
-                            if (instr instanceof MCMove && func.getArgMoves().contains(instr)) {
-                                continue;
-                            }
+//                            if (instr instanceof MCMove && func.getArgMoves().contains(instr)) {
+//                                continue;
+//                            }
 
                             done &= movReplace.get();
                             done &= movCmp.get();
