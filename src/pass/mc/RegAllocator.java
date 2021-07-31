@@ -635,7 +635,7 @@ public class RegAllocator implements MCPass {
         }
 
         simplifyRegType(manager);
-        manager.getMachineFunctions().forEach(manager::fixStack);
+//        manager.getMachineFunctions().forEach(manager::fixStack);
     }
 
     private void simplifyRegType(CodeGenManager manager) {

@@ -391,7 +391,7 @@ public class CodeGenManager {
             globalLoad.clear();
             MachineFunction mf = mfIte.next();
             // fixed: move to reg alloc
-            // fixStack(mf);
+             fixStack(mf);
             arm += "\n.global\t";
             arm += mf.getName() + "\n";
             arm += mf.getName() + ":\n";
