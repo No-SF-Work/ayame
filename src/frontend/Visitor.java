@@ -1325,10 +1325,28 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }
         if (ctx.mulOp(i - 1).MOD() != null) {
           //x%y=x - (x/y)*y
-          //  var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
-          //  var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
-          //  lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
-          lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
+          if (rhs instanceof ConstantInt) {
+            var num = ((ConstantInt) rhs).getVal();
+            if (Math.abs(num) == 1) {
+              lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
+            } else if ((Math.abs(num) & Math.abs(num - 1)) == 0) {
+              lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
+            } else if (num < 0) {
+              var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+              var b = f.buildBinary(TAG_.Mul, a,
+                  ConstantInt.newOne(i32Type_, Math.abs(((ConstantInt) rhs).getVal())), curBB_);
+              lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
+            } else if (num > 0) {
+              var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+              var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
+              lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
+            }
+          } else {
+            var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+            var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
+            lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
+          }
+          //lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
         }
         tmp_ = lhs;
       }
