@@ -473,11 +473,16 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 // ldr/str x, [a, #0]
                                 // =>
                                 // ldr/str x, [b, c, shift]
+                                if (hasNoShift) { // shold have shift
+                                    return true;
+                                }
+
                                 if (!(instr.getTag() == MachineCode.TAG.Add)) {
                                     return true;
                                 }
                                 assert instr instanceof MCBinary;
                                 var addInstr = (MCBinary) instr;
+
                                 assert addInstr.getRhs().getState() != imm;
 
                                 var nxtInstrEntry = instrEntry.getNext();
