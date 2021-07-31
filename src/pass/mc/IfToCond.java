@@ -19,6 +19,9 @@ public class IfToCond implements Pass.MCPass {
         for (var func : manager.getMachineFunctions()) {
             for (var blockEntry : func.getmbList()) {
                 var block = blockEntry.getVal();
+                if (block.getmclist().getLast() == null) {
+                    continue;
+                }
                 var lastInstr = block.getmclist().getLast().getVal();
 
                 if (lastInstr instanceof MCBranch) {
