@@ -14,12 +14,6 @@ import static backend.machinecodes.ArmAddition.ShiftType.*;
 import static backend.reg.MachineOperand.state.*;
 
 public class PeepholeOptimization implements Pass.MCPass {
-    private boolean openMoveRelated;
-
-    public PeepholeOptimization(boolean openMoveRelated) {
-        this.openMoveRelated = openMoveRelated;
-    }
-
     @Override
     public String getName() {
         return "Peephole";
@@ -835,15 +829,18 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 }
                             }
 
-                            if (this.openMoveRelated) {
-                                done &= movReplace.get();
-                                done &= movCmp.get();
-                                done &= movShift.get();
-                            }
                             done &= addSubLdrStr.get();
                             done &= addLdrShift.get();
                             done &= mulAddSub.get();
                             done &= subSub.get();
+
+                            if (instr instanceof MCMove && func.getArgMoves().contains(instr)) {
+                                continue;
+                            }
+
+                            done &= movReplace.get();
+                            done &= movCmp.get();
+                            done &= movShift.get();
                         }
                     }
                 }
