@@ -3,6 +3,7 @@ package pass.ir;
 import ir.Analysis.ArrayAliasAnalysis;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
+import ir.types.PointerType;
 import ir.values.Function;
 import ir.values.GlobalVariable;
 import ir.values.Value;
@@ -52,8 +53,12 @@ public class InterproceduralAnalysis implements IRPass {
                 continue;
               }
               Value pointer = ArrayAliasAnalysis.getArrayValue(addr);
-              if (pointer instanceof GlobalVariable) {
+              if (ArrayAliasAnalysis.isGlobal(pointer)) {
                 func.setUsedGlobalVariable(true);
+                GlobalVariable gv = (GlobalVariable) pointer;
+                if (((PointerType) gv.getType()).getContained().isIntegerTy()) {
+                  func.getLoadGVSet().add(gv);
+                }
               }
             }
             case Store -> {
@@ -66,6 +71,12 @@ public class InterproceduralAnalysis implements IRPass {
               Value pointer = ArrayAliasAnalysis.getArrayValue(addr);
               if (ArrayAliasAnalysis.isGlobal(pointer) || ArrayAliasAnalysis.isParam(pointer)) {
                 func.setHasSideEffect(true);
+                if (ArrayAliasAnalysis.isGlobal(pointer)) {
+                  GlobalVariable gv = (GlobalVariable) pointer;
+                  if (((PointerType) gv.getType()).getContained().isIntegerTy()) {
+                    func.getStoreGVSet().add(gv);
+                  }
+                }
               }
             }
           }
@@ -86,6 +97,7 @@ public class InterproceduralAnalysis implements IRPass {
 
   private void dfsSideEffect(Function func) {
     for (var callerFunc : func.getCallerList()) {
+      callerFunc.getStoreGVSet().addAll(func.getStoreGVSet());
       if (!callerFunc.isHasSideEffect()) {
         callerFunc.setHasSideEffect(true);
         dfsSideEffect(callerFunc);
@@ -95,6 +107,7 @@ public class InterproceduralAnalysis implements IRPass {
 
   private void dfsUsedGlobalVariable(Function func) {
     for (var callerFunc : func.getCallerList()) {
+      callerFunc.getLoadGVSet().addAll(func.getLoadGVSet());
       if (!callerFunc.isUsedGlobalVariable()) {
         callerFunc.setUsedGlobalVariable(true);
         dfsUsedGlobalVariable(callerFunc);

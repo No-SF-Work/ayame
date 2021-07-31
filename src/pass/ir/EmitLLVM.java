@@ -48,7 +48,31 @@ public class EmitLLVM implements IRPass {
         val.getLoopInfo().computeLoopInfo(val);
         sb.append("define dso_local ")
             .append(val)
-            .append("{\n");
+            .append("{");
+
+        if (val.getStoreGVSet().size() != 0) {
+          sb.append("\t; store gv: ");
+          val.getStoreGVSet().forEach(
+              globalVariable -> {
+                sb.append(globalVariable.getName()).append(", ");
+              }
+          );
+          sb.deleteCharAt(sb.length() - 1);
+          sb.deleteCharAt(sb.length() - 1);
+        }
+        if (val.getLoadGVSet().size() != 0) {
+          sb.append("\t; load gv: ");
+          val.getLoadGVSet().forEach(
+              globalVariable -> {
+                sb.append(globalVariable.getName()).append(", ");
+              }
+          );
+          sb.deleteCharAt(sb.length() - 1);
+          sb.deleteCharAt(sb.length() - 1);
+        }
+
+        sb.append("\n");
+
         val.getList_().forEach(
             bbNode -> {
               var bbval = bbNode.getVal();
