@@ -780,20 +780,25 @@ public class CodeGenManager {
         } else if ((abs & (abs - 1)) == 0) {
             int l = calcCTZ(abs);
             VirtualReg v=new VirtualReg();
-            mf.addVirtualReg(v);
-            MCMove mv1 = new MCMove(mb);
-            mv1.setDst(v);
-            mv1.setRhs(lhs);
-            mv1.setShift(ArmAddition.ShiftType.Asr, 31);
-            MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
-            add.setDst(v);
-            add.setLhs(lhs);
-            add.setRhs(v);
-            add.setShift(ArmAddition.ShiftType.Lsr, 32 - l);
+            if(!isO2){
+                mf.addVirtualReg(v);
+                MCMove mv1 = new MCMove(mb);
+                mv1.setDst(v);
+                mv1.setRhs(lhs);
+                mv1.setShift(ArmAddition.ShiftType.Asr, 31);
+                MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
+                add.setDst(v);
+                add.setLhs(lhs);
+                add.setRhs(v);
+                add.setShift(ArmAddition.ShiftType.Lsr, 32 - l);
+            }
             MCMove mv2 = new MCMove(mb);
             mv2.setDst(dst);
-            mv2.setRhs(v);
+            mv2.setRhs(lhs);
             mv2.setShift(ArmAddition.ShiftType.Asr, l);
+            if(!isO2){
+                mv2.setRhs(v);
+            }
 
         } else {
             long nc = ((long) 1 << 31) - (((long) 1 << 31) % abs) - 1;
@@ -909,30 +914,36 @@ public class CodeGenManager {
                     continue;
                 }
                 VirtualReg v=new VirtualReg();
-                mf.addVirtualReg(v);
-                if(abs!=2){
-                    MCMove mv1 = new MCMove(mb);
-                    mv1.setDst(v);
-                    mv1.setRhs(lhs);
-                    mv1.setShift(ArmAddition.ShiftType.Asr, 31);
+                if(!isO2){
+                    mf.addVirtualReg(v);
+                    if(abs!=2){
+                        MCMove mv1 = new MCMove(mb);
+                        mv1.setDst(v);
+                        mv1.setRhs(lhs);
+                        mv1.setShift(ArmAddition.ShiftType.Asr, 31);
+                    }
+                    MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
+                    add.setDst(v);
+                    add.setLhs(lhs);
+                    if(abs!=2){
+                        add.setRhs(v);
+                    }else{
+                        add.setRhs(lhs);
+                    }
+                    add.setShift(ArmAddition.ShiftType.Lsr, 32 - l);
                 }
-                MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
-                add.setDst(v);
-                add.setLhs(lhs);
-                if(abs!=2){
-                    add.setRhs(v);
-                }else{
-                    add.setRhs(lhs);
-                }
-                add.setShift(ArmAddition.ShiftType.Lsr, 32 - l);
                 MCBinary mc1=new MCBinary(MachineCode.TAG.Bic,mb);
                 mc1.setDst(dst);
-                mc1.setLhs(add.getDst());
-                mc1.setRhs(new MachineOperand(~(abs-1)));
-//                MCBinary mc2 = new MCBinary(MachineCode.TAG.Sub,mb);
-//                mc2.setDst(dst);
-//                mc2.setRhs(v);
-//                mc2.setLhs(lhs);
+                mc1.setLhs(lhs);//fixme:a mod b,如果a是负数那结果错误
+                mc1.setRhs(new MachineOperand(~(abs-1)));//fixme:a mod b，如果a是负数那结果是错误的
+                if(!isO2){
+                    mc1.setLhs(v);
+                    mc1.setRhs(new MachineOperand((abs-1)));
+                    MCBinary mc2 = new MCBinary(MachineCode.TAG.Sub,mb);
+                    mc2.setDst(dst);
+                    mc2.setRhs(dst);
+                    mc2.setLhs(lhs);
+                }
             }else if (ir instanceof BinaryInst && ((BinaryInst) ir).isMul()) {
                 boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                 boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
