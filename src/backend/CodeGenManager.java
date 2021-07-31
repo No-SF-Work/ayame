@@ -926,7 +926,7 @@ public class CodeGenManager {
                 }
                 add.setShift(ArmAddition.ShiftType.Lsr, 32 - l);
                 MCBinary mc1=new MCBinary(MachineCode.TAG.Bic,mb);
-                mc1.setDst(v);
+                mc1.setDst(dst);
                 mc1.setLhs(add.getDst());
                 mc1.setRhs(new MachineOperand(~(abs-1)));
 //                MCBinary mc2 = new MCBinary(MachineCode.TAG.Sub,mb);
