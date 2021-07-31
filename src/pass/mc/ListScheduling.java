@@ -58,7 +58,7 @@ public class ListScheduling implements Pass.MCPass {
             this.instr = instr;
             this.criticalLatency = 0;
             this.latency = switch (instr.getTag()) {
-                case Add, Sub, Rsb, And, Or -> instr.getShift().getType() == None ? 1 : 2;
+                case Add, Sub, Rsb, And, Or, Bic -> instr.getShift().getType() == None ? 1 : 2;
                 case Mul, LongMul -> 3;
                 case Div -> 8;
                 // binary
@@ -83,7 +83,7 @@ public class ListScheduling implements Pass.MCPass {
                 default -> throw new IllegalStateException("Unexpected value: " + instr.getTag());
             };
             this.needFU.add(switch (instr.getTag()) {
-                case Add, Sub, Rsb, And, Or -> instr.getShift().getType() == None ? A72FUType.Integer : A72FUType.Multiple;
+                case Add, Sub, Rsb, And, Or, Bic -> instr.getShift().getType() == None ? A72FUType.Integer : A72FUType.Multiple;
                 case Mul, Div, LongMul, FMA -> A72FUType.Multiple;
                 // binary
                 case Mv -> A72FUType.Integer;

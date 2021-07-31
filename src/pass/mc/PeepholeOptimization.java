@@ -595,8 +595,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 }
 
                                 var nxtNoShift = nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0;
-                                var nxtNoCond = nxtInstr.getCond() == Any;
-                                if (!(nxtNoShift && nxtNoCond)) {
+                                if (!nxtNoShift) {
                                     return true;
                                 }
 
@@ -607,6 +606,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 var binInstr = (MCBinary) nxtInstr;
 
                                 var fmaInstr = new MCFma();
+                                fmaInstr.setCond(binInstr.getCond());
                                 fmaInstr.setDst(binInstr.getDst());
                                 fmaInstr.setLhs(mulInstr.getLhs());
                                 fmaInstr.setRhs(mulInstr.getRhs());
@@ -729,12 +729,78 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 return true;
                             };
 
+                            Supplier<Boolean> movMov = () -> {
+                                // sub a, b, a
+                                // sub b, b, a
+                                if (!hasNoShift) {
+                                    return true;
+                                }
+
+                                if (instr.getTag() != MachineCode.TAG.Sub) {
+                                    return true;
+                                }
+                                var subInstr = (MCBinary) instr;
+
+                                var nxtInstrEntry = instrEntry.getNext();
+                                if (nxtInstrEntry == null) {
+                                    return true;
+                                }
+                                var nxtInstr = nxtInstrEntry.getVal();
+                                if (!Objects.equals(lastUser, nxtInstr)) {
+                                    return true;
+                                }
+
+                                if (nxtInstr.getTag() != MachineCode.TAG.Sub) {
+                                    return true;
+                                }
+                                var subNxtInstr = (MCBinary) nxtInstr;
+
+                                var nxtNoShift = nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0;
+                                if (!nxtNoShift) {
+                                    return true;
+                                }
+
+                                var a = subInstr.getDst();
+                                var b = subNxtInstr.getDst();
+                                var matched1 = subInstr.getDst().equals(a) && subInstr.getLhs().equals(b) && subInstr.getRhs().equals(a);
+                                var matched2 = subNxtInstr.getDst().equals(b) && subNxtInstr.getLhs().equals(b) && subNxtInstr.getRhs().equals(a);
+                                if (matched1 && matched2) {
+                                    var moveInstr = new MCMove();
+                                    moveInstr.setDst(b);
+                                    moveInstr.setRhs(a);
+                                    moveInstr.setCond(subNxtInstr.getCond());
+
+                                    var nxtInstrNode = nxtInstr.getNode();
+                                    nxtInstrNode.setVal(moveInstr);
+                                    moveInstr.setNode(nxtInstrNode);
+                                    moveInstr.mb = block;
+                                    moveInstr.mf = func;
+
+                                    // maintain data flow info
+                                    if (liveRangeInBlock.containsKey(nxtInstr)) {
+                                        liveRangeInBlock.put(moveInstr, liveRangeInBlock.get(nxtInstr));
+                                        liveRangeInBlock.remove(nxtInstr);
+                                    }
+
+                                    if (lastDefMap.containsValue(nxtInstr)) {
+                                        var key = moveInstr.getDef().get(0);
+                                        assert key != null;
+                                        lastDefMap.put(key, moveInstr);
+                                    }
+                                    instrEntryIter.remove();
+                                    return false;
+                                } else {
+                                    return true;
+                                }
+                            };
+
                             done &= addSubLdrStr.get();
                             done &= addLdrShift.get();
                             done &= mulAddSub.get();
                             done &= movReplace.get();
                             done &= movCmp.get();
                             done &= movShift.get();
+                            done &= movMov.get();
                         }
                     }
                 }
