@@ -25,6 +25,7 @@ public class MachineCode {
         Div,
         And,
         Or,
+        Bic,
         //binary
         LongMul,
         FMA,

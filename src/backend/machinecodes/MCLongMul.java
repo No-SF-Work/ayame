@@ -6,6 +6,7 @@ import backend.reg.VirtualReg;
 
 /**
  * LongMul
+ * Rd := (Rm * Rs)[63:32]
  */
 public class MCLongMul extends MachineCode{
 
