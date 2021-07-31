@@ -265,8 +265,7 @@ public class CodeGenManager {
             falsePair = new Pair<>(mb, mb.getFalseSucc());
             //处理True后继
             if (waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()) {
-
-                //如果true块只有一个前驱基本块，那么就可以把waiting中的copy插入true块的最前面
+                //如果waiting中的copy太少，那么可以条件执行
                 if (mb.getTrueSucc().getPred().size() == 1) {
                     Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
                     while (mcIte.hasNext()) {
@@ -274,24 +273,33 @@ public class CodeGenManager {
                         mci.insertBeforeNode(mb.getTrueSucc().getmclist().getEntry().getVal());
                     }
                 } else {
-                    //如果true块有多个前驱块，那么只能在当前块和true块之间新建一个块插入waiting中的copy
-                    MachineBlock newMB = new MachineBlock(mf);
-                    newMB.setLoopDepth(mb.getLoopDepth());
-                    Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
-                    while (mcIte.hasNext()) {
-                        MachineCode mci = mcIte.next();
-                        mci.setMb(newMB);
+                    //如果true块只有一个前驱基本块，那么就可以把waiting中的copy插入true块的最前面
+                    if(isO2 && waiting.get(truePair).size()<=4){
+                        MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
+                        for(MachineCode mci:waiting.get(truePair)){
+                            ((MCMove)mci).setCond(br.getCond());
+                            mci.insertBeforeNode(br);
+                        }
+                    }else{
+                        //如果true块有多个前驱块，那么只能在当前块和true块之间新建一个块插入waiting中的copy
+                        MachineBlock newMB = new MachineBlock(mf);
+                        newMB.setLoopDepth(mb.getLoopDepth());
+                        Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
+                        while (mcIte.hasNext()) {
+                            MachineCode mci = mcIte.next();
+                            mci.setMb(newMB);
+                        }
+                        MCJump jump = new MCJump(newMB);
+                        jump.setTarget(mb.getTrueSucc());
+                        assert (mb.getTrueSucc().getPred().contains(mb));
+                        mb.getTrueSucc().removePred(mb);
+                        mb.getTrueSucc().addPred(newMB);
+                        newMB.setTrueSucc(mb.getTrueSucc());
+                        newMB.addPred(mb);
+                        mb.setTrueSucc(newMB);
+                        MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
+                        br.setTarget(mb.getTrueSucc());
                     }
-                    MCJump jump = new MCJump(newMB);
-                    jump.setTarget(mb.getTrueSucc());
-                    assert (mb.getTrueSucc().getPred().contains(mb));
-                    mb.getTrueSucc().removePred(mb);
-                    mb.getTrueSucc().addPred(newMB);
-                    newMB.setTrueSucc(mb.getTrueSucc());
-                    newMB.addPred(mb);
-                    mb.setTrueSucc(newMB);
-                    MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
-                    br.setTarget(mb.getTrueSucc());
                 }
 
 
@@ -299,27 +307,31 @@ public class CodeGenManager {
 
             //如果此时false块依然在mblist中，那么说明两个块都在mblist中
             if (isVisit.containsKey(mb.getFalseSucc())) {
-                if (waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()) {
-                    MachineBlock newMB = new MachineBlock(mf);
-                    newMB.setLoopDepth(mb.getLoopDepth());
-                    Iterator<MachineCode> mcIte = waiting.get(falsePair).iterator();
-                    while (mcIte.hasNext()) {
-                        MachineCode mci = mcIte.next();
-                        mci.setMb(newMB);
-                    }
-                    MCJump jump = new MCJump(newMB);
-                    jump.setTarget(mb.getFalseSucc());
-                    assert (mb.getFalseSucc().getPred().contains(mb));
-                    mb.getFalseSucc().removePred(mb);
-                    mb.getFalseSucc().addPred(newMB);
-                    newMB.setTrueSucc(mb.getFalseSucc());
-                    newMB.addPred(mb);
-                    mb.setFalseSucc(newMB);
-                }
+//                if (waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()) {
+//                    MachineBlock newMB = new MachineBlock(mf);
+//                    newMB.setLoopDepth(mb.getLoopDepth());
+//                    Iterator<MachineCode> mcIte = waiting.get(falsePair).iterator();
+//                    while (mcIte.hasNext()) {
+//                        MachineCode mci = mcIte.next();
+//                        mci.setMb(newMB);
+//                    }
+//                    MCJump jump = new MCJump(newMB);
+//                    jump.setTarget(mb.getFalseSucc());
+//                    assert (mb.getFalseSucc().getPred().contains(mb));
+//                    mb.getFalseSucc().removePred(mb);
+//                    mb.getFalseSucc().addPred(newMB);
+//                    newMB.setTrueSucc(mb.getFalseSucc());
+//                    newMB.addPred(mb);
+//                    mb.setFalseSucc(newMB);
+//                }
                 //如果两个后继块都已经在mbList中，本基本块的最后一条指令跳转到True块，还缺一条跳转到False块的指令，加到最后
                 MCJump jump = new MCJump(mb);
                 jump.setTarget(mb.getFalseSucc());
-
+                if(waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()){
+                    for(MachineCode mci:waiting.get(truePair)){
+                        mci.insertBeforeNode(jump);
+                    }
+                }
             } else {
                 //如果false块没有被访问过，那么就放在当前块后面，当前块的br(跳向true块)指令后，
                 //false块之前可以插入waiting中的copy指令
@@ -359,6 +371,7 @@ public class CodeGenManager {
             assert (mv instanceof MCMove);
             assert (mv.getRhs().getState() == MachineOperand.state.imm);
             mv.setRhs(new MachineOperand(mv.getRhs().getImm() + mf.getStackSize() + 4 * regs));
+
         });
 
     }

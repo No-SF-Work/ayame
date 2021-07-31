@@ -44,6 +44,8 @@ public class MachineOperand {
         this.imme=imme;
     }
 
+
+
     @Override
     public boolean equals(Object obj){
         if(!(obj instanceof MachineOperand)){
