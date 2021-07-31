@@ -4,11 +4,12 @@ import ir.Analysis.LoopInfo;
 import ir.MyModule;
 import ir.types.FunctionType;
 import ir.types.Type;
-
-import java.util.ArrayList;
-import java.util.List;
 import util.IList;
 import util.IList.INode;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 
 /**
  * Function类,代表一个函数，拥有一串基本块，一串参数，一个SymbolTable //
@@ -62,6 +63,8 @@ public class Function extends Value {
     argList_ = new ArrayList<>();
     callerList = new ArrayList<>();
     calleeList = new ArrayList<>();
+    storeGVSet = new HashSet<>();
+    loadGVSet = new HashSet<>();
     buildArgs();
   }
 
@@ -73,6 +76,8 @@ public class Function extends Value {
     argList_ = new ArrayList<>();
     callerList = new ArrayList<>();
     calleeList = new ArrayList<>();
+    storeGVSet = new HashSet<>();
+    loadGVSet = new HashSet<>();
     buildArgs();
   }
 
@@ -84,6 +89,8 @@ public class Function extends Value {
     argList_ = new ArrayList<>();
     callerList = new ArrayList<>();
     calleeList = new ArrayList<>();
+    storeGVSet = new HashSet<>();
+    loadGVSet = new HashSet<>();
     buildArgs();
     this.isBuiltin_ = isBuiltin;
   }
@@ -148,6 +155,25 @@ public class Function extends Value {
   private LoopInfo loopInfo = new LoopInfo(); // 函数内的循环信息
   private ArrayList<Function> callerList; // 调用此函数的所有函数
   private ArrayList<Function> calleeList; // 此函数调用的所有函数
+
+  private HashSet<GlobalVariable> storeGVSet; // 修改的全局 i32 变量集合
+  private HashSet<GlobalVariable> loadGVSet; // 使用的全局 i32 变量集合
+
+  public HashSet<GlobalVariable> getStoreGVSet() {
+    return storeGVSet;
+  }
+
+  public void setStoreGVSet(HashSet<GlobalVariable> storeGVSet) {
+    this.storeGVSet = storeGVSet;
+  }
+
+  public HashSet<GlobalVariable> getLoadGVSet() {
+    return loadGVSet;
+  }
+
+  public void setLoadGVSet(HashSet<GlobalVariable> loadGVSet) {
+    this.loadGVSet = loadGVSet;
+  }
 
   public ArrayList<Function> getCallerList() {
     return callerList;
