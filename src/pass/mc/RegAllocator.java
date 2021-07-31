@@ -634,7 +634,11 @@ public class RegAllocator implements MCPass {
             }
         }
 
-        // todo: [to be refactor] fix allocator equality
+        simplifyRegType(manager);
+    }
+
+    private void simplifyRegType(CodeGenManager manager) {
+        // set isAllocated false
         for (var func : manager.getMachineFunctions()) {
             for (var blockEntry : func.getmbList()) {
                 var block = blockEntry.getVal();
