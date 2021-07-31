@@ -5,6 +5,7 @@ import ir.MyModule;
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
 import pass.ir.*;
+import pass.mc.IfToCond;
 import pass.mc.ListScheduling;
 import pass.mc.PeepholeOptimization;
 import pass.mc.RegAllocator;
@@ -42,6 +43,7 @@ public class PassManager {
         mcPasses.add(new PeepholeOptimization());
         mcPasses.add(new ListScheduling());
         mcPasses.add(new PeepholeOptimization());
+        mcPasses.add(new IfToCond());
     }
 
     public static PassManager getPassManager() {

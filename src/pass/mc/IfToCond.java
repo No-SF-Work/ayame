@@ -23,6 +23,7 @@ public class IfToCond implements Pass.MCPass {
 
                 if (lastInstr instanceof MCBranch) {
                     var brInstr = (MCBranch) lastInstr;
+
                     if (blockEntry.getNext() == null) {
                         continue;
                     }
@@ -34,13 +35,12 @@ public class IfToCond implements Pass.MCPass {
                         boolean canBeOptimized = true;
                         int cntInstr = 0;
 
-                        for (var instrEntry2 : nxtBlock.getmclist()) {
-                            var instr2 = instrEntry2.getVal();
-
+                        for (var instrEntry : nxtBlock.getmclist()) {
+                            var instr = instrEntry.getVal();
                             ++cntInstr;
 
-                            boolean correctInstr = instr2 instanceof MCLoad || instr2 instanceof MCStore || instr2 instanceof MCFma;
-                            boolean hasNoCond = instr2.getCond() == Any;
+                            boolean correctInstr = instr instanceof MCLoad || instr instanceof MCStore || instr instanceof MCFma;
+                            boolean hasNoCond = instr.getCond() == Any;
                             boolean tooMuchInstr = cntInstr > 4;
 
                             if (!(correctInstr && hasNoCond) || tooMuchInstr) {
@@ -73,6 +73,8 @@ public class IfToCond implements Pass.MCPass {
                                 } else if (instr2 instanceof MCFma) {
                                     MCFma fmaInstr = (MCFma) instr2;
                                     fmaInstr.setCond(getOppoCond.apply(fmaInstr.getCond()));
+                                } else {
+                                    assert false;
                                 }
                             }
                         }
