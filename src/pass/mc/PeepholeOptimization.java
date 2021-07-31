@@ -824,6 +824,13 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 }
                             };
 
+                            if (instr instanceof MCMove) {
+                                var imm = ((MCMove) instr).getRhs().getImm();
+                                if (!CodeGenManager.canEncodeImm(imm)) {
+                                    continue;
+                                }
+                            }
+
                             done &= addSubLdrStr.get();
                             done &= addLdrShift.get();
                             done &= mulAddSub.get();
