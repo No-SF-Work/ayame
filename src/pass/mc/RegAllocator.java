@@ -10,6 +10,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -526,6 +527,32 @@ public class RegAllocator implements MCPass {
                     done = true;
                 } else {
                     for (var n : spilledNodes) {
+                        Function<MachineOperand, VirtualReg> getGlobalAddr = vreg -> {
+                            if (!(vreg instanceof VirtualReg)) {
+                                return null;
+                            }
+
+                            for (var blockEntry : func.getmbList()) {
+                                var block = blockEntry.getVal();
+
+                                for (var instrEntry : block.getmclist()) {
+                                    var instr = instrEntry.getVal();
+
+                                    if (instr instanceof MCLoad) {
+                                        var addr = ((MCLoad) instr).getAddr();
+
+                                        if (addr instanceof VirtualReg && ((VirtualReg)addr).isGlobal() &&
+                                                instr.getDef().contains(vreg)) {
+                                            return (VirtualReg) addr;
+                                        }
+                                    }
+                                }
+                            }
+                            return null;
+                        };
+
+                        VirtualReg corGlobalAddr = getGlobalAddr.apply(n);
+
                         for (var blockEntry : func.getmbList()) {
                             var block = blockEntry.getVal();
                             var offset = func.getStackSize();
@@ -566,26 +593,42 @@ public class RegAllocator implements MCPass {
                             };
 
                             Runnable checkPoint = () -> {
-                                if (ref.firstUse != null) {
-                                    var loadInstr = new MCLoad();
-                                    loadInstr.insertBeforeNode(ref.firstUse);
+                                if (corGlobalAddr != null) {
+                                    if (ref.firstUse != null) {
+                                        var loadInstr = new MCLoad();
+                                        loadInstr.insertBeforeNode(ref.firstUse);
 
-                                    loadInstr.setAddr(func.getPhyReg("sp"));
-                                    loadInstr.setDst(ref.vreg);
-                                    loadInstr.setShift(ArmAddition.ShiftType.None, 0);
-                                    fixOffset.accept(loadInstr);
-                                    ref.firstUse = null;
-                                }
-
-                                if (ref.lastDef != null) {
-                                    var storeInstr = new MCStore();
-                                    storeInstr.insertAfterNode(ref.lastDef);
-
-                                    storeInstr.setAddr(func.getPhyReg("sp"));
-                                    storeInstr.setShift(ArmAddition.ShiftType.None, 0);
-                                    fixOffset.accept(storeInstr);
-                                    storeInstr.setData(ref.vreg);
+                                        loadInstr.setAddr(corGlobalAddr);
+                                        loadInstr.setDst(ref.vreg);
+                                        loadInstr.setShift(ArmAddition.ShiftType.None, 0);
+                                        loadInstr.setOffset(new MachineOperand(0));
+                                    }
                                     ref.lastDef = null;
+                                    ref.firstUse = null;
+                                } else {
+                                    if (ref.firstUse != null) {
+                                        var loadInstr = new MCLoad();
+                                        loadInstr.insertBeforeNode(ref.firstUse);
+
+                                        loadInstr.setAddr(func.getPhyReg("sp"));
+                                        loadInstr.setDst(ref.vreg);
+                                        loadInstr.setShift(ArmAddition.ShiftType.None, 0);
+                                        loadInstr.setOffset(new MachineOperand(0));
+                                        fixOffset.accept(loadInstr);
+                                        ref.firstUse = null;
+                                    }
+
+                                    if (ref.lastDef != null) {
+                                        var storeInstr = new MCStore();
+                                        storeInstr.insertAfterNode(ref.lastDef);
+
+                                        storeInstr.setAddr(func.getPhyReg("sp"));
+                                        storeInstr.setShift(ArmAddition.ShiftType.None, 0);
+                                        storeInstr.setOffset(new MachineOperand(0));
+                                        storeInstr.setData(ref.vreg);
+                                        fixOffset.accept(storeInstr);
+                                        ref.lastDef = null;
+                                    }
                                 }
 
                                 ref.vreg = null;
@@ -627,7 +670,10 @@ public class RegAllocator implements MCPass {
 
                             checkPoint.run();
                         }
-                        func.addStackSize(4);
+
+                        if (corGlobalAddr == null) {
+                            func.addStackSize(4);
+                        }
                     }
                     done = false;
                 }
