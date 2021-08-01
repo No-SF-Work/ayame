@@ -36,7 +36,7 @@ public class CodeGenManager {
     //ir moudle
     private static MyModule myModule;
 
-    private boolean isO2 = false;
+    private boolean isO2 = true;
 
     private boolean ifPrintIR = true;
 
@@ -45,7 +45,7 @@ public class CodeGenManager {
     private CodeGenManager() {
         logger = Mylogger.getLogger(CodeGenManager.class);
         this.isO2 = Config.getInstance().isO2;
-        this.ifPrintIR = !isO2;
+//        this.ifPrintIR = !isO2;
     }
 
     public void load(MyModule m) {
@@ -1448,7 +1448,7 @@ public class CodeGenManager {
     //其中a,d是一个数组首地址，b是一个二重指针，但是d和a其实是一个东西，把对d的使用转换成对a的使用
     HashMap<MemInst.LoadInst, MemInst.AllocaInst> loadToAlloca = new HashMap<>();
     HashMap<MemInst.AllocaInst, MachineOperand> allocaToStore = new HashMap<>();
-    HashMap<GlobalVariable, MCLoad> globalMap = new HashMap<>();
+    HashMap<Pair<GlobalVariable,MachineFunction>, MCLoad> globalMap = new HashMap<>();
     MachineFunction mf = null;
     Function f = null;
     HashMap<BasicBlock, MachineBlock> bMap = new HashMap<>();
@@ -1489,8 +1489,9 @@ public class CodeGenManager {
             }
         } else if (myModule.__globalVariables.contains(v)) {
             assert irMap.containsKey(v);
-            if (globalMap.containsKey(v)) {
-                return globalMap.get(v).getDst();
+            Pair<GlobalVariable,MachineFunction> p=new Pair<>((GlobalVariable) v,mb.getMF());
+            if (globalMap.containsKey(p)) {
+                return globalMap.get(p).getDst();
             } else {
                 MCLoad l = new MCLoad(mb);
                 l.setAddr(irMap.get(v));
@@ -1498,7 +1499,7 @@ public class CodeGenManager {
                 mf.addVirtualReg(r);
                 l.setDst(r);
                 l.setOffset(new MachineOperand(0));
-                globalMap.put((GlobalVariable) v,l);
+                globalMap.put(new Pair<>((GlobalVariable) v,mb.getMF()),l);
                 return l.getDst();
             }
 
