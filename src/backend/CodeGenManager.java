@@ -228,6 +228,15 @@ public class CodeGenManager {
         if (mb.getTrueSucc() == null && mb.getFalseSucc() == null) {
             return;
         }
+        /**合并基本块：如果当前块的后继只有一个块，那么将其与当前块合并；一直合并到满足如下几个条件之一为止：
+         * 后继数量大于一；没有后继；后继只有一个但是被访问过了；后继中指令数量大于4；总共的指令数量大于20；
+        */
+//        if(mb.getFalseSucc()==null){
+//            MachineBlock succ=mb.getTrueSucc();
+//            while(true){
+//                if(succ)
+//            }
+//        }
         //只有一个后继的情况
         Pair<MachineBlock, MachineBlock> truePair = new Pair<>(mb, mb.getTrueSucc());
         Pair<MachineBlock, MachineBlock> falsePair = new Pair<>(mb, mb.getFalseSucc());
@@ -879,7 +888,7 @@ public class CodeGenManager {
                 MachineOperand rhs;
                 boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                 //优化除常量
-                if (rhsIsConst) {
+                if (rhsIsConst && isO2) {
                     int imm = ((Constants.ConstantInt) ir.getOperands().get(1)).getVal();
                     if (imm == 1) {
                         irMap.put(ir, irMap.get(ir.getOperands().get(0)));
