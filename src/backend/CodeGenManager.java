@@ -38,7 +38,7 @@ public class CodeGenManager {
 
     private boolean isO2 = false;
 
-    private boolean ifPrintIR = false;
+    private boolean ifPrintIR = true;
 
     private static Logger logger;
 
@@ -668,9 +668,9 @@ public class CodeGenManager {
                                 phiSet.add(phiArg);
                                 comment += phiArg.getName() + " ";
                             }
-                            if (ifPrintIR) {
-                                MCComment m = new MCComment(comment, bMap.get(bb));
-                            }
+//                            if (ifPrintIR) {
+//                                MCComment m = new MCComment(comment, bMap.get(bb));
+//                            }
                         } else {
                             break;
                         }
@@ -762,12 +762,12 @@ public class CodeGenManager {
             };
             //处理phi指令
             logger.info("HandlePhi begin");
-            handlePhi.handlephi();
+
 
             HashMap<BasicBlock, Boolean> VisitMap = new HashMap<>();
             //处理其余指令
             bfsBB(f.getList_().getEntry().getVal());
-
+            handlePhi.handlephi();
             DFSSerialize s = () -> {
                 HashMap<MachineBlock, Boolean> isVisit = new HashMap<>();
                 dfsTrueSerial(bMap.get(f.getList_().getEntry().getVal()), mf, isVisit);
