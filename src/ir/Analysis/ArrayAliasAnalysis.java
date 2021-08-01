@@ -83,6 +83,12 @@ public class ArrayAliasAnalysis {
     return !isGlobal(array) && !isParam(array);
   }
 
+  public static boolean isGlobalArray(Value array) {
+    if (!isGlobal(array)) return false;
+    var gv = (GlobalVariable) array;
+    return !gv.isConst && ((PointerType) gv.getType()).getContained().isArrayTy();
+  }
+
   // TODO: 我裂了
   public static boolean aliasGlobalParam(Value globalArray, Value paramArray) {
     if (!isGlobal(globalArray) || !isParam(paramArray)) {
@@ -152,7 +158,7 @@ public class ArrayAliasAnalysis {
       return true;
     }
     for (Value arg : callinst.getOperands()) {
-      // FIXME: maybe bug here
+      // FIXME call 传数组还有 Load，等内联修复
       if (arg instanceof GEPInst) {
         GEPInst gepInst = (GEPInst) arg;
         if (alias(arr, getArrayValue(gepInst))) {
@@ -219,6 +225,10 @@ public class ArrayAliasAnalysis {
           }
         }
       }
+
+//      if (arrayDefUse.defs.isEmpty() && isGlobalArray(array)) {
+//        ((GlobalVariable)array).setConst();
+//      }
     }
 
     // insert mem-phi-instructions
