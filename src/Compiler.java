@@ -1,8 +1,8 @@
-import driver.CompilerDriverRaw;
+import driver.CompilerDriver;
 
 public class Compiler {
 
   public static void main(String[] args) {
-    CompilerDriverRaw.run(args);
+    CompilerDriver.run(args);
   }
 }
