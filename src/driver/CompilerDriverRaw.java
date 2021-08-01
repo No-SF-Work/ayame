@@ -1,26 +1,20 @@
 package driver;
 
+import backend.CodeGenManager;
 import frontend.SysYLexer;
 import frontend.SysYParser;
 import frontend.Visitor;
 import ir.MyModule;
-
 import java.io.File;
 import java.io.FileWriter;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.Arrays;
-import java.util.Iterator;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.FileHandler;
 import java.util.logging.Logger;
-
-import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import pass.PassManager;
-import backend.CodeGenManager;
-
-import java.io.IOException;
-
 import util.Mylogger;
 
 
@@ -85,6 +79,7 @@ public class CompilerDriverRaw {
                 pm.openedPasses_.add("gvngcm");
                 pm.openedPasses_.add("deadcodeemit");
                 pm.openedPasses_.add("funcinline");
+                pm.openedPasses_.add("markConstantArray");
                 pm.openedPasses_.add("ListScheduling");
                 pm.openedPasses_.add("Peephole");
                 pm.openedPasses_.add("IfToCond");
