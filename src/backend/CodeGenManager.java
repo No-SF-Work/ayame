@@ -1498,6 +1498,7 @@ public class CodeGenManager {
                 mf.addVirtualReg(r);
                 l.setDst(r);
                 l.setOffset(new MachineOperand(0));
+                globalMap.put((GlobalVariable) v,l);
                 return l.getDst();
             }
 
