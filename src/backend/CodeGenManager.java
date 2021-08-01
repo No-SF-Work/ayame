@@ -45,7 +45,7 @@ public class CodeGenManager {
     private CodeGenManager() {
         logger = Mylogger.getLogger(CodeGenManager.class);
         this.isO2 = Config.getInstance().isO2;
-//        this.ifPrintIR = !isO2;
+        this.ifPrintIR = !isO2;
     }
 
     public void load(MyModule m) {
@@ -317,29 +317,33 @@ public class CodeGenManager {
 
             //如果此时false块依然在mblist中，那么说明两个块都在mblist中
             if (isVisit.containsKey(mb.getFalseSucc())) {
-//                if (waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()) {
-//                    MachineBlock newMB = new MachineBlock(mf);
-//                    newMB.setLoopDepth(mb.getLoopDepth());
-//                    Iterator<MachineCode> mcIte = waiting.get(falsePair).iterator();
-//                    while (mcIte.hasNext()) {
-//                        MachineCode mci = mcIte.next();
-//                        mci.setMb(newMB);
-//                    }
-//                    MCJump jump = new MCJump(newMB);
-//                    jump.setTarget(mb.getFalseSucc());
-//                    assert (mb.getFalseSucc().getPred().contains(mb));
-//                    mb.getFalseSucc().removePred(mb);
-//                    mb.getFalseSucc().addPred(newMB);
-//                    newMB.setTrueSucc(mb.getFalseSucc());
-//                    newMB.addPred(mb);
-//                    mb.setFalseSucc(newMB);
-//                }
+                if(!isO2){
+                    if (waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()) {
+                        MachineBlock newMB = new MachineBlock(mf);
+                        newMB.setLoopDepth(mb.getLoopDepth());
+                        Iterator<MachineCode> mcIte = waiting.get(falsePair).iterator();
+                        while (mcIte.hasNext()) {
+                            MachineCode mci = mcIte.next();
+                            mci.setMb(newMB);
+                        }
+                        MCJump jump = new MCJump(newMB);
+                        jump.setTarget(mb.getFalseSucc());
+                        assert (mb.getFalseSucc().getPred().contains(mb));
+                        mb.getFalseSucc().removePred(mb);
+                        mb.getFalseSucc().addPred(newMB);
+                        newMB.setTrueSucc(mb.getFalseSucc());
+                        newMB.addPred(mb);
+                        mb.setFalseSucc(newMB);
+                    }
+                }
                 //如果两个后继块都已经在mbList中，本基本块的最后一条指令跳转到True块，还缺一条跳转到False块的指令，加到最后
                 MCJump jump = new MCJump(mb);
                 jump.setTarget(mb.getFalseSucc());
-                if(waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()){
-                    for(MachineCode mci:waiting.get(truePair)){
-                        mci.insertBeforeNode(jump);
+                if(isO2){
+                    if(waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()){
+                        for(MachineCode mci:waiting.get(truePair)){
+                            mci.insertBeforeNode(jump);
+                        }
                     }
                 }
             } else {
