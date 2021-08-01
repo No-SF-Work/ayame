@@ -45,6 +45,7 @@ public class CodeGenManager {
     private CodeGenManager() {
         logger = Mylogger.getLogger(CodeGenManager.class);
         this.isO2 = Config.getInstance().isO2;
+        this.ifPrintIR = !isO2;
     }
 
     public void load(MyModule m) {
