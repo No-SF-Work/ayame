@@ -64,18 +64,7 @@ public class ListScheduling implements Pass.MCPass {
                 // binary
                 case Compare -> 1;
                 case FMA -> 4;
-                case Mv -> {
-                    var cond = (instr.getCond() == Any ? 1 : 2);
-
-                    var rhs = ((MCMove) instr).getRhs();
-                    var isImm = rhs.getState() == MachineOperand.state.imm;
-                    var imm = rhs.getImm();
-                    var canEncode = !isImm ||
-                            CodeGenManager.canEncodeImm(~imm) ||
-                            CodeGenManager.canEncodeImm(imm) ||
-                            (imm >>> 16) == 0;
-                    yield cond * (canEncode ? 1 : 2);
-                }
+                case Mv -> 1;
                 case Branch, Jump, Return, Call -> 1;
                 case Load -> 4;
                 case Store -> 3;
