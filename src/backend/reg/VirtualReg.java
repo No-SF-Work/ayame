@@ -16,6 +16,49 @@ public class VirtualReg extends Reg {
         return isGlobal;
     }
 
+    private static final int inf=10;
+
+    public int getCost() {
+        return cost;
+    }
+
+
+    public MachineCode getDefMC() {
+        return defMC;
+    }
+
+    //该虚拟寄存器被多次定义
+    private boolean isMultDef=false;
+
+    //该指令不可被重新计算
+    private boolean isUnMoveable=false;
+
+    public void setDef(MachineCode defMC, int cost) {
+        assert(defMC!=null);
+        if(this.defMC==null && !isMultDef){
+            this.defMC = defMC;
+            this.cost=cost;
+        }else{
+            this.defMC=null;
+            this.isMultDef=true;
+            this.cost=inf;
+        }
+
+    }
+
+    public void setUnMoveable(){
+        this.isUnMoveable=true;
+        this.cost=inf;
+    }
+
+    //计算出此VirgralReg需要花费的周期数
+    private int cost=-1;
+
+    //定义
+    private MachineCode defMC=null;
+
+
+
     private boolean isGlobal=false;
 
     private String name;
