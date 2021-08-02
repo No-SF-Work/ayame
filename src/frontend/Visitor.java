@@ -130,7 +130,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private boolean globalInit_ = false;
   private boolean buildCall = false;
   private boolean expInRel = false;
-  private boolean isO2 = Config.getInstance().isO2;
 
   /**
    * program : compUnit ;
@@ -162,13 +161,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
     scope_.put("putint", f.buildFunction("putint", f.getFuncTy(voidType, params_int), true));
     scope_.put("putch", f.buildFunction("putch", f.getFuncTy(voidType, params_int), true));
     scope_.put("putarray",
-        f.buildFunction("putarray", f.getFuncTy(voidType, params_int_and_array), true));
+            f.buildFunction("putarray", f.getFuncTy(voidType, params_int_and_array), true));
     scope_.put("putf", f.buildFunction("putf", f.getFuncTy(voidType, params_putf), true));
     scope_.put("starttime",
-        f.buildFunction("_sysy_starttime", f.getFuncTy(voidType, params_empty), true));
+            f.buildFunction("_sysy_starttime", f.getFuncTy(voidType, params_empty), true));
     scope_
-        .put("stoptime",
-            f.buildFunction("_sysy_stoptime", f.getFuncTy(voidType, params_empty), true));
+            .put("stoptime",
+                    f.buildFunction("_sysy_stoptime", f.getFuncTy(voidType, params_empty), true));
 
     return super.visitProgram(ctx);
   }
@@ -217,9 +216,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
       for (int i = 0; i < curDimLength; i++) {
         //fix subDims and add to curDimArr
         curDimArr.add(
-            genConstArr(
-                new ArrayList<>(dims.subList(1, dims.size())),
-                new ArrayList<>(inits.subList(length * i, length * (i + 1)))));
+                genConstArr(
+                        new ArrayList<>(dims.subList(1, dims.size())),
+                        new ArrayList<>(inits.subList(length * i, length * (i + 1)))));
 
       }
     }
@@ -276,7 +275,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }
       } else {
         var allocatedArray = f
-            .buildAlloca(curBB_, arrty);//alloca will be move to first bb in cur functioon
+                .buildAlloca(curBB_, arrty);//alloca will be move to first bb in cur functioon
         scope_.put(ctx.IDENT().getText(), allocatedArray);
         if (ctx.constInitVal() != null) {
           allocatedArray.setInit();
@@ -337,7 +336,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             arrOfCurDim.add(CONST0);//长度不足一个ele的补0为一个ele长
           }
           constInitValContext.dimInfo_ = new ArrayList<>(
-              ctx.dimInfo_.subList(1, ctx.dimInfo_.size()));
+                  ctx.dimInfo_.subList(1, ctx.dimInfo_.size()));
           visit(constInitValContext);
           arrOfCurDim.addAll(tmpArr_);
         } else {
@@ -444,8 +443,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
             }}, curBB_);
           }
           f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
-                  Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, arr.size() * 4))),
-              curBB_);
+                          Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, arr.size() * 4))),
+                  curBB_);
           for (int i = 0; i < arr.size(); i++) {
             var t = arr.get(i);
 
@@ -475,8 +474,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
             add(CONST0);
           }}, curBB_);
           f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
-                  Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, size * 4))),
-              curBB_);
+                          Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, size * 4))),
+                  curBB_);
           /*for (var i = 1; i < dims.size(); i++) {
             pointer = f.buildGEP(pointer, new ArrayList<>() {{
               add(CONST0);
@@ -529,12 +528,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
         if (context.exp() == null) {
           var pos = arrOfCurDim.size();
           for (var i = 0;
-              i < (finalSizeOfEachEle - (pos % finalSizeOfEachEle)) % finalSizeOfEachEle;
-              i++) {
+               i < (finalSizeOfEachEle - (pos % finalSizeOfEachEle)) % finalSizeOfEachEle;
+               i++) {
             arrOfCurDim.add(CONST0);
           }
           context.dimInfo_ = new ArrayList<>(ctx.dimInfo_.
-              subList(1, ctx.dimInfo_.size()));
+                  subList(1, ctx.dimInfo_.size()));
           visit(context);
           arrOfCurDim.addAll(tmpArr_);
         } else {
@@ -604,8 +603,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
     visit(ctx.block());
     //todo checkeifright
     if (curBB_.getList().getLast() != null &&
-        (curBB_.getList().getLast().getVal().tag != TAG_.Br
-            && curBB_.getList().getLast().getVal().tag != TAG_.Ret)) {
+            (curBB_.getList().getLast().getVal().tag != TAG_.Br
+                    && curBB_.getList().getLast().getVal().tag != TAG_.Ret)) {
 
       if (curFunc_.getType().getRetType().isVoidTy()) {
         f.buildRet(curBB_);
@@ -747,7 +746,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     var trueBlock = f.buildBasicBlock(name + "_then", curFunc_);
     var nxtBlock = f.buildBasicBlock(name + "_nxtBlock", curFunc_);
     var falseBlock = ctx.ELSE_KW() == null ? nxtBlock :
-        f.buildBasicBlock(parentBB.getName() + "_else", curFunc_);
+            f.buildBasicBlock(parentBB.getName() + "_else", curFunc_);
     var ifIfEndWithRet = false;
     ctx.cond().falseblock = falseBlock;
     ctx.cond().trueblock = trueBlock;
@@ -827,6 +826,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       f.buildBr(whileCondEntryBlock, curBB_);
     }
 
+
     // [Backpatch] for break & continue
     backpatch(BreakInstructionMark, trueBlock, curBB_, nxtBlock, whileCondEntryBlock);
     backpatch(ContinueInstructionMark, trueBlock, curBB_, whileCondEntryBlock, whileCondEntryBlock);
@@ -836,7 +836,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   }
 
   private void backpatch(String key, BasicBlock startBlock, BasicBlock endBlock,
-      BasicBlock targetBlock, BasicBlock whileEntry) {
+                         BasicBlock targetBlock, BasicBlock whileEntry) {
     ValueCloner cloner = new ValueCloner() {
       @Override
       public Value findValue(Value value) {
@@ -878,16 +878,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
                 if (trueBlock.getName().equals("_CONTINUE")) {
                   toBeReplacedContinues.add((BrInst) curInstr);
                   trueBlock.node_.removeSelf();
-                } else {
-                  curInstr.CoSetOperand(0, targetBlock);
-                  trueBlock.node_.removeSelf();
                 }
               } else {
                 curInstr.CoSetOperand(0, targetBlock);
                 trueBlock.node_.removeSelf();
               }
             } else if (trueBlock != endBlock && !blockSet
-                .contains(trueBlock)) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
+                    .contains(trueBlock)) { // 遇到 endBlock 则不再加入，endBlock 是尾后 BB
               blockList.add(trueBlock);
               blockSet.add(trueBlock);
             }
@@ -900,9 +897,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
               if (Config.getInstance().isO2) {
                 if (trueBlock.getName().equals("_CONTINUE")) {
                   toBeReplacedContinues.add((BrInst) curInstr);
-                  trueBlock.node_.removeSelf();
-                } else {
-                  curInstr.CoSetOperand(1, targetBlock);
                   trueBlock.node_.removeSelf();
                 }
               } else {
@@ -922,9 +916,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
               if (Config.getInstance().isO2) {
                 if (falseBlock.getName().equals("_CONTINUE")) {
                   toBeReplacedContinues.add((BrInst) curInstr);
-                  falseBlock.node_.removeSelf();
-                } else {
-                  curInstr.CoSetOperand(2, targetBlock);
                   falseBlock.node_.removeSelf();
                 }
               } else {
@@ -1325,33 +1316,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }
         if (ctx.mulOp(i - 1).MOD() != null) {
           //x%y=x - (x/y)*y
-          if (rhs instanceof ConstantInt) {
-            var num = ((ConstantInt) rhs).getVal();
-            if (Math.abs(num) == 1) {
-              lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
-            } else if ((Math.abs(num) & (Math.abs(num) - 1)) == 0) {
-              lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
-            } else if (num < 0) {
-              var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
-              var b = f.buildBinary(TAG_.Mul, a,
-                  ConstantInt.newOne(i32Type_, Math.abs(((ConstantInt) rhs).getVal())), curBB_);
-              lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
-            } else if (num > 0) {
-              var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
-              var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
-              lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
-            }
-          } else {
-            var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
-            var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
-            lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
-          }
-          //lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
+          var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+          var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
+          lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
         }
-        tmp_ = lhs;
       }
-      return null;
+      tmp_ = lhs;
     }
+    return null;
   }
 
   /**
