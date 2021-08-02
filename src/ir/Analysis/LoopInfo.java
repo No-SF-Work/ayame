@@ -125,9 +125,18 @@ public class LoopInfo {
     populateLoopsDFS(entry);
 
     computeAllLoops();
+    computeAdditionalLoopInfo();
   }
 
   public void computeAdditionalLoopInfo() {
+    for (var loop: allLoops) {
+      loop.setIndVarInit(null);
+      loop.setIndVar(null);
+      loop.setLatchBlock(null);
+      loop.setStepInst(null);
+      loop.getExitingBlocks().clear();
+    }
+
     computeExitingBlocks();
     computeLatchBlock();
     computeIndVarInfo();
@@ -218,6 +227,7 @@ public class LoopInfo {
 
       var header = loop.getLoopHeader();
 
+      // stepInst
       for (var i = 0; i <= 1; i++) {
         var op = latchCmpInst.getOperands().get(i);
         if (op instanceof Instruction) {
@@ -225,13 +235,16 @@ public class LoopInfo {
           if (getLoopDepthForBB(opInst.getBB()) != getLoopDepthForBB(latchCmpInst.getBB())) {
             loop.setStepInst(
                 (Instruction) latchCmpInst.getOperands().get(1 - i));
+            loop.setIndVarEnd(latchCmpInst.getOperands().get(i));
           } else {
             loop.setStepInst(
                 (Instruction) latchCmpInst.getOperands().get(i));
+            loop.setIndVarEnd(latchCmpInst.getOperands().get(1 - i));
           }
         } else {
           loop.setStepInst(
               (Instruction) latchCmpInst.getOperands().get(1 - i));
+          loop.setIndVarEnd(latchCmpInst.getOperands().get(i));
         }
       }
 
