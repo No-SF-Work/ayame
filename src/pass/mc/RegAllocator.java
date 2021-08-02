@@ -614,6 +614,14 @@ public class RegAllocator implements MCPass {
 
                                         var prevInstr = ref.firstUse;
 
+                                        Consumer<MachineOperand> testReg = vreg -> {
+                                            if (!regMap.containsKey(vreg)) {
+                                                var newVReg = buildNewVReg.get();
+                                                regMap.put(vreg, newVReg);
+                                            }
+
+                                        };
+
                                         while (!toInsertMCList.isEmpty()) {
                                             var instr = toInsertMCList.pollFirst();
 
@@ -624,11 +632,7 @@ public class RegAllocator implements MCPass {
 
                                                 var dst = ((MCBinary) instr).getDst();
                                                 if (dst instanceof VirtualReg) {
-                                                    if (!regMap.containsKey(dst)) {
-                                                        var newVReg = buildNewVReg.get();
-                                                        regMap.put(dst, newVReg);
-                                                    }
-
+                                                    testReg.accept(dst);
                                                     binInstr.setDst(regMap.get(dst));
                                                 } else {
                                                     binInstr.setDst(dst);
@@ -636,11 +640,7 @@ public class RegAllocator implements MCPass {
 
                                                 var lhs = ((MCBinary) instr).getLhs();
                                                 if (lhs instanceof VirtualReg) {
-                                                    if (!regMap.containsKey(lhs)) {
-                                                        var newVReg = buildNewVReg.get();
-                                                        regMap.put(lhs, newVReg);
-                                                    }
-
+                                                    testReg.accept(lhs);
                                                     binInstr.setLhs(regMap.get(lhs));
                                                 } else {
                                                     binInstr.setLhs(lhs);
@@ -648,11 +648,7 @@ public class RegAllocator implements MCPass {
 
                                                 var rhs = ((MCBinary) instr).getRhs();
                                                 if (rhs instanceof VirtualReg) {
-                                                    if (!regMap.containsKey(rhs)) {
-                                                        var newVReg = buildNewVReg.get();
-                                                        regMap.put(rhs, newVReg);
-                                                    }
-
+                                                    testReg.accept(rhs);
                                                     binInstr.setRhs(regMap.get(rhs));
                                                 } else {
                                                     binInstr.setRhs(rhs);
@@ -667,11 +663,7 @@ public class RegAllocator implements MCPass {
 
                                                 var dst = ((MCMove) instr).getDst();
                                                 if (dst instanceof VirtualReg) {
-                                                    if (!regMap.containsKey(dst)) {
-                                                        var newVReg = buildNewVReg.get();
-                                                        regMap.put(dst, newVReg);
-                                                    }
-
+                                                    testReg.accept(dst);
                                                     movInstr.setDst(regMap.get(dst));
                                                 } else {
                                                     movInstr.setDst(dst);
@@ -679,11 +671,7 @@ public class RegAllocator implements MCPass {
 
                                                 var rhs = ((MCMove) instr).getRhs();
                                                 if (rhs instanceof VirtualReg) {
-                                                    if (!regMap.containsKey(rhs)) {
-                                                        var newVReg = buildNewVReg.get();
-                                                        regMap.put(rhs, newVReg);
-                                                    }
-
+                                                    testReg.accept(rhs);
                                                     movInstr.setRhs(regMap.get(rhs));
                                                 } else {
                                                     movInstr.setRhs(rhs);
@@ -698,11 +686,7 @@ public class RegAllocator implements MCPass {
 
                                                 var dst = ((MCLoad) instr).getDst();
                                                 if (dst instanceof VirtualReg) {
-                                                    if (!regMap.containsKey(dst)) {
-                                                        var newVReg = buildNewVReg.get();
-                                                        regMap.put(dst, newVReg);
-                                                    }
-
+                                                    testReg.accept(dst);
                                                     ldrInstr.setDst(regMap.get(dst));
                                                 } else {
                                                     ldrInstr.setDst(dst);
@@ -710,19 +694,12 @@ public class RegAllocator implements MCPass {
 
                                                 var addr = ((MCLoad) instr).getAddr();
                                                 assert addr instanceof VirtualReg && ((VirtualReg)addr).isGlobal();
-                                                if (!regMap.containsKey(addr)) {
-                                                    var newVReg = buildNewVReg.get();
-                                                    regMap.put(addr, newVReg);
-                                                }
+                                                testReg.accept(addr);
                                                 ldrInstr.setAddr(regMap.get(addr));
 
                                                 var off = ((MCLoad) instr).getOffset();
                                                 if (off instanceof VirtualReg) {
-                                                    if (!regMap.containsKey(off)) {
-                                                        var newVReg = buildNewVReg.get();
-                                                        regMap.put(off, newVReg);
-                                                    }
-
+                                                    testReg.accept(off);
                                                     ldrInstr.setOffset(regMap.get(off));
                                                 } else {
                                                     ldrInstr.setOffset(off);
