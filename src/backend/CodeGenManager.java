@@ -775,13 +775,13 @@ public class CodeGenManager {
                 }
             };
             //处理phi指令
+            handlePhi.handlephi();
             logger.info("HandlePhi begin");
 
 
             HashMap<BasicBlock, Boolean> VisitMap = new HashMap<>();
             //处理其余指令
             bfsBB(f.getList_().getEntry().getVal());
-            handlePhi.handlephi();
             DFSSerialize s = () -> {
                 HashMap<MachineBlock, Boolean> isVisit = new HashMap<>();
                 dfsTrueSerial(bMap.get(f.getList_().getEntry().getVal()), mf, isVisit);
