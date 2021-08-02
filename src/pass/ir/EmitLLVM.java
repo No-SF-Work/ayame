@@ -3,10 +3,11 @@ package pass.ir;
 import ir.MyModule;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction.TAG_;
-import java.io.FileWriter;
-import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.Mylogger;
+
+import java.io.FileWriter;
+import java.util.logging.Logger;
 
 public class EmitLLVM implements IRPass {
 
@@ -91,11 +92,18 @@ public class EmitLLVM implements IRPass {
                 });
                 sb.deleteCharAt(sb.length() - 1);
                 sb.append("]");
+
+                // === start print loop info ===
                 if (val.getLoopInfo().isLoopHeader(bbval)) {
                   sb.append(", is LOOP HEADER");
+                  if (val.getLoopInfo().getLoopForBB(bbval).isCanonical()) {
+                    sb.append(" (canonical loop)");
+                  }
                 }
                 sb.append(", loop depth: ");
                 sb.append(val.getLoopInfo().getLoopDepthForBB(bbval));
+                // === end print loop info ===
+
                 sb.append("\n");
               }
               bbval.getList().forEach(
@@ -114,7 +122,22 @@ public class EmitLLVM implements IRPass {
                           .append(inst.thirdName).append(" ").append(";----------- \n");
                     } else {
                       var instVal = instNode.getVal();
-                      sb.append(instVal.toString()).append("\n");
+                      sb.append(instVal.toString());
+
+                      // === start print loop info ===
+                      if (val.getLoopInfo().getLoopDepthForBB(bbval) != 0) {
+                        var loop = val.getLoopInfo().getLoopForBB(bbval);
+                        if (loop.getIndVar() == instVal) {
+                          sb.append(" ; is indvar");
+                        } else if (loop.getStepInst() == instVal) {
+                          sb.append(" ; is step inst");
+                        } else if (loop.getLatchCmpInst() == instVal) {
+                          sb.append(" ; is latchCmpInst");
+                        }
+                      }
+                      // === end print loop info ===
+
+                      sb.append("\n");
                     }
                   }
               );
