@@ -132,6 +132,7 @@ public class LoopInfo {
     for (var loop: allLoops) {
       loop.setIndVarInit(null);
       loop.setIndVar(null);
+      loop.setIndVarEnd(null);
       loop.setLatchBlock(null);
       loop.setStepInst(null);
       loop.getExitingBlocks().clear();
