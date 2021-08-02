@@ -125,6 +125,9 @@ public class LoopInfo {
     populateLoopsDFS(entry);
 
     computeAllLoops();
+  }
+
+  public void computeAdditionalLoopInfo() {
     computeExitingBlocks();
     computeLatchBlock();
     computeIndVarInfo();
@@ -208,10 +211,11 @@ public class LoopInfo {
   // FIXME: 只是 trivial 的做法，latchCmpInst 操作数中循环深度和 latchCmpInst 不同的就是 stepInst，按照这个来，精确一点的需要 SCEV
   private void computeIndVarInfo() {
     for (var loop : allLoops) {
-      if (!loop.isCanonical()) {
+      var latchCmpInst = loop.getLatchCmpInst();
+      if (!loop.isCanonical() || latchCmpInst == null) {
         continue;
       }
-      var latchCmpInst = loop.getLatchCmpInst();
+
       var header = loop.getLoopHeader();
 
       for (var i = 0; i <= 1; i++) {
