@@ -72,9 +72,9 @@ public class CompilerDriverRaw {
             pm.openedPasses_.add("bbPredSucc");
             pm.openedPasses_.add("Mem2reg");
             pm.openedPasses_.add("RegAlloc");
-            pm.openedPasses_.add("gvngcm");
-            pm.openedPasses_.add("interproceduralAnalysis");
             if (Config.getInstance().isO2) {
+                pm.openedPasses_.add("gvngcm");
+                pm.openedPasses_.add("interproceduralAnalysis");
                 pm.openedPasses_.add("branchOptimization");
                 pm.openedPasses_.add("emitllvm");
                 pm.openedPasses_.add("deadcodeemit");
