@@ -275,7 +275,7 @@ public class CodeGenManager {
             falsePair = new Pair<>(mb, mb.getFalseSucc());
             //处理True后继
             if (waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()) {
-                //如果waiting中的copy太少，那么可以条件执行
+                //如果true块只有一个前驱基本块，那么就可以把waiting中的copy插入true块的最前面
                 if (mb.getTrueSucc().getPred().size() == 1) {
                     Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
                     while (mcIte.hasNext()) {
@@ -283,7 +283,7 @@ public class CodeGenManager {
                         mci.insertBeforeNode(mb.getTrueSucc().getmclist().getEntry().getVal());
                     }
                 } else {
-                    //如果true块只有一个前驱基本块，那么就可以把waiting中的copy插入true块的最前面
+                    //如果waiting中的copy太少，那么可以条件执行
                     if(isO2 && waiting.get(truePair).size()<=4){
                         MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
                         for(MachineCode mci:waiting.get(truePair)){
@@ -341,7 +341,7 @@ public class CodeGenManager {
                 jump.setTarget(mb.getFalseSucc());
                 if(isO2){
                     if(waiting.containsKey(falsePair) && !waiting.get(falsePair).isEmpty()){
-                        for(MachineCode mci:waiting.get(truePair)){
+                        for(MachineCode mci:waiting.get(falsePair)){
                             mci.insertBeforeNode(jump);
                         }
                     }
@@ -1503,7 +1503,7 @@ public class CodeGenManager {
                 mf.addVirtualReg(r);
                 l.setDst(r);
                 l.setOffset(new MachineOperand(0));
-                globalMap.put(new Pair<>((GlobalVariable) v,mb.getMF()),l);
+//                globalMap.put(new Pair<>((GlobalVariable) v,mb.getMF()),l);
                 return l.getDst();
             }
 
