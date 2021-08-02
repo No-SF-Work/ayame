@@ -623,21 +623,113 @@ public class RegAllocator implements MCPass {
                                                 prevInstr = binInstr;
 
                                                 var dst = ((MCBinary) instr).getDst();
-                                                var lhs = ((MCBinary) instr).getLhs();
-                                                var rhs = ((MCBinary) instr).getRhs();
+                                                if (dst instanceof VirtualReg) {
+                                                    if (!regMap.containsKey(dst)) {
+                                                        var newVReg = buildNewVReg.get();
+                                                        regMap.put(dst, newVReg);
+                                                    }
 
-                                                if (regMap.containsKey(dst) {
-
+                                                    binInstr.setDst(regMap.get(dst));
+                                                } else {
+                                                    binInstr.setDst(dst);
                                                 }
+
+                                                var lhs = ((MCBinary) instr).getLhs();
+                                                if (lhs instanceof VirtualReg) {
+                                                    if (!regMap.containsKey(lhs)) {
+                                                        var newVReg = buildNewVReg.get();
+                                                        regMap.put(lhs, newVReg);
+                                                    }
+
+                                                    binInstr.setLhs(regMap.get(lhs));
+                                                } else {
+                                                    binInstr.setLhs(lhs);
+                                                }
+
+                                                var rhs = ((MCBinary) instr).getRhs();
+                                                if (rhs instanceof VirtualReg) {
+                                                    if (!regMap.containsKey(rhs)) {
+                                                        var newVReg = buildNewVReg.get();
+                                                        regMap.put(rhs, newVReg);
+                                                    }
+
+                                                    binInstr.setRhs(regMap.get(rhs));
+                                                } else {
+                                                    binInstr.setRhs(rhs);
+                                                }
+
                                                 binInstr.setShift(instr.getShift().getType(), instr.getShift().getImm());
                                                 binInstr.setCond(instr.getCond());
                                             } else if (instr instanceof MCMove) {
+                                                var movInstr = new MCMove();
+                                                movInstr.insertBeforeNode(prevInstr);
+                                                prevInstr = movInstr;
 
+                                                var dst = ((MCMove) instr).getDst();
+                                                if (dst instanceof VirtualReg) {
+                                                    if (!regMap.containsKey(dst)) {
+                                                        var newVReg = buildNewVReg.get();
+                                                        regMap.put(dst, newVReg);
+                                                    }
+
+                                                    movInstr.setDst(regMap.get(dst));
+                                                } else {
+                                                    movInstr.setDst(dst);
+                                                }
+
+                                                var rhs = ((MCMove) instr).getRhs();
+                                                if (rhs instanceof VirtualReg) {
+                                                    if (!regMap.containsKey(rhs)) {
+                                                        var newVReg = buildNewVReg.get();
+                                                        regMap.put(rhs, newVReg);
+                                                    }
+
+                                                    movInstr.setRhs(regMap.get(rhs));
+                                                } else {
+                                                    movInstr.setRhs(rhs);
+                                                }
+
+                                                movInstr.setShift(instr.getShift().getType(), instr.getShift().getImm());
+                                                movInstr.setCond(instr.getCond());
                                             } else if (instr instanceof MCLoad) {
+                                                var ldrInstr = new MCLoad();
+                                                ldrInstr.insertBeforeNode(prevInstr);
+                                                prevInstr = ldrInstr;
+
+                                                var dst = ((MCLoad) instr).getDst();
+                                                if (dst instanceof VirtualReg) {
+                                                    if (!regMap.containsKey(dst)) {
+                                                        var newVReg = buildNewVReg.get();
+                                                        regMap.put(dst, newVReg);
+                                                    }
+
+                                                    ldrInstr.setDst(regMap.get(dst));
+                                                } else {
+                                                    ldrInstr.setDst(dst);
+                                                }
+
                                                 var addr = ((MCLoad) instr).getAddr();
                                                 assert addr instanceof VirtualReg && ((VirtualReg)addr).isGlobal();
+                                                if (!regMap.containsKey(addr)) {
+                                                    var newVReg = buildNewVReg.get();
+                                                    regMap.put(addr, newVReg);
+                                                }
+                                                ldrInstr.setAddr(regMap.get(addr));
 
+                                                var off = ((MCLoad) instr).getOffset();
+                                                if (off instanceof VirtualReg) {
+                                                    if (!regMap.containsKey(off)) {
+                                                        var newVReg = buildNewVReg.get();
+                                                        regMap.put(off, newVReg);
+                                                    }
 
+                                                    ldrInstr.setOffset(regMap.get(off));
+                                                } else {
+                                                    ldrInstr.setOffset(off);
+                                                }
+
+                                                ldrInstr.setShift(instr.getShift().getType(), instr.getShift().getImm());
+                                                ldrInstr.setCond(instr.getCond());
                                             }
                                         }
 
