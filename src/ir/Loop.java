@@ -24,6 +24,8 @@ public class Loop {
   private Value indVarInit; // 索引初值
   private Value indVarEnd; // 索引边界（可不可以等于边界，自己判断）
   private Instruction stepInst; // 索引迭代指令
+  private Value step; // 迭代长度
+  private Integer tripCount; // 迭代次数（只考虑 init/end/step 都是常量的情况）
 
   public Loop(Loop parentLoop) {
     this.parentLoop = parentLoop;
@@ -87,6 +89,14 @@ public class Loop {
     return indVarEnd;
   }
 
+  public Value getStep() {
+    return step;
+  }
+
+  public Integer getTripCount() {
+    return tripCount;
+  }
+
   public void setLatchBlock(BasicBlock latchBlock) {
     this.latchBlock = latchBlock;
   }
@@ -102,9 +112,17 @@ public class Loop {
   public void setIndVarInit(Value indVarInit) {
     this.indVarInit = indVarInit;
   }
-  
+
   public void setIndVarEnd(Value indVarEnd) {
     this.indVarEnd = indVarEnd;
+  }
+
+  public void setStep(Value step) {
+    this.step = step;
+  }
+
+  public void setTripCount(Integer tripCount) {
+    this.tripCount = tripCount;
   }
 
 
@@ -143,6 +161,7 @@ public class Loop {
 
     return null;
   }
+
 
   public Integer getLoopDepth() {
     int depth = 0;
