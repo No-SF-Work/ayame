@@ -187,7 +187,6 @@ public class RegAllocator implements MCPass {
                 var selectStack = new Stack<MachineOperand>();
                 var worklistMoves = new HashSet<MCMove>();
                 var activeMoves = new HashSet<MCMove>();
-                var loopDepth = new HashMap<MachineOperand, Integer>();
                 // maybe removed
                 var coalescedMoves = new HashSet<MCMove>();
                 var constrainedMoves = new HashSet<MCMove>();
@@ -250,17 +249,6 @@ public class RegAllocator implements MCPass {
                             }
                             defs.stream().filter(MachineOperand::needsColor).forEach(live::add);
                             defs.stream().filter(MachineOperand::needsColor).forEach(d -> live.forEach(l -> addEdge.accept(l, d)));
-
-                            // heuristic
-                            defs.stream().filter(MachineOperand::needsColor).forEach(d -> {
-                                // loopDepth.putIfAbsent(d, 0);
-                                loopDepth.compute(d, (key, value) -> value == null ? 0 : value + block.getLoopDepth());
-                            });
-
-                            uses.stream().filter(MachineOperand::needsColor).forEach(u -> {
-                                // loopDepth.putIfAbsent(u, 0);
-                                loopDepth.compute(u, (key, value) -> value == null ? 0 : value + block.getLoopDepth());
-                            });
 
                             defs.stream().filter(MachineOperand::needsColor).forEach(live::remove);
 
@@ -431,13 +419,7 @@ public class RegAllocator implements MCPass {
 
                 Runnable selectSpill = () -> {
                     // heuristic
-                    // var m = spillWorklist.iterator().next();
-                    var m = spillWorklist.stream().max((l, r) -> {
-                        var value1 = degree.getOrDefault(l, 0).doubleValue() / Math.pow(1.4, loopDepth.getOrDefault(l, 0));
-                        var value2 = degree.getOrDefault(r, 0).doubleValue() / Math.pow(1.4, loopDepth.getOrDefault(r, 0));
-
-                        return Double.compare(value1, value2);
-                    }).get();
+                     var m = spillWorklist.iterator().next();
                     simplifyWorklist.add(m);
                     freezeMoves.accept(m);
                     spillWorklist.remove(m);
