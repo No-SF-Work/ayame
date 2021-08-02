@@ -615,11 +615,12 @@ public class RegAllocator implements MCPass {
                                         var prevInstr = ref.firstUse;
 
                                         Consumer<MachineOperand> testReg = vreg -> {
+                                            assert vreg instanceof VirtualReg;
                                             if (!regMap.containsKey(vreg)) {
                                                 var newVReg = buildNewVReg.get();
                                                 regMap.put(vreg, newVReg);
                                             }
-
+                                            toInsertMCList.addLast(((VirtualReg) vreg).getDefMC());
                                         };
 
                                         while (!toInsertMCList.isEmpty()) {
