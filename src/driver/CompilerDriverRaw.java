@@ -80,9 +80,9 @@ public class CompilerDriverRaw {
                 pm.openedPasses_.add("deadcodeemit");
                 pm.openedPasses_.add("funcinline");
                 pm.openedPasses_.add("markConstantArray");
-                pm.openedPasses_.add("ListScheduling");
-                pm.openedPasses_.add("Peephole");
-                pm.openedPasses_.add("IfToCond");
+//                pm.openedPasses_.add("ListScheduling");
+//                pm.openedPasses_.add("Peephole");
+//                pm.openedPasses_.add("IfToCond");
             }
 
             if (source.contains("register_alloc")) {
