@@ -12,6 +12,7 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
+import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst;
 import ir.values.instructions.TerminatorInst.CallInst;
@@ -159,6 +160,18 @@ public class FunctionInline implements IRPass {
       if (callerArg.getType().isI32()) {
         tmparg.COReplaceAllUseWith(callerArg);
       } else {
+        /* todo:
+            1.找到arg对应的alloca
+            2.找到这个alloca的load
+            3.把这些个load换成对callerarg的使用（不是RAU,load的是）
+        * */
+        tmparg.getUsesList().forEach(
+            use -> {
+              if (use.getUser() instanceof LoadInst){
+                use.getUser().COReplaceAllUseWith(callerArg);
+              }
+            }
+        );
         tmparg.COReplaceAllUseWith(callerArg);
       }
     }
