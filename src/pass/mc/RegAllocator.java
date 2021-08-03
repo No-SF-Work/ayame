@@ -549,6 +549,7 @@ public class RegAllocator implements MCPass {
                                 func.addVirtualReg(newVReg);
                                 if (vreg != null) {
                                     replaceVRegMap.put(vreg, newVReg);
+                                    newVReg.setDef(vreg.getDefMC(), vreg.getCost());
                                 }
                                 return newVReg;
                             };
@@ -587,9 +588,11 @@ public class RegAllocator implements MCPass {
                                         loadInstr.insertBeforeNode(ref.firstUse);
 
                                         loadInstr.setAddr(func.getPhyReg("sp"));
-                                        loadInstr.setDst(ref.vreg);
                                         loadInstr.setShift(ArmAddition.ShiftType.None, 0);
                                         loadInstr.setOffset(new MachineOperand(0));
+
+                                        loadInstr.setDst(ref.vreg);
+
                                         fixOffset.accept(loadInstr);
                                         ref.firstUse = null;
                                     }
