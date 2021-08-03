@@ -1023,7 +1023,7 @@ public class CodeGenManager {
                         mc.setDst(dst);
                         mc.setLhs(lhs);
                         mc.setRhs(lhs);
-                        mc.setShift(ArmAddition.ShiftType.Lsl, log);
+                        mc.setShift(ArmAddition.ShiftType.Lsl, log+1);
                         continue;
                     }
                     if (lhsIsConst) {
