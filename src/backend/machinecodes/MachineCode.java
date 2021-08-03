@@ -25,6 +25,7 @@ public class MachineCode {
         Div,
         And,
         Or,
+        Bic,
         //binary
         LongMul,
         FMA,
@@ -49,9 +50,9 @@ public class MachineCode {
 
     private TAG tag;
 
-    private MachineBlock mb;
+    public MachineBlock mb;
 
-    private MachineFunction mf;
+    public MachineFunction mf;
 
 
     private ArrayList<Reg> regDef = new ArrayList<>();
@@ -203,6 +204,10 @@ public class MachineCode {
         node = new IList.INode(this);
         node.setParent(mb.getmclist());
         mb.addAtEndMC(node);
+    }
+
+    public void setNode(IList.INode node) {
+        this.node = node;
     }
 
     public String condString(ArmAddition.CondType t) {

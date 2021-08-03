@@ -71,7 +71,7 @@ run_perf_1_pro:
     - bash scripts/send_to_pi_performance_pro.sh
   tags:
     - x86
-  timeout: 20m
+  timeout: 30m
 
 run_func_2:
   when: manual
@@ -119,5 +119,5 @@ run_perf_2_pro:
     - bash scripts/send_to_pi_performance2_pro.sh
   tags:
     - x86
-  timeout: 20m
+  timeout: 30m
 

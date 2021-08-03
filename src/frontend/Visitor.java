@@ -1,6 +1,7 @@
 package frontend;
 
 
+import driver.Config;
 import frontend.SysYParser.*;
 import ir.MyFactoryBuilder;
 import ir.types.FunctionType;
@@ -18,6 +19,7 @@ import ir.values.ValueCloner;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.RetInst;
+
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -128,6 +130,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
   private boolean globalInit_ = false;
   private boolean buildCall = false;
   private boolean expInRel = false;
+  private boolean isO2 = Config.getInstance().isO2;
 
   /**
    * program : compUnit ;
@@ -808,19 +811,21 @@ public class Visitor extends SysYBaseVisitor<Void> {
     changeBB(trueBlock);
     visitStmt(ctx.stmt());
     //保持几个Inst之间的use关系不乱，并且让使用了其他value的inst能够找到那些inst
-    whileCondEntryBlock.getList().forEach(instNode -> {
-      var val = instNode.getVal();
-      for (Value operand : val.getOperands()) {
-        if (cloner.findValue(operand) == null) {
-          cloner.put(operand, operand);
+    if (Config.getInstance().isO2) {
+      whileCondEntryBlock.getList().forEach(instNode -> {
+        var val = instNode.getVal();
+        for (Value operand : val.getOperands()) {
+          if (cloner.findValue(operand) == null) {
+            cloner.put(operand, operand);
+          }
         }
-      }
-      var copy = cloner.getInstCopy(val);
-      cloner.put(val, copy);
-      copy.node.insertAtEnd(curBB_.getList());
-    });
-
-    //f.buildBr(whileCondEntryBlock, curBB_);
+        var copy = cloner.getInstCopy(val);
+        cloner.put(val, copy);
+        copy.node.insertAtEnd(curBB_.getList());
+      });
+    } else {
+      f.buildBr(whileCondEntryBlock, curBB_);
+    }
 
     // [Backpatch] for break & continue
     backpatch(BreakInstructionMark, trueBlock, curBB_, nxtBlock, whileCondEntryBlock);
@@ -869,9 +874,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var trueBlock = (BasicBlock) curInstr.getOperands().get(0);
 
             if (trueBlock.getName().equals(key)) {
-              if (trueBlock.getName().equals("_CONTINUE")) {
-                toBeReplacedContinues.add((BrInst) curInstr);
-                trueBlock.node_.removeSelf();
+              if (Config.getInstance().isO2) {
+                if (trueBlock.getName().equals("_CONTINUE")) {
+                  toBeReplacedContinues.add((BrInst) curInstr);
+                  trueBlock.node_.removeSelf();
+                } else {
+                  curInstr.CoSetOperand(0, targetBlock);
+                  trueBlock.node_.removeSelf();
+                }
               } else {
                 curInstr.CoSetOperand(0, targetBlock);
                 trueBlock.node_.removeSelf();
@@ -887,9 +897,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
             assert curInstr.getOperands().get(1) instanceof BasicBlock;
             var trueBlock = (BasicBlock) curInstr.getOperands().get(1);
             if (trueBlock.getName().equals(key)) {
-              if (trueBlock.getName().equals("_CONTINUE")) {
-                toBeReplacedContinues.add((BrInst) curInstr);
-                trueBlock.node_.removeSelf();
+              if (Config.getInstance().isO2) {
+                if (trueBlock.getName().equals("_CONTINUE")) {
+                  toBeReplacedContinues.add((BrInst) curInstr);
+                  trueBlock.node_.removeSelf();
+                } else {
+                  curInstr.CoSetOperand(1, targetBlock);
+                  trueBlock.node_.removeSelf();
+                }
               } else {
                 curInstr.CoSetOperand(1, targetBlock);
                 trueBlock.node_.removeSelf();
@@ -904,9 +919,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
             var falseBlock = (BasicBlock) curInstr.getOperands().get(2);
 
             if (falseBlock.getName().equals(key)) {
-              if (falseBlock.getName().equals("_CONTINUE")) {
-                toBeReplacedContinues.add((BrInst) curInstr);
-                falseBlock.node_.removeSelf();
+              if (Config.getInstance().isO2) {
+                if (falseBlock.getName().equals("_CONTINUE")) {
+                  toBeReplacedContinues.add((BrInst) curInstr);
+                  falseBlock.node_.removeSelf();
+                } else {
+                  curInstr.CoSetOperand(2, targetBlock);
+                  falseBlock.node_.removeSelf();
+                }
               } else {
                 curInstr.CoSetOperand(2, targetBlock);
                 falseBlock.node_.removeSelf();
@@ -919,22 +939,22 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }
       }
     }
-    toBeReplacedContinues.forEach(br -> {
-      whileEntry.getList().forEach(instNode -> {
-        var val = instNode.getVal();
-        for (Value operand : val.getOperands()) {
-          if (cloner.findValue(operand) == null) {
-            cloner.put(operand, operand);
+    if (Config.getInstance().isO2) {
+      toBeReplacedContinues.forEach(br -> {
+        whileEntry.getList().forEach(instNode -> {
+          var val = instNode.getVal();
+          for (Value operand : val.getOperands()) {
+            if (cloner.findValue(operand) == null) {
+              cloner.put(operand, operand);
+            }
           }
-        }
-        var copy = cloner.getInstCopy(val);
-        cloner.put(val, copy);
-        copy.node.insertAtEnd(br.getBB().getList());
+          var copy = cloner.getInstCopy(val);
+          cloner.put(val, copy);
+          copy.node.insertAtEnd(br.getBB().getList());
+        });
+        br.node.removeSelf();
       });
-      br.node.removeSelf();
-    });
-
-
+    }
   }
 
   /**
@@ -1305,14 +1325,33 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }
         if (ctx.mulOp(i - 1).MOD() != null) {
           //x%y=x - (x/y)*y
-          var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
-          var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
-          lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
+          if (rhs instanceof ConstantInt) {
+            var num = ((ConstantInt) rhs).getVal();
+            if (Math.abs(num) == 1) {
+              lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
+            } else if ((Math.abs(num) & (Math.abs(num) - 1)) == 0) {
+              lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
+            } else if (num < 0) {
+              var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+              var b = f.buildBinary(TAG_.Mul, a,
+                  ConstantInt.newOne(i32Type_, Math.abs(((ConstantInt) rhs).getVal())), curBB_);
+              lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
+            } else if (num > 0) {
+              var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+              var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
+              lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
+            }
+          } else {
+            var a = f.buildBinary(TAG_.Div, lhs, rhs, curBB_);
+            var b = f.buildBinary(TAG_.Mul, a, rhs, curBB_);
+            lhs = f.buildBinary(TAG_.Sub, lhs, b, curBB_);
+          }
+          //lhs = f.buildBinary(TAG_.Mod, lhs, rhs, curBB_);
         }
+        tmp_ = lhs;
       }
-      tmp_ = lhs;
+      return null;
     }
-    return null;
   }
 
   /**

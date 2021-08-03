@@ -1,9 +1,11 @@
 package backend.machinecodes;
 
 import backend.CodeGenManager;
+import backend.reg.MachineOperand;
 import backend.reg.PhyReg;
 import backend.reg.Reg;
 import backend.reg.VirtualReg;
+import ir.values.instructions.Instruction;
 import util.IList;
 import util.IList.INode;
 

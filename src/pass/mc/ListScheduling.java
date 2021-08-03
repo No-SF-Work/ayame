@@ -58,13 +58,13 @@ public class ListScheduling implements Pass.MCPass {
             this.instr = instr;
             this.criticalLatency = 0;
             this.latency = switch (instr.getTag()) {
-                case Add, Sub, Rsb, And, Or -> instr.getShift().getType() == None ? 1 : 2;
+                case Add, Sub, Rsb, And, Or, Bic -> instr.getShift().getType() == None ? 1 : 2;
                 case Mul, LongMul -> 3;
                 case Div -> 8;
                 // binary
                 case Compare -> 1;
                 case FMA -> 4;
-                case Mv -> instr.getCond() == Any ? 1 : 2; // fixme movw & movt
+                case Mv -> 1;
                 case Branch, Jump, Return, Call -> 1;
                 case Load -> 4;
                 case Store -> 3;
@@ -72,10 +72,10 @@ public class ListScheduling implements Pass.MCPass {
                 default -> throw new IllegalStateException("Unexpected value: " + instr.getTag());
             };
             this.needFU.add(switch (instr.getTag()) {
-                case Add, Sub, Rsb, And, Or -> instr.getShift().getType() == None ? A72FUType.Integer : A72FUType.Multiple;
+                case Add, Sub, Rsb, And, Or, Bic -> instr.getShift().getType() == None ? A72FUType.Integer : A72FUType.Multiple;
                 case Mul, Div, LongMul, FMA -> A72FUType.Multiple;
                 // binary
-                case Mv -> A72FUType.Integer; // fixme movw & movt
+                case Mv -> A72FUType.Integer;
                 case Compare -> A72FUType.Integer;
                 case Branch, Jump, Return, Call -> A72FUType.Branch;
                 case Load -> A72FUType.Load;
@@ -94,7 +94,7 @@ public class ListScheduling implements Pass.MCPass {
         public int compareTo(Node rhs) {
             return rhs.criticalLatency == this.criticalLatency ?
                     rhs.latency - this.latency :
-                    rhs.criticalLatency - this.latency;
+                    rhs.criticalLatency - this.criticalLatency;
         }
     }
 
@@ -115,7 +115,6 @@ public class ListScheduling implements Pass.MCPass {
             var defs = instr.getMCDef();
             var uses = instr.getMCUse();
             assert defs.stream().allMatch(def -> def instanceof PhyReg);
-            assert uses.stream().allMatch(use -> use instanceof PhyReg);
             var curNode = new Node(instr);
             nodes.add(curNode);
 

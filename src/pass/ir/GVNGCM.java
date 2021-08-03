@@ -228,7 +228,8 @@ public class GVNGCM implements IRPass {
       ArrayAliasAnalysis.clear(func);
       cnt++;
     } while (bropt.runBranchOptimization(func));
-    System.out.println("Run GVNGCM for func " + func.getName() + " " + cnt + " times.");
+//    func.getLoopInfo().computeAdditionalLoopInfo();
+//    System.out.println("Run GVNGCM for func " + func.getName() + " " + cnt + " times.");
   }
 
   // TODO: use better algebraic simplification and unreachable code elimination

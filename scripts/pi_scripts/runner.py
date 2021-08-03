@@ -3,7 +3,7 @@ import subprocess
 from pretty_print import Print_C
 
 class Runner:
-    run_kases = 1
+    run_kases = 3
 
     def __init__(self, scheme, testcases):
         self.scheme = scheme
@@ -47,7 +47,7 @@ class Runner:
                 subprocess.run(f"echo".split(), stdout=myout_file, bufsize=1)
                 subprocess.run(f"echo {p.returncode}".split(), stdout=myout_file, bufsize=1)
             else:
-                p = subprocess.run(f"{bin}".split(), stdin=stdin_file, stdout=null_file, stderr=null_file, bufsize=1)
+                p = subprocess.run(f"{bin}".split(), stdin=stdin_file, stdout=null_file, stderr=log_file, bufsize=1)
             stdin_file.close()
         else:
             if kase == 0:
@@ -55,7 +55,7 @@ class Runner:
                 subprocess.run(f"echo".split(), stdout=myout_file, bufsize=1)
                 subprocess.run(f"echo {p.returncode}".split(), stdout=myout_file, bufsize=1)
             else:
-                p = subprocess.run(f"{bin}".split(), stdout=null_file, stderr=null_file, bufsize=1)
+                p = subprocess.run(f"{bin}".split(), stdout=null_file, stderr=log_file, bufsize=1)
 
         myout_file.close()
         log_file.close()

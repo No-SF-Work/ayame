@@ -29,7 +29,7 @@ public class MCReturn extends MachineCode{
                 mv.setRhs(v1);
                 mv.setDst(mf.getPhyReg("r5"));
                 res+=mv.toString();
-                res+=op+"\tsp,\tsp,\t"+mf.getPhyReg(5).getName()+"\n";
+                res+="\t"+op+"\tsp,\tsp,\t"+mf.getPhyReg(5).getName()+"\n";
                 mcNum+=2;
             }
 

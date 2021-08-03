@@ -4,7 +4,9 @@ import backend.CodeGenManager;
 import backend.reg.MachineOperand;
 
 /**
- * Fma smmla:Rn + (Rm * Rs)[63:32] or smmls:Rd := Rn – (Rm * Rs)[63:32]
+ * Fma
+ * smmla:Rn + (Rm * Rs)[63:32] or smmls:Rd := Rn – (Rm * Rs)[63:32]
+ * mla:Rn + (Rm * Rs)[31:0] or mls:Rd := Rn – (Rm * Rs)[31:0]
  * dst = acc +(-) lhs * rhs
  */
 public class MCFma extends MachineCode {
@@ -58,6 +60,10 @@ public class MCFma extends MachineCode {
 
     public MCFma(MachineBlock mb) {
         super(TAG.FMA, mb);
+    }
+
+    public MCFma(){
+        super(TAG.FMA);
     }
 
     public MachineOperand getDst() {

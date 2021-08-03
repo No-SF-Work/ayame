@@ -42,7 +42,10 @@ public class MCBinary extends MachineCode{
             op="sdiv";
         }else if(getTag()==TAG.Mul){
             op="mul";
-        }else{
+        }else if(getTag()==TAG.Bic){
+            op="bic";
+        }
+        else{
             assert(false);
         }
         String res="\t"+op+"\t"+dst.getName()+",\t"+lhs.getName()+",\t"+rhs.getName()+getShift().toString()+"\n";

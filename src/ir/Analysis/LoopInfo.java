@@ -3,6 +3,8 @@ package ir.Analysis;
 import ir.Loop;
 import ir.values.BasicBlock;
 import ir.values.Function;
+import ir.values.instructions.Instruction;
+import ir.values.instructions.MemInst.Phi;
 import util.IList.INode;
 
 import java.util.ArrayList;
@@ -15,14 +17,20 @@ public class LoopInfo {
   // map between basic block and the most inner loop
   private HashMap<BasicBlock, Loop> bbLoopMap;
   private ArrayList<Loop> topLevelLoops;
+  private ArrayList<Loop> allLoops;
 
   public LoopInfo() {
     this.bbLoopMap = new HashMap<>();
     this.topLevelLoops = new ArrayList<>();
+    this.allLoops = new ArrayList<>();
   }
 
   public ArrayList<Loop> getTopLevelLoops() {
     return topLevelLoops;
+  }
+
+  public ArrayList<Loop> getAllLoops() {
+    return allLoops;
   }
 
   public Loop getLoopForBB(BasicBlock bb) {
@@ -38,7 +46,11 @@ public class LoopInfo {
 
   public Boolean isLoopHeader(BasicBlock bb) {
     // Notice: use `==` instead of `equals` just for speed.
-    return bbLoopMap.get(bb).getHeader() == bb;
+    var loop = bbLoopMap.get(bb);
+    if (loop == null) {
+      return false;
+    }
+    return loop.getHeader() == bb;
   }
 
   // Algorithm: Testing flow graph reducibility, Tarjan
@@ -53,6 +65,7 @@ public class LoopInfo {
     ArrayList<BasicBlock> postOrder = new ArrayList<>();
     this.bbLoopMap = new HashMap<>();
     this.topLevelLoops = new ArrayList<>();
+    this.allLoops = new ArrayList<>();
 
     postOrderStack.push(entry);
     BasicBlock curr;
@@ -96,7 +109,7 @@ public class LoopInfo {
 
             subloop.setParentLoop(loop);
             for (BasicBlock subHeaderPred : subloop.getHeader().getPredecessor_()) {
-              Loop tmp  = bbLoopMap.get(subHeaderPred);
+              Loop tmp = bbLoopMap.get(subHeaderPred);
               if (tmp == null || !tmp.equals(subloop)) {
                 backEdgeTo.push(subHeaderPred);
               }
@@ -110,6 +123,14 @@ public class LoopInfo {
       bbNode.getVal().setDirty(false);
     }
     populateLoopsDFS(entry);
+
+    computeAllLoops();
+  }
+
+  public void computeAdditionalLoopInfo() {
+    computeExitingBlocks();
+    computeLatchBlock();
+    computeIndVarInfo();
   }
 
   public void populateLoopsDFS(BasicBlock bb) {
@@ -145,4 +166,95 @@ public class LoopInfo {
     }
   }
 
+  private void computeAllLoops() {
+    Stack<Loop> loopStack = new Stack<>();
+    allLoops.addAll(topLevelLoops);
+    loopStack.addAll(topLevelLoops);
+    while (!loopStack.isEmpty()) {
+      var loop = loopStack.pop();
+      if (!loop.getSubLoops().isEmpty()) {
+        allLoops.addAll(loop.getSubLoops());
+        loopStack.addAll(loop.getSubLoops());
+      }
+    }
+  }
+
+  private void computeExitingBlocks() {
+    for (var loop : allLoops) {
+      for (var bb : loop.getBlocks()) {
+        var inst = bb.getList().getLast().getVal();
+        if (inst.tag == Instruction.TAG_.Br && inst.getNumOP() == 3) {
+          var bb1 = inst.getOperands().get(1);
+          var bb2 = inst.getOperands().get(2);
+          if (!loop.getBlocks().contains(bb1) || !loop.getBlocks().contains(bb2)) {
+            loop.getExitingBlocks().add(bb);
+          }
+        }
+      }
+    }
+  }
+
+  private void computeLatchBlock() {
+    for (var loop : allLoops) {
+      if (!loop.isCanonical()) {
+        continue;
+      }
+      for (var predbb : loop.getLoopHeader().getPredecessor_()) {
+        if (loop.getBlocks().contains(predbb)) {
+          loop.setLatchBlock(predbb);
+        }
+      }
+    }
+  }
+
+  // 计算索引 phi、索引初值、索引迭代指令
+  // FIXME: 只是 trivial 的做法，latchCmpInst 操作数中循环深度和 latchCmpInst 不同的就是 stepInst，按照这个来，精确一点的需要 SCEV
+  private void computeIndVarInfo() {
+    for (var loop : allLoops) {
+      var latchCmpInst = loop.getLatchCmpInst();
+      if (!loop.isCanonical() || latchCmpInst == null) {
+        continue;
+      }
+
+      var header = loop.getLoopHeader();
+
+      for (var i = 0; i <= 1; i++) {
+        var op = latchCmpInst.getOperands().get(i);
+        if (op instanceof Instruction) {
+          Instruction opInst = (Instruction) op;
+          if (getLoopDepthForBB(opInst.getBB()) != getLoopDepthForBB(latchCmpInst.getBB())) {
+            loop.setStepInst(
+                (Instruction) latchCmpInst.getOperands().get(1 - i));
+          } else {
+            loop.setStepInst(
+                (Instruction) latchCmpInst.getOperands().get(i));
+          }
+        } else {
+          loop.setStepInst(
+              (Instruction) latchCmpInst.getOperands().get(1 - i));
+        }
+      }
+
+      if (loop.getStepInst() == null) {
+        return;
+      }
+
+      var stepInst = loop.getStepInst();
+      for (var instNode : header.getList()) {
+        var inst = instNode.getVal();
+        if (!(inst instanceof Phi)) {
+          break;
+        }
+
+        var phi = (Phi) inst;
+        // indVar and indVarInit
+        if (phi.getOperands().contains(stepInst)) {
+          loop.setIndVar(phi);
+          var stepIndex = phi.getOperands().indexOf(stepInst);
+          loop.setIndVarInit(phi.getOperands().get(1 - stepIndex));
+          break;
+        }
+      }
+    }
+  }
 }

@@ -1,5 +1,7 @@
 package backend.reg;
 
+import java.util.Objects;
+
 public class MachineOperand {
     public static MachineOperand zeroImm = new MachineOperand(0);
 
@@ -40,5 +42,27 @@ public class MachineOperand {
     public MachineOperand(int imme){
         this.s=state.imm;
         this.imme=imme;
+    }
+
+
+
+    @Override
+    public boolean equals(Object obj){
+        if(!(obj instanceof MachineOperand)){
+            return false;
+        }
+        if(((MachineOperand) obj).getState()!=this.getState()){
+            return false;
+        }
+        if(this.getState()==state.imm){
+            return this.imme== ((MachineOperand) obj).getImm();
+        }else {
+            return this.equals(obj);
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(imme, s);
     }
 }
