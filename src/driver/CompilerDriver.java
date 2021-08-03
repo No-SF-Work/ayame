@@ -5,26 +5,21 @@ import frontend.SysYLexer;
 import frontend.SysYParser;
 import frontend.Visitor;
 import ir.MyModule;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.logging.Logger;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.helper.HelpScreenException;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.antlr.v4.runtime.BailErrorStrategy;
-import org.antlr.v4.runtime.BaseErrorListener;
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ParseTree;
 import pass.PassManager;
 import util.Mylogger;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.logging.Logger;
 
 
 /**
@@ -109,6 +104,8 @@ public class CompilerDriver {
                 pm.openedPasses_.add("ListScheduling");
                 pm.openedPasses_.add("Peephole");
                 pm.openedPasses_.add("IfToCond");
+                pm.openedPasses_.add("loopInfoFullAnalysis");
+                pm.openedPasses_.add("loopUnroll");
             }
 
 

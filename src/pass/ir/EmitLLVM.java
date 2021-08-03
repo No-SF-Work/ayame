@@ -46,7 +46,6 @@ public class EmitLLVM implements IRPass {
     m.__functions.forEach(func -> {
       var val = func.getVal();
       if (!val.isBuiltin_()) {
-        val.getLoopInfo().computeLoopInfo(val);
         sb.append("define dso_local ")
             .append(val)
             .append("{");

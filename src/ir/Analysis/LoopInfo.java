@@ -128,7 +128,6 @@ public class LoopInfo {
     populateLoopsDFS(entry);
 
     computeAllLoops();
-    computeAdditionalLoopInfo();
   }
 
   public void computeAdditionalLoopInfo() {
@@ -232,6 +231,7 @@ public class LoopInfo {
 
       var header = loop.getLoopHeader();
 
+      // FIXME: 找 stepInst 有 bug，如 while (i + 1 < 100) { i = i + 1; }，找到的 stepInst 是 { i + 1 < 100 } 中的 i + 1
       // stepInst
       for (var i = 0; i <= 1; i++) {
         var op = latchCmpInst.getOperands().get(i);
@@ -276,6 +276,9 @@ public class LoopInfo {
 
       // step
       var indVarIndex = stepInst.getOperands().indexOf(loop.getIndVar());
+      if (indVarIndex == -1) {
+        return;
+      }
       loop.setStep(stepInst.getOperands().get(1 - indVarIndex));
 
       // tripCount
@@ -328,5 +331,31 @@ public class LoopInfo {
 
   private int ceilDiv(int a, int b) {
     return (int) Math.ceil((double) a / b);
+  }
+
+  public HashMap<BasicBlock, Loop> getBbLoopMap() {
+    return bbLoopMap;
+  }
+
+  public void addBBToLoop(BasicBlock bb, Loop loop) {
+    this.bbLoopMap.put(bb, loop);
+    loop.addBlock(bb);
+  }
+
+  public void removeBBFromAllLoops(BasicBlock bb) {
+    var loop = getLoopForBB(bb);
+    while (loop != null) {
+      loop.removeBlock(bb);
+      loop = loop.getParentLoop();
+    }
+    this.bbLoopMap.remove(bb);
+  }
+
+  public void removeTopLevelLoop(Loop loop) {
+    this.topLevelLoops.remove(loop);
+  }
+
+  public void addTopLevelLoop(Loop loop) {
+    this.topLevelLoops.add(loop);
   }
 }

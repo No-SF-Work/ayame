@@ -178,4 +178,27 @@ public class Loop {
   public boolean isCanonical() {
     return loopHeader.getPredecessor_().size() == 2 && exitingBlocks.size() == 1;
   }
+
+  public void addBlock(BasicBlock bb) {
+    var loop = this;
+    while (loop != null) {
+      loop.getBlocks().add(bb);
+      loop = loop.getParentLoop();
+    }
+  }
+
+  public void removeBlock(BasicBlock bb) {
+    this.blocks.remove(bb);
+  }
+
+
+  public void addSubLoop(Loop subLoop) {
+    this.subLoops.add(subLoop);
+    subLoop.setParentLoop(this);
+  }
+
+  public void removeSubLoop(Loop subLoop) {
+    this.subLoops.remove(subLoop);
+    subLoop.setParentLoop(null);
+  }
 }
