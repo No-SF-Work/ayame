@@ -45,7 +45,7 @@ public class CodeGenManager {
     private CodeGenManager() {
         logger = Mylogger.getLogger(CodeGenManager.class);
         this.isO2 = Config.getInstance().isO2;
-        this.ifPrintIR = !isO2;
+        this.ifPrintIR = true;
     }
 
     public void load(MyModule m) {
@@ -477,6 +477,27 @@ public class CodeGenManager {
                     INode<MachineCode, MachineBlock> mcNode = mcIte.next();
                     MachineCode mc = mcNode.getVal();
                     String str = mc.toString();
+                    if(mc instanceof MCMove ||mc instanceof MCLoad||mc instanceof MCBinary){
+                        if(mc instanceof MCMove){
+                            str+=((MCMove)mc).getDst().getName();
+                            if(((MCMove)mc).getDst() instanceof VirtualReg){
+                                str+=" cost:"+((VirtualReg)((MCMove)mc).getDst()).getCost();
+                            }
+                            str+="\n";
+                        }else if(mc instanceof MCLoad){
+                            str+=((MCLoad)mc).getDst().getName();
+                            if(((MCLoad)mc).getDst() instanceof VirtualReg){
+                                str+=" cost:"+((VirtualReg)((MCLoad)mc).getDst()).getCost();
+                            }
+                            str+="\n";
+                        }else{
+                            str+=((MCBinary)mc).getDst().getName();
+                            if(((MCBinary)mc).getDst() instanceof VirtualReg){
+                                str+=" cost:"+((VirtualReg)((MCBinary)mc).getDst()).getCost();
+                            }
+                            str+="\n";
+                        }
+                    }
                     arm += str;
                     strOffset += str.length();
                 }
@@ -738,6 +759,7 @@ public class CodeGenManager {
                                     MCMove mv = new MCMove();
                                     mv.setRhs(phiParam);
                                     mv.setDst(phiTarget);
+                                    mv.calcCost();
                                     list.add(0, mv);
                                     phiParam = phiTarget;
                                     edges.remove(phiTarget);
@@ -752,6 +774,7 @@ public class CodeGenManager {
                                     MachineOperand r = stack.pop();
                                     mv.setRhs(r);
                                     mv.setDst(lastr);
+                                    mv.calcCost();
                                     lastr = r;
                                     list.add(mv);
                                     mv = new MCMove();
@@ -760,6 +783,7 @@ public class CodeGenManager {
                                 }
                                 mv.setRhs(temp);
                                 mv.setDst(lastr);
+                                mv.calcCost();
                                 list.add(mv);//TODO
                                 MachineOperand phiParam = now;
                                 while (!stack.isEmpty()) {
@@ -768,6 +792,7 @@ public class CodeGenManager {
                                     MCMove mv1 = new MCMove();
                                     mv1.setRhs(phiParam);
                                     mv1.setDst(phiTarget);
+                                    mv1.calcCost();
                                     list.add(0, mv1);
                                     phiParam = phiTarget;
                                     edges.remove(phiTarget);
@@ -789,7 +814,25 @@ public class CodeGenManager {
                 HashMap<MachineBlock, Boolean> isVisit = new HashMap<>();
                 dfsTrueSerial(bMap.get(f.getList_().getEntry().getVal()), mf, isVisit);
             };
-
+            Iterator<INode<BasicBlock,Function>> fi=f.getList_().iterator();
+            while(fi.hasNext()){
+                INode<BasicBlock,Function> bNode=fi.next();
+                MachineBlock mmb=bMap.get(bNode.getVal());
+                Iterator<INode<MachineCode,MachineBlock>> bi=mmb.getmclist().iterator();
+                while(bi.hasNext()){
+                    INode<MachineCode,MachineBlock> inode=bi.next();
+                    MachineCode c=inode.getVal();
+                    if(c instanceof MCBinary){
+                        ((MCBinary)c).calcCost();
+                    }else if(c instanceof MCLoad){
+                        ((MCLoad)c).calcCost();
+                    }else if(c instanceof MCLongMul){
+                        ((MCLongMul)c).calcCost();
+                    }else if(c instanceof MCMove){
+                        ((MCMove)c).calcCost();
+                    }
+                }
+            }
             s.dfsSerialize();
 
         }
@@ -1005,22 +1048,25 @@ public class CodeGenManager {
                     int log = calcCTZ(abs);
                     MachineOperand dst = analyzeValue(ir, mb, true);
                     MCBinary rsb=new MCBinary(MachineCode.TAG.Rsb);
-                    rsb.setLhs(dst);
                     rsb.setRhs(new MachineOperand(0));
-                    rsb.setDst(dst);
                     VirtualReg v1 = new VirtualReg();
                     //乘以2的幂
                     if ((abs & (abs - 1)) == 0) {
                         MCMove mc = new MCMove(mb);
                         if (abs == 0) {
                             mc.setRhs(new MachineOperand(0));
+                            mc.setDst(dst);
                             continue;
                         }
                         mc.setRhs(lhs);
                         mc.setShift(ArmAddition.ShiftType.Lsl, log);
-                        mc.setDst(dst);
                         if(imm<0){
+                            mc.setDst(v1);
                             rsb.setMb(mb);
+                            rsb.setLhs(v1);
+                            rsb.setDst(dst);
+                        }else{
+                            mc.setDst(dst);
                         }
                         continue;
                     } else if (((abs - 2) & (abs - 1)) == 0) {//乘以（2的幂+1）
@@ -1028,9 +1074,13 @@ public class CodeGenManager {
                         add.setLhs(lhs);
                         add.setRhs(lhs);
                         add.setShift(ArmAddition.ShiftType.Lsl, log);
-                        add.setDst(dst);
                         if(imm<0){
+                            add.setDst(v1);
                             rsb.setMb(mb);
+                            rsb.setLhs(v1);
+                            rsb.setDst(dst);
+                        }else{
+                            add.setDst(dst);
                         }
                         continue;
                     }else if (((abs ) & (abs + 1)) == 0) {//乘以（2的幂-1）

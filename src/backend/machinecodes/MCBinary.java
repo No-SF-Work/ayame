@@ -19,30 +19,35 @@ public class MCBinary extends MachineCode{
     public void setDst(MachineOperand dst) {
         super.dealReg(this.dst,dst,false);
         this.dst = dst;
-        if(dst instanceof VirtualReg){
-            assert(this.lhs!=null);
-            assert(this.rhs!=null);
-            int cost = 0;
-            if(lhs instanceof PhyReg){
-                if(((PhyReg)lhs).getName()!="sp"){
-                    ((VirtualReg)dst).setUnMoveable();
-                }
-            }else {
-                cost+=((VirtualReg)lhs).getCost();
-            }
-            if(rhs.getState()== MachineOperand.state.imm){
+    }
 
-            }else if(rhs instanceof PhyReg){
+    public void calcCost(){
+        assert(dst!=null);
+        assert(this.lhs!=null);
+        assert(this.rhs!=null);
+        int cost = 0;
+        if(dst instanceof PhyReg){
+            return;
+        }
+        if(lhs instanceof PhyReg){
+            if(((PhyReg)lhs).getName()!="sp"){
                 ((VirtualReg)dst).setUnMoveable();
             }
-            else{
-                cost+=((VirtualReg)rhs).getCost();
-            }
-            if(!getShift().isNone()){
-                cost+=1;
-            }
-            ((VirtualReg)dst).setDef(this,cost+1);
+        }else {
+            cost+=((VirtualReg)lhs).getCost();
         }
+        if(rhs.getState()== MachineOperand.state.imm){
+
+        }else if(rhs instanceof PhyReg){
+            ((VirtualReg)dst).setUnMoveable();
+        }
+        else if(lhs !=rhs){
+            cost+=((VirtualReg)rhs).getCost();
+        }
+        if(!getShift().isNone()){
+            cost+=1;
+        }
+        ((VirtualReg)dst).setDef(this,cost+1);
     }
 
     public MachineOperand getLhs() {
