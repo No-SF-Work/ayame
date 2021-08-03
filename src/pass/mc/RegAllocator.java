@@ -3,6 +3,7 @@ package pass.mc;
 import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.*;
+import driver.Config;
 import util.Pair;
 
 import java.util.*;
@@ -531,7 +532,7 @@ public class RegAllocator implements MCPass {
 
                     for (var n : spilledNodes) {
                         assert n instanceof VirtualReg;
-                        var storeInStack = ((VirtualReg) n).getCost() >= 4;
+                        var storeInStack = !Config.getInstance().isO2 || ((VirtualReg) n).getCost() >= 4;
 
                         for (var blockEntry : func.getmbList()) {
                             var block = blockEntry.getVal();
