@@ -527,7 +527,7 @@ public class RegAllocator implements MCPass {
                 if (spilledNodes.isEmpty()) {
                     done = true;
                 } else {
-                    HashMap<VirtualReg, VirtualReg> fatherVRegMap = new HashMap<>();
+//                    HashMap<VirtualReg, VirtualReg> fatherVRegMap = new HashMap<>();
 
                     for (var n : spilledNodes) {
                         assert n instanceof VirtualReg;
@@ -548,8 +548,8 @@ public class RegAllocator implements MCPass {
                                 var newVReg = new VirtualReg();
                                 func.addVirtualReg(newVReg);
 
-                                if (oldReg != null) {
-                                    fatherVRegMap.put(newVReg, fatherVRegMap.getOrDefault(oldReg, oldReg));
+                                if (oldReg != null && !oldReg.isGlobal()) {
+//                                    fatherVRegMap.put(newVReg, fatherVRegMap.getOrDefault(oldReg, oldReg));
                                     newVReg.setDef(oldReg.getDefMC(), oldReg.getCost());
                                 }
 
@@ -616,13 +616,14 @@ public class RegAllocator implements MCPass {
                                     if (ref.firstUse != null) {
                                         var defMC = ((VirtualReg) n).getDefMC();
 
+                                        var regMap = new HashMap<VirtualReg, VirtualReg>();
                                         var toInsertMCList = new LinkedList<MachineCode>();
                                         var toInsertMCSet = new HashSet<MachineCode>();
 
                                         Consumer<MachineCode> addDefiners = instr -> {
                                             if (instr instanceof MCBinary) {
                                                 var lhs = ((MCBinary) defMC).getLhs();
-                                                if (lhs instanceof VirtualReg) {
+                                                if (lhs instanceof VirtualReg && !((VirtualReg) lhs).isGlobal()) {
                                                     var lhsDefiner = ((VirtualReg) lhs).getDefMC();
                                                     if (!toInsertMCSet.contains(lhsDefiner)) {
                                                         toInsertMCList.addLast(lhsDefiner);
@@ -631,7 +632,7 @@ public class RegAllocator implements MCPass {
                                                 }
 
                                                 var rhs = ((MCBinary) instr).getRhs();
-                                                if (rhs instanceof VirtualReg) {
+                                                if (rhs instanceof VirtualReg && !((VirtualReg) rhs).isGlobal()) {
                                                     var rhsDefiner = ((VirtualReg) rhs).getDefMC();
                                                     if (!toInsertMCSet.contains(rhsDefiner)) {
                                                         toInsertMCList.addLast(rhsDefiner);
@@ -640,7 +641,7 @@ public class RegAllocator implements MCPass {
                                                 }
                                             } else if (instr instanceof MCMove) {
                                                 var rhs = ((MCMove) instr).getRhs();
-                                                if (rhs instanceof VirtualReg) {
+                                                if (rhs instanceof VirtualReg && !((VirtualReg) rhs).isGlobal()) {
                                                     var rhsDefiner = ((VirtualReg) rhs).getDefMC();
                                                     if (!toInsertMCSet.contains(rhsDefiner)) {
                                                         toInsertMCList.addLast(rhsDefiner);
@@ -649,7 +650,7 @@ public class RegAllocator implements MCPass {
                                                 }
                                             } else if (instr instanceof MCLoad) {
                                                 var addr = ((MCLoad) instr).getAddr();
-                                                if (addr instanceof VirtualReg) {
+                                                if (addr instanceof VirtualReg && !((VirtualReg) addr).isGlobal()) {
                                                     var addrDefiner = ((VirtualReg) addr).getDefMC();
                                                     if (!toInsertMCSet.contains(addrDefiner)) {
                                                         toInsertMCList.addLast(addrDefiner);
@@ -658,7 +659,7 @@ public class RegAllocator implements MCPass {
                                                 }
 
                                                 var off = ((MCLoad) instr).getOffset();
-                                                if (off instanceof VirtualReg) {
+                                                if (off instanceof VirtualReg && !((VirtualReg) off).isGlobal()) {
                                                     var offDefiner = ((VirtualReg) off).getDefMC();
                                                     if (!toInsertMCSet.contains(offDefiner)) {
                                                         toInsertMCList.addLast(offDefiner);
@@ -672,6 +673,10 @@ public class RegAllocator implements MCPass {
                                         toInsertMCList.addLast(defMC);
                                         toInsertMCSet.add(defMC);
 
+                                        var defReg = defMC.getDef().get(0);
+                                        assert defReg instanceof VirtualReg;
+                                        regMap.put((VirtualReg) defReg, ref.vreg);
+
                                         while (!toInsertMCList.isEmpty()) {
                                             var instr = toInsertMCList.pollFirst();
 
@@ -683,13 +688,40 @@ public class RegAllocator implements MCPass {
                                                 prevInstr = newBinInstr;
 
                                                 var dst = ((MCBinary) instr).getDst();
-                                                newBinInstr.setDst(dst instanceof VirtualReg ? cloneVReg.apply((VirtualReg) dst) : dst);
+                                                if (dst instanceof VirtualReg && !((VirtualReg) dst).isGlobal()) {
+                                                    var dstVReg = (VirtualReg) dst;
+                                                    if (!regMap.containsKey(dstVReg)) {
+                                                        regMap.put(dstVReg, cloneVReg.apply(dstVReg));
+                                                    }
+
+                                                    newBinInstr.setDst(regMap.get(dstVReg));
+                                                } else {
+                                                    newBinInstr.setDst(dst);
+                                                }
 
                                                 var lhs = ((MCBinary) instr).getLhs();
-                                                newBinInstr.setLhs(lhs instanceof VirtualReg ? cloneVReg.apply((VirtualReg) lhs) : lhs);
+                                                if (lhs instanceof VirtualReg && !((VirtualReg) lhs).isGlobal()) {
+                                                    var lhsVReg = (VirtualReg) lhs;
+                                                    if (!regMap.containsKey(lhsVReg)) {
+                                                        regMap.put(lhsVReg, cloneVReg.apply(lhsVReg));
+                                                    }
+
+                                                    newBinInstr.setLhs(regMap.get(lhsVReg));
+                                                } else {
+                                                    newBinInstr.setLhs(lhs);
+                                                }
 
                                                 var rhs = ((MCBinary) instr).getRhs();
-                                                newBinInstr.setRhs(rhs instanceof VirtualReg ? cloneVReg.apply((VirtualReg) rhs) : rhs);
+                                                if (rhs instanceof VirtualReg && !((VirtualReg) rhs).isGlobal()) {
+                                                    var rhsVReg = (VirtualReg) rhs;
+                                                    if (!regMap.containsKey(rhsVReg)) {
+                                                        regMap.put(rhsVReg, cloneVReg.apply(rhsVReg));
+                                                    }
+
+                                                    newBinInstr.setRhs(regMap.get(rhsVReg));
+                                                } else {
+                                                    newBinInstr.setRhs(rhs);
+                                                }
 
                                                 newBinInstr.setShift(instr.getShift().getType(), instr.getShift().getImm());
                                                 newBinInstr.setCond(instr.getCond());
@@ -699,10 +731,28 @@ public class RegAllocator implements MCPass {
                                                 prevInstr = newMovInstr;
 
                                                 var dst = ((MCMove) instr).getDst();
-                                                newMovInstr.setDst(dst instanceof VirtualReg ? cloneVReg.apply((VirtualReg) dst) : dst);
+                                                if (dst instanceof VirtualReg && !((VirtualReg) dst).isGlobal()) {
+                                                    var dstVReg = (VirtualReg) dst;
+                                                    if (!regMap.containsKey(dstVReg)) {
+                                                        regMap.put(dstVReg, cloneVReg.apply(dstVReg));
+                                                    }
+
+                                                    newMovInstr.setDst(regMap.get(dstVReg));
+                                                } else {
+                                                    newMovInstr.setDst(dst);
+                                                }
 
                                                 var rhs = ((MCMove) instr).getRhs();
-                                                newMovInstr.setRhs(rhs instanceof VirtualReg ? cloneVReg.apply((VirtualReg) rhs) : rhs);
+                                                if (rhs instanceof VirtualReg && !((VirtualReg) rhs).isGlobal()) {
+                                                    var rhsVReg = (VirtualReg) rhs;
+                                                    if (!regMap.containsKey(rhsVReg)) {
+                                                        regMap.put(rhsVReg, cloneVReg.apply(rhsVReg));
+                                                    }
+
+                                                    newMovInstr.setRhs(regMap.get(rhsVReg));
+                                                } else {
+                                                    newMovInstr.setRhs(rhs);
+                                                }
 
                                                 newMovInstr.setShift(instr.getShift().getType(), instr.getShift().getImm());
                                                 newMovInstr.setCond(instr.getCond());
@@ -712,13 +762,40 @@ public class RegAllocator implements MCPass {
                                                 prevInstr = newLoadInstr;
 
                                                 var dst = ((MCLoad) instr).getDst();
-                                                newLoadInstr.setDst(dst instanceof VirtualReg ? cloneVReg.apply((VirtualReg) dst) : dst);
+                                                if (dst instanceof VirtualReg && !((VirtualReg) dst).isGlobal()) {
+                                                    var dstVReg = (VirtualReg) dst;
+                                                    if (!regMap.containsKey(dstVReg)) {
+                                                        regMap.put(dstVReg, cloneVReg.apply(dstVReg));
+                                                    }
+
+                                                    newLoadInstr.setDst(regMap.get(dstVReg));
+                                                } else {
+                                                    newLoadInstr.setDst(dst);
+                                                }
 
                                                 var addr = ((MCLoad) instr).getAddr();
-                                                newLoadInstr.setAddr(addr instanceof VirtualReg ? cloneVReg.apply((VirtualReg) addr) : addr);
+                                                if (addr instanceof VirtualReg && !((VirtualReg) addr).isGlobal()) {
+                                                    var addrVReg = (VirtualReg) addr;
+                                                    if (!regMap.containsKey(addrVReg)) {
+                                                        regMap.put(addrVReg, cloneVReg.apply(addrVReg));
+                                                    }
+
+                                                    newLoadInstr.setAddr(regMap.get(addrVReg));
+                                                } else {
+                                                    newLoadInstr.setAddr(addr);
+                                                }
 
                                                 var off = ((MCLoad) instr).getOffset();
-                                                newLoadInstr.setOffset(off instanceof VirtualReg ? cloneVReg.apply((VirtualReg) off) : off);
+                                                if (off instanceof VirtualReg && !((VirtualReg) off).isGlobal()) {
+                                                    var offVReg = (VirtualReg) off;
+                                                    if (!regMap.containsKey(offVReg)) {
+                                                        regMap.put(offVReg, cloneVReg.apply(offVReg));
+                                                    }
+
+                                                    newLoadInstr.setOffset(regMap.get(offVReg));
+                                                } else {
+                                                    newLoadInstr.setOffset(off);
+                                                }
 
                                                 newLoadInstr.setShift(instr.getShift().getType(), instr.getShift().getImm());
                                                 newLoadInstr.setCond(instr.getCond());
