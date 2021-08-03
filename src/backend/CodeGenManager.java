@@ -830,6 +830,8 @@ public class CodeGenManager {
                         ((MCLongMul)c).calcCost();
                     }else if(c instanceof MCMove){
                         ((MCMove)c).calcCost();
+                    }else if(c instanceof MCFma){
+                        ((MCFma)c).calcCost();
                     }
                 }
             }

@@ -50,6 +50,16 @@ public class MCFma extends MachineCode {
         return res;
     }
 
+    public void calcCost(){
+        if(dst instanceof VirtualReg){
+            assert(this.lhs!=null);
+            assert(this.rhs!=null);
+            assert(this.acc!=null);
+            int cost=((VirtualReg)lhs).getCost()+((VirtualReg)rhs).getCost()+((VirtualReg)acc).getCost()+3;
+            ((VirtualReg)dst).setDef(this,cost);
+        }
+    }
+
     public void setCond(ArmAddition.CondType cond) {
         this.cond = cond;
     }
@@ -86,13 +96,6 @@ public class MCFma extends MachineCode {
     public void setDst(MachineOperand dst) {
         dealReg(this.dst, dst, false);
         this.dst = dst;
-        if(dst instanceof VirtualReg){
-            assert(this.lhs!=null);
-            assert(this.rhs!=null);
-            assert(this.acc!=null);
-            int cost=((VirtualReg)lhs).getCost()+((VirtualReg)rhs).getCost()+((VirtualReg)acc).getCost()+3;
-            ((VirtualReg)dst).setDef(this,cost);
-        }
     }
 
     public void setLhs(MachineOperand lhs) {
