@@ -527,6 +527,8 @@ public class RegAllocator implements MCPass {
                 if (spilledNodes.isEmpty()) {
                     done = true;
                 } else {
+                    HashMap<VirtualReg, VirtualReg> replaceVRegMap = new HashMap<>();
+
                     for (var n : spilledNodes) {
                         assert n instanceof VirtualReg;
                         var storeInStack = ((VirtualReg) n).getCost() >= 4;
@@ -545,6 +547,9 @@ public class RegAllocator implements MCPass {
                             Function<VirtualReg, VirtualReg> cloneVReg = vreg -> {
                                 var newVReg = new VirtualReg();
                                 func.addVirtualReg(newVReg);
+                                if (vreg != null) {
+                                    replaceVRegMap.put(vreg, newVReg);
+                                }
                                 return newVReg;
                             };
 
@@ -562,7 +567,7 @@ public class RegAllocator implements MCPass {
                                     moveInstr.insertBeforeNode(inst);
                                     moveInstr.setRhs(offsetOperand);
 
-                                    var newVReg = cloneVReg.apply();
+                                    var newVReg = cloneVReg.apply(null);
                                     moveInstr.setDst(newVReg);
 
                                     if (inst instanceof MCLoad) {
