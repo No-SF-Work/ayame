@@ -1,6 +1,7 @@
 package backend.machinecodes;
 
 import backend.CodeGenManager;
+import backend.reg.PhyReg;
 import backend.reg.VirtualReg;
 import backend.reg.MachineOperand;
 
@@ -18,6 +19,30 @@ public class MCBinary extends MachineCode{
     public void setDst(MachineOperand dst) {
         super.dealReg(this.dst,dst,false);
         this.dst = dst;
+        if(dst instanceof VirtualReg){
+            assert(this.lhs!=null);
+            assert(this.rhs!=null);
+            int cost = 0;
+            if(lhs instanceof PhyReg){
+                if(((PhyReg)lhs).getName()!="sp"){
+                    ((VirtualReg)dst).setUnMoveable();
+                }
+            }else {
+                cost+=((VirtualReg)lhs).getCost();
+            }
+            if(rhs.getState()== MachineOperand.state.imm){
+
+            }else if(rhs instanceof PhyReg){
+                ((VirtualReg)dst).setUnMoveable();
+            }
+            else{
+                cost+=((VirtualReg)rhs).getCost();
+            }
+            if(!getShift().isNone()){
+                cost+=1;
+            }
+            ((VirtualReg)dst).setDef(this,cost+1);
+        }
     }
 
     public MachineOperand getLhs() {
@@ -62,9 +87,9 @@ public class MCBinary extends MachineCode{
         this.rhs = rhs;
     }
 
-    private MachineOperand lhs;
+    private MachineOperand lhs = null;
 
-    private MachineOperand rhs;
+    private MachineOperand rhs = null;
 
     private ArmAddition.CondType cond = ArmAddition.CondType.Any;
 

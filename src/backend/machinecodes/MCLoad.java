@@ -19,6 +19,20 @@ public class MCLoad extends MachineCode{
     public void setDst(MachineOperand dst) {
         dealReg(this.dst,dst,false);
         this.dst=dst;
+        if(dst instanceof VirtualReg){
+            assert (this.addr!=null);
+            assert(this.offset!=null);
+            assert (this.addr instanceof VirtualReg);
+            if(addr instanceof VirtualReg && ((VirtualReg)addr).isGlobal()){
+                ((VirtualReg)dst).setDef(this,1);
+            }else if(offset.getState()== MachineOperand.state.imm){
+                ((VirtualReg)dst).setDef(this,((VirtualReg)addr).getCost()+3);
+            }else{
+                assert(this.offset instanceof VirtualReg);
+                int cost=((VirtualReg)addr).getCost()+((VirtualReg)offset).getCost()+3;
+                ((VirtualReg)dst).setDef(this,cost);
+            }
+        }
     }
 
     public MachineOperand getAddr() {
@@ -33,11 +47,11 @@ public class MCLoad extends MachineCode{
         return dst;
     }
 
-    private MachineOperand addr;
+    private MachineOperand addr = null;
 
-    private MachineOperand offset;
+    private MachineOperand offset = null;
 
-    private MachineOperand dst;
+    private MachineOperand dst = null;
 
     private ArmAddition.CondType cond= ArmAddition.CondType.Any;
 
