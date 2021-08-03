@@ -38,7 +38,6 @@ public class PassManager {
         irPasses.add(new DeadCodeEmit());
         irPasses.add(new EmitLLVM());
 
-        mcPasses.add(new PeepholeOptimization());
         mcPasses.add(new RegAllocator());
         mcPasses.add(new PeepholeOptimization());
         mcPasses.add(new ListScheduling());
