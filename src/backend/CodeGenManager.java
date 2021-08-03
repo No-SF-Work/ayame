@@ -369,17 +369,30 @@ public class CodeGenManager {
 
     public void fixStack(MachineFunction mf) {
         var useRegs = mf.getUsedRegIdxs();
-        for (int idx : useRegs) {
-            for (int i = 4; i <= 12; i++) {
-                if (i == idx) {
+        for(int i=4;i<=12;i++){
+            for(int idx:useRegs){
+                if(i==idx){
                     mf.getUsedSavedRegs().add(mf.getPhyReg(i));
                 }
             }
-            if (idx == 14) {
+        }
+        for(int idx:useRegs){
+            if(14==idx){
                 mf.getUsedSavedRegs().add(mf.getPhyReg(14));
                 mf.setUsedLr(true);
             }
         }
+//        for (int idx : useRegs) {
+//            for (int i = 4; i <= 12; i++) {
+//                if (i == idx) {
+//                    mf.getUsedSavedRegs().add(mf.getPhyReg(i));
+//                }
+//            }
+//            if (idx == 14) {
+//                mf.getUsedSavedRegs().add(mf.getPhyReg(14));
+//                mf.setUsedLr(true);
+//            }
+//        }
         int regs = mf.getUsedSavedRegs().size();
         mf.getArgMoves().forEach(mv -> {
             assert (mv instanceof MCMove);
@@ -477,27 +490,27 @@ public class CodeGenManager {
                     INode<MachineCode, MachineBlock> mcNode = mcIte.next();
                     MachineCode mc = mcNode.getVal();
                     String str = mc.toString();
-//                    if(mc instanceof MCMove ||mc instanceof MCLoad||mc instanceof MCBinary){
-//                        if(mc instanceof MCMove){
-//                            str+=((MCMove)mc).getDst().getName();
-//                            if(((MCMove)mc).getDst() instanceof VirtualReg){
-//                                str+=" cost:"+((VirtualReg)((MCMove)mc).getDst()).getCost();
-//                            }
-//                            str+="\n";
-//                        }else if(mc instanceof MCLoad){
-//                            str+=((MCLoad)mc).getDst().getName();
-//                            if(((MCLoad)mc).getDst() instanceof VirtualReg){
-//                                str+=" cost:"+((VirtualReg)((MCLoad)mc).getDst()).getCost();
-//                            }
-//                            str+="\n";
-//                        }else{
-//                            str+=((MCBinary)mc).getDst().getName();
-//                            if(((MCBinary)mc).getDst() instanceof VirtualReg){
-//                                str+=" cost:"+((VirtualReg)((MCBinary)mc).getDst()).getCost();
-//                            }
-//                            str+="\n";
-//                        }
-//                    }
+                    if(mc instanceof MCMove ||mc instanceof MCLoad||mc instanceof MCBinary){
+                        if(mc instanceof MCMove){
+                            str+=((MCMove)mc).getDst().getName();
+                            if(((MCMove)mc).getDst() instanceof VirtualReg){
+                                str+=" cost:"+((VirtualReg)((MCMove)mc).getDst()).getCost();
+                            }
+                            str+="\n";
+                        }else if(mc instanceof MCLoad){
+                            str+=((MCLoad)mc).getDst().getName();
+                            if(((MCLoad)mc).getDst() instanceof VirtualReg){
+                                str+=" cost:"+((VirtualReg)((MCLoad)mc).getDst()).getCost();
+                            }
+                            str+="\n";
+                        }else{
+                            str+=((MCBinary)mc).getDst().getName();
+                            if(((MCBinary)mc).getDst() instanceof VirtualReg){
+                                str+=" cost:"+((VirtualReg)((MCBinary)mc).getDst()).getCost();
+                            }
+                            str+="\n";
+                        }
+                    }
                     arm += str;
                     strOffset += str.length();
                 }
