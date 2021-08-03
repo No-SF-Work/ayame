@@ -46,6 +46,10 @@ public class VirtualReg extends Reg {
 
     }
 
+    public void setCost(int cost){
+        this.cost=cost;
+    }
+
     public void setUnMoveable(){
         this.isUnMoveable=true;
         this.cost=inf;

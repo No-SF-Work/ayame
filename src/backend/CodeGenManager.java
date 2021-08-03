@@ -477,27 +477,27 @@ public class CodeGenManager {
                     INode<MachineCode, MachineBlock> mcNode = mcIte.next();
                     MachineCode mc = mcNode.getVal();
                     String str = mc.toString();
-                    if(mc instanceof MCMove ||mc instanceof MCLoad||mc instanceof MCBinary){
-                        if(mc instanceof MCMove){
-                            str+=((MCMove)mc).getDst().getName();
-                            if(((MCMove)mc).getDst() instanceof VirtualReg){
-                                str+=" cost:"+((VirtualReg)((MCMove)mc).getDst()).getCost();
-                            }
-                            str+="\n";
-                        }else if(mc instanceof MCLoad){
-                            str+=((MCLoad)mc).getDst().getName();
-                            if(((MCLoad)mc).getDst() instanceof VirtualReg){
-                                str+=" cost:"+((VirtualReg)((MCLoad)mc).getDst()).getCost();
-                            }
-                            str+="\n";
-                        }else{
-                            str+=((MCBinary)mc).getDst().getName();
-                            if(((MCBinary)mc).getDst() instanceof VirtualReg){
-                                str+=" cost:"+((VirtualReg)((MCBinary)mc).getDst()).getCost();
-                            }
-                            str+="\n";
-                        }
-                    }
+//                    if(mc instanceof MCMove ||mc instanceof MCLoad||mc instanceof MCBinary){
+//                        if(mc instanceof MCMove){
+//                            str+=((MCMove)mc).getDst().getName();
+//                            if(((MCMove)mc).getDst() instanceof VirtualReg){
+//                                str+=" cost:"+((VirtualReg)((MCMove)mc).getDst()).getCost();
+//                            }
+//                            str+="\n";
+//                        }else if(mc instanceof MCLoad){
+//                            str+=((MCLoad)mc).getDst().getName();
+//                            if(((MCLoad)mc).getDst() instanceof VirtualReg){
+//                                str+=" cost:"+((VirtualReg)((MCLoad)mc).getDst()).getCost();
+//                            }
+//                            str+="\n";
+//                        }else{
+//                            str+=((MCBinary)mc).getDst().getName();
+//                            if(((MCBinary)mc).getDst() instanceof VirtualReg){
+//                                str+=" cost:"+((VirtualReg)((MCBinary)mc).getDst()).getCost();
+//                            }
+//                            str+="\n";
+//                        }
+//                    }
                     arm += str;
                     strOffset += str.length();
                 }
@@ -919,6 +919,7 @@ public class CodeGenManager {
             mc4.setLhs(mc3.getDst());
             mc4.setRhs(lhs);
             mc4.setShift(ArmAddition.ShiftType.Lsr, 31);
+
             mc4.setDst(dst);
         }
         if (imm < 0) {
@@ -1090,7 +1091,7 @@ public class CodeGenManager {
                         MCBinary mc = new MCBinary(t, mb);
                         mc.setLhs(lhs);
                         mc.setRhs(lhs);
-                        mc.setShift(ArmAddition.ShiftType.Lsl, log);
+                        mc.setShift(ArmAddition.ShiftType.Lsl, log+1);
                         mc.setDst(dst);
                         continue;
                     }
