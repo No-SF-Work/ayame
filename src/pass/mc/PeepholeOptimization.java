@@ -34,16 +34,35 @@ public class PeepholeOptimization implements Pass.MCPass {
                     boolean hasNoShift = instr.getShift().getType() == None || instr.getShift().getImm() == 0;
 
                     if (instr instanceof MCBinary) {
-                        // add(sub) dst dst 0 (to be remove)
                         MCBinary binInstr = (MCBinary) instr;
                         boolean isAddOrSub = binInstr.getTag() == MachineCode.TAG.Add ||
                                 binInstr.getTag() == MachineCode.TAG.Sub;
                         boolean isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
                         boolean hasZeroOperand = binInstr.getRhs().getState() == imm && binInstr.getRhs().getImm() == 0;
 
-                        if (isAddOrSub && isSameDstLhs && hasZeroOperand) {
-                            instrEntryIter.remove();
-                            done = false;
+                        if (isAddOrSub && hasZeroOperand) {
+                            if (isSameDstLhs) {
+                                // add(sub) dst dst 0 (to be remove)
+                                instrEntryIter.remove();
+                                done = false;
+                            } else {
+                                // add(sub) a b 0
+                                // =>
+                                // mov a b
+                                var movInstr = new MCMove();
+                                movInstr.setDst(binInstr.getDst());
+                                movInstr.setRhs(binInstr.getLhs());
+                                movInstr.setShift(None, 0);
+                                movInstr.setCond(binInstr.getCond());
+
+                                var instrNode = binInstr.getNode();
+                                instrNode.setVal(movInstr);
+                                movInstr.setNode(instrNode);
+                                movInstr.mb = block;
+                                movInstr.mf = func;
+
+                                done = false;
+                            }
                         }
                     }
 
@@ -475,9 +494,9 @@ public class PeepholeOptimization implements Pass.MCPass {
                             // ldr/str x, [b, c, shift]
                             // or
                             // add + mov + str
-                            if (hasNoShift) { // shold have shift
-                                return true;
-                            }
+//                            if (hasNoShift) { // shold have shift
+//                                return true;
+//                            }
 
                             if (!(instr.getTag() == MachineCode.TAG.Add)) {
                                 return true;
