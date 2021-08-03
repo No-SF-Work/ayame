@@ -542,7 +542,7 @@ public class RegAllocator implements MCPass {
                                 MachineCode lastDef = null;
                             };
 
-                            Supplier<VirtualReg> buildNewVReg = () -> {
+                            Function<VirtualReg, VirtualReg> cloneVReg = vreg -> {
                                 var newVReg = new VirtualReg();
                                 func.addVirtualReg(newVReg);
                                 return newVReg;
@@ -562,7 +562,7 @@ public class RegAllocator implements MCPass {
                                     moveInstr.insertBeforeNode(inst);
                                     moveInstr.setRhs(offsetOperand);
 
-                                    var newVReg = buildNewVReg.get();
+                                    var newVReg = cloneVReg.apply();
                                     moveInstr.setDst(newVReg);
 
                                     if (inst instanceof MCLoad) {
@@ -617,7 +617,7 @@ public class RegAllocator implements MCPass {
                                         Consumer<MachineOperand> testReg = vreg -> {
                                             assert vreg instanceof VirtualReg;
                                             if (!regMap.containsKey(vreg)) {
-                                                var newVReg = buildNewVReg.get();
+                                                var newVReg = cloneVReg.get();
                                                 regMap.put(vreg, newVReg);
                                             }
                                             toInsertMCList.addLast(((VirtualReg) vreg).getDefMC());
@@ -725,7 +725,7 @@ public class RegAllocator implements MCPass {
                                 var uses = new HashSet<>(instr.getUse());
                                 defs.stream().filter(def -> def.equals(n)).forEach(def -> {
                                     if (ref.vreg == null) {
-                                        ref.vreg = buildNewVReg.get();
+                                        ref.vreg = cloneVReg.apply((VirtualReg) n);
                                     }
 
                                     replaceReg(instr, def, ref.vreg);
@@ -734,7 +734,7 @@ public class RegAllocator implements MCPass {
 
                                 uses.stream().filter(use -> use.equals(n)).forEach(use -> {
                                     if (ref.vreg == null) {
-                                        ref.vreg = buildNewVReg.get();
+                                        ref.vreg = cloneVReg.apply((VirtualReg) n);
                                     }
 
                                     replaceReg(instr, use, ref.vreg);
