@@ -125,7 +125,7 @@ public class LoopInfo {
     populateLoopsDFS(entry);
 
     computeAllLoops();
-    computeAdditionalLoopInfo();
+//    computeAdditionalLoopInfo();
   }
 
   public void computeAdditionalLoopInfo() {
