@@ -5,20 +5,24 @@ import ir.Loop;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.values.BasicBlock;
-import ir.values.Constant;
 import ir.values.Function;
 import ir.values.Value;
-import ir.values.ValueCloner;
+import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
+import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.MemInst;
+import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.Phi;
+import ir.values.instructions.TerminatorInst;
 import ir.values.instructions.TerminatorInst.CallInst;
+import pass.Pass.IRPass;
+import util.Mylogger;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
-import pass.Pass.IRPass;
-import util.Mylogger;
 
 public class LoopUnroll implements IRPass {
 
@@ -27,31 +31,63 @@ public class LoopUnroll implements IRPass {
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
   private LoopInfo currLoopInfo;
 
+  // return a new instruction but uses the old inst operands
+  public static Instruction copyInstruction(Instruction inst) {
+    Instruction copy = null;
+    var ops = inst.getOperands();
+    if (inst instanceof BinaryInst) {
+      copy = factory.getBinary(inst.tag, ops.get(0), ops.get(1));
+    } else if (inst instanceof MemInst) {
+      copy = switch (inst.tag) {
+        case Alloca -> factory.getAlloca(((AllocaInst) inst).getAllocatedType());
+        case Load -> factory.getLoad(inst.getType(), ops.get(0));
+        case Store -> factory.getStore(ops.get(0), ops.get(1));
+        case GEP -> factory.getGEP(ops.get(0),
+            new ArrayList<>() {{
+              for (int i = 1; i < ops.size(); i++) {
+                add(ops.get(i));
+              }
+            }});
+        case Zext -> factory.getZext(ops.get(0));
+        case Phi -> new Phi(inst.tag, inst.getType(), inst.getNumOP(), inst.getOperands());
+        default -> throw new RuntimeException();
+      };
+    } else if (inst instanceof TerminatorInst) {
+      assert inst.tag != TAG_.Call;
+      switch (inst.tag) {
+        case Br -> {
+          if (ops.size() == 3) {
+            copy = factory.getBr(ops.get(0), (BasicBlock) ops.get(1), (BasicBlock) ops.get(2));
+          }
+          if (ops.size() == 1) {
+            copy = factory.getBr((BasicBlock) ops.get(0));
+          }
+        }
+
+        case Ret -> {
+          if (ops.size() == 1) {
+            copy = factory.getRet(ops.get(0));
+          } else {
+            copy = factory.getRet();
+          }
+        }
+      }
+    }
+
+    if (copy == null) {
+      throw new RuntimeException();
+    }
+    return copy;
+  }
+
   public static BasicBlock getLoopBasicBlockCopy(BasicBlock source, HashMap<Value, Value> vMap) {
     var func = source.getParent();
     var target = factory.buildBasicBlock("", func);
-    var cloner = new ValueCloner() {
-      @Override
-      public Value findValue(Value value) {
-        if (value instanceof Constant) {
-          return value;
-        } else {
-          return this.valueMap.get(value);
-        }
-      }
-    };
-
     source.getList().forEach(instNode -> {
       var inst = instNode.getVal();
-      for (Value operand : inst.getOperands()) {
-        if (cloner.findValue(operand) == null) {
-          cloner.put(operand, operand);
-        }
-      }
-      var cloneInst = cloner.getInstCopy(inst);
-      cloner.put(inst, cloneInst);
-      vMap.put(inst, cloneInst);
-      cloneInst.node.insertAtEnd(target.getList());
+      var copyInst = copyInstruction(inst);
+      vMap.put(inst, copyInst);
+      copyInst.node.insertAtEnd(target.getList());
     });
 
     return target;
@@ -62,7 +98,7 @@ public class LoopUnroll implements IRPass {
       var op = inst.getOperands().get(i);
       if (vMap.containsKey(op)) {
         var newOp = vMap.get(op);
-        inst.CoSetOperand(i, newOp);
+        inst.CoReplaceOperandByIndex(i, newOp);
       }
     }
   }
@@ -81,7 +117,7 @@ public class LoopUnroll implements IRPass {
     loopBlocks.addAll(loop.getBlocks());
     if (loop.getParentLoop() != null) {
       var parentLoop = loop.getParentLoop();
-      for (var bb: loopBlocks) {
+      for (var bb : loopBlocks) {
         if (loopInfo.getLoopForBB(bb) == loop) {
           loopInfo.getBbLoopMap().put(bb, parentLoop);
         }
@@ -95,7 +131,7 @@ public class LoopUnroll implements IRPass {
         parentLoop.addSubLoop(subLoop);
       }
     } else {
-      for (var bb: loopBlocks) {
+      for (var bb : loopBlocks) {
         if (loopInfo.getLoopForBB(bb) == loop) {
           // bb 在最外层循环里了
           loopInfo.removeBBFromAllLoops(bb);
@@ -131,15 +167,15 @@ public class LoopUnroll implements IRPass {
   public void runOnFunction(Function func) {
     Queue<Loop> loopQueue = new LinkedList<>();
     this.currLoopInfo = func.getLoopInfo();
-    for (var topLoop: this.currLoopInfo.getTopLevelLoops()) {
+
+    // run on loop manager
+    for (var topLoop : this.currLoopInfo.getTopLevelLoops()) {
       addLoopToQueue(topLoop, loopQueue);
     }
     while (!loopQueue.isEmpty()) {
       var loop = loopQueue.remove();
       runOnLoop(loop);
     }
-
-    // TODO run on loop manager
   }
 
   public void runOnLoop(Loop loop) {
@@ -168,7 +204,8 @@ public class LoopUnroll implements IRPass {
     log.info("Run constant unroll");
 
     int instNum = 0;
-    var latchBr = loop.getLatchBlock().getList().getLast().getVal(); // FIXME: maybe exit block is better
+    var latchBr = loop.getLatchBlock().getList().getLast()
+        .getVal(); // FIXME: maybe exit block is better
     var tripCount = loop.getTripCount();
 
     ArrayList<BasicBlock> loopBlocks = new ArrayList<>();
@@ -236,12 +273,13 @@ public class LoopUnroll implements IRPass {
         if (bb == header) {
           for (var phi : originPhis) {
             var newPhi = (Phi) valueMap.get(phi);
-            Value latchIncomingVal = newPhi.getIncomingVals().get(latchPredIndex);
+            var latchIncomingVal = newPhi.getIncomingVals().get(latchPredIndex);
             if (latchIncomingVal instanceof Instruction &&
                 (loopBlocks.contains(((Instruction) latchIncomingVal).getBB())) && iterNum > 1) {
-              valueMap.replace(phi, latchIncomingVal);
-              newPhi.node.removeSelf();
+              latchIncomingVal = lastValueMap.get(latchIncomingVal);
             }
+            valueMap.put(phi, latchIncomingVal);
+            newPhi.node.removeSelf();
           }
         }
 
@@ -278,6 +316,7 @@ public class LoopUnroll implements IRPass {
     var preheaderPredIndex = 1 - latchPredIndex;
     for (var phi : originPhis) {
       phi.COReplaceAllUseWith(phi.getIncomingVals().get(preheaderPredIndex));
+      phi.CORemoveAllOperand();
       phi.node.removeSelf();
     }
 
