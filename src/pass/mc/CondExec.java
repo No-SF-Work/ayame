@@ -8,10 +8,10 @@ import java.util.function.Function;
 
 import static backend.machinecodes.ArmAddition.CondType.*;
 
-public class IfToCond implements Pass.MCPass {
+public class CondExec implements Pass.MCPass {
     @Override
     public String getName() {
-        return "IfToCond";
+        return "CondExec";
     }
 
     @Override
@@ -67,15 +67,16 @@ public class IfToCond implements Pass.MCPass {
 
                             for (var instrEntry2 : nxtBlock.getmclist()) {
                                 var instr2 = instrEntry2.getVal();
+                                var cond = getOppoCond.apply(lastInstr.getCond());
                                 if (instr2 instanceof MCLoad) {
                                     MCLoad loadInstr = (MCLoad) instr2;
-                                    loadInstr.setCond(getOppoCond.apply(loadInstr.getCond()));
+                                    loadInstr.setCond(cond);
                                 } else if (instr2 instanceof MCStore) {
                                     MCStore storeInstr = (MCStore) instr2;
-                                    storeInstr.setCond(getOppoCond.apply(storeInstr.getCond()));
+                                    storeInstr.setCond(cond);
                                 } else if (instr2 instanceof MCFma) {
                                     MCFma fmaInstr = (MCFma) instr2;
-                                    fmaInstr.setCond(getOppoCond.apply(fmaInstr.getCond()));
+                                    fmaInstr.setCond(cond);
                                 } else {
                                     assert false;
                                 }
