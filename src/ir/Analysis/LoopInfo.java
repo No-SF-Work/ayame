@@ -211,9 +211,10 @@ public class LoopInfo {
   private void computeExitBlocks() {
     for (var loop : allLoops) {
       for (var bb : loop.getBlocks()) {
-        for (var succBB: bb.getSuccessor_()) {
-          if (!loop.getBlocks().contains(succBB));
-          loop.getExitBlocks().add(succBB);
+        for (var succBB : bb.getSuccessor_()) {
+          if (!loop.getBlocks().contains(succBB)) {
+            loop.getExitBlocks().add(succBB);
+          }
         }
       }
     }

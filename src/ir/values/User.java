@@ -72,7 +72,7 @@ public abstract class User extends Value {
   public void CoReplaceOperandByIndex(int index, Value v) {
     var op = operands.get(index);
     this.CoSetOperand(index, v);
-    if (!this.operands.contains(op)) {
+    if (op != null && !this.operands.contains(op)) {
       op.removeUseByUser(this);
     }
   }
