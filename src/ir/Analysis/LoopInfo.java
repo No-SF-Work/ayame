@@ -142,6 +142,7 @@ public class LoopInfo {
     }
 
     computeExitingBlocks();
+    computeExitBlocks();
     computeLatchBlock();
     computeIndVarInfo();
   }
@@ -197,11 +198,22 @@ public class LoopInfo {
       for (var bb : loop.getBlocks()) {
         var inst = bb.getList().getLast().getVal();
         if (inst.tag == Instruction.TAG_.Br && inst.getNumOP() == 3) {
-          var bb1 = inst.getOperands().get(1);
-          var bb2 = inst.getOperands().get(2);
+          BasicBlock bb1 = (BasicBlock) inst.getOperands().get(1);
+          BasicBlock bb2 = (BasicBlock) inst.getOperands().get(2);
           if (!loop.getBlocks().contains(bb1) || !loop.getBlocks().contains(bb2)) {
             loop.getExitingBlocks().add(bb);
           }
+        }
+      }
+    }
+  }
+
+  private void computeExitBlocks() {
+    for (var loop : allLoops) {
+      for (var bb : loop.getBlocks()) {
+        for (var succBB: bb.getSuccessor_()) {
+          if (!loop.getBlocks().contains(succBB));
+          loop.getExitBlocks().add(succBB);
         }
       }
     }
@@ -358,4 +370,40 @@ public class LoopInfo {
   public void addTopLevelLoop(Loop loop) {
     this.topLevelLoops.add(loop);
   }
+
+  public void removeLoop(Loop loop) {
+    ArrayList<BasicBlock> loopBlocks = new ArrayList<>();
+    loopBlocks.addAll(loop.getBlocks());
+    if (loop.getParentLoop() != null) {
+      var parentLoop = loop.getParentLoop();
+      for (var bb : loopBlocks) {
+        if (this.getLoopForBB(bb) == loop) {
+          this.getBbLoopMap().put(bb, parentLoop);
+        }
+      }
+
+      parentLoop.removeSubLoop(loop);
+
+      while (loop.getSubLoops().size() != 0) {
+        var subLoop = loop.getSubLoops().get(0);
+        loop.removeSubLoop(subLoop);
+        parentLoop.addSubLoop(subLoop);
+      }
+    } else {
+      for (var bb : loopBlocks) {
+        if (this.getLoopForBB(bb) == loop) {
+          // bb 在最外层循环里了
+          this.removeBBFromAllLoops(bb);
+        }
+      }
+
+      this.removeTopLevelLoop(loop);
+      while (loop.getSubLoops().size() != 0) {
+        var subLoop = loop.getSubLoops().get(0);
+        loop.removeSubLoop(subLoop);
+        this.addTopLevelLoop(subLoop);
+      }
+    }
+  }
+
 }

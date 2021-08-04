@@ -15,14 +15,13 @@ import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst;
 import ir.values.instructions.TerminatorInst.CallInst;
-import pass.Pass.IRPass;
-import util.Mylogger;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
+import pass.Pass.IRPass;
+import util.Mylogger;
 
 public class LoopUnroll implements IRPass {
 
@@ -112,45 +111,12 @@ public class LoopUnroll implements IRPass {
     }
   }
 
-  public static void removeLoop(Loop loop, LoopInfo loopInfo) {
-    ArrayList<BasicBlock> loopBlocks = new ArrayList<>();
-    loopBlocks.addAll(loop.getBlocks());
-    if (loop.getParentLoop() != null) {
-      var parentLoop = loop.getParentLoop();
-      for (var bb : loopBlocks) {
-        if (loopInfo.getLoopForBB(bb) == loop) {
-          loopInfo.getBbLoopMap().put(bb, parentLoop);
-        }
-      }
-
-      parentLoop.removeSubLoop(loop);
-
-      while (loop.getSubLoops().size() != 0) {
-        var subLoop = loop.getSubLoops().get(0);
-        loop.removeSubLoop(subLoop);
-        parentLoop.addSubLoop(subLoop);
-      }
-    } else {
-      for (var bb : loopBlocks) {
-        if (loopInfo.getLoopForBB(bb) == loop) {
-          // bb 在最外层循环里了
-          loopInfo.removeBBFromAllLoops(bb);
-        }
-      }
-
-      loopInfo.removeTopLevelLoop(loop);
-      while (loop.getSubLoops().size() != 0) {
-        var subLoop = loop.getSubLoops().get(0);
-        loop.removeSubLoop(subLoop);
-        loopInfo.addTopLevelLoop(subLoop);
-      }
-    }
-  }
-
   @Override
   public String getName() {
     return "loopUnroll";
   }
+
+
 
   @Override
   public void run(MyModule m) {
@@ -326,7 +292,7 @@ public class LoopUnroll implements IRPass {
     }
     factory.buildBr(exit, latches.get(latches.size() - 1));
 
-    removeLoop(loop, currLoopInfo);
+    currLoopInfo.removeLoop(loop);
   }
 
   public void doubleUnroll(Loop loop) {

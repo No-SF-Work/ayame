@@ -16,7 +16,8 @@ public class Loop {
   private ArrayList<Loop> subLoops;
   private ArrayList<BasicBlock> blocks;
 
-  private HashSet<BasicBlock> exitingBlocks; // blocks that jump out from the loop
+  private HashSet<BasicBlock> exitingBlocks; // 跳转到循环外的基本块
+  private HashSet<BasicBlock> exitBlocks; // 循环跳转到的循环外基本块
 
   // 这两个只在 Canonical 的循环中才计算，loop header 有两个 pred，只有一个 exiting block，只有一个 latch block
   private BasicBlock latchBlock; // 跳回循环头的基本块
@@ -32,6 +33,7 @@ public class Loop {
     this.subLoops = new ArrayList<>();
     this.blocks = new ArrayList<>();
     this.exitingBlocks = new HashSet<>();
+    this.exitBlocks = new HashSet<>();
   }
 
 
@@ -40,6 +42,7 @@ public class Loop {
     this.subLoops = new ArrayList<>();
     this.blocks = new ArrayList<>();
     this.exitingBlocks = new HashSet<>();
+    this.exitBlocks = new HashSet<>();
     this.loopHeader = header;
     this.blocks.add(header);
   }
@@ -64,6 +67,7 @@ public class Loop {
     return exitingBlocks;
   }
 
+  public HashSet<BasicBlock> getExitBlocks() { return exitBlocks; }
 
   public BasicBlock getLoopHeader() {
     return loopHeader;
