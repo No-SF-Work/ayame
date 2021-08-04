@@ -18,7 +18,7 @@ import pass.Pass.MCPass;
 // Graph-Coloring
 public class RegAllocator implements MCPass {
     private final int INF = 0x3f3f3f3f;
-    private final int K = 8;
+    private final int K = 11;
 
     @Override
     public String getName() {
@@ -430,7 +430,7 @@ public class RegAllocator implements MCPass {
                     selectStack.removeIf(n -> n instanceof VirtualReg && ((VirtualReg) n).isGlobal());
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
-                        var okColors = IntStream.range(0, 8).filter(i -> i != 13).boxed() // 15
+                        var okColors = IntStream.range(0, 11).filter(i -> i != 13).boxed() // 15
                                 .collect(Collectors.toCollection(HashSet::new));
 
                         for (MachineOperand w : adjList.getOrDefault(n, new HashSet<>())) {
