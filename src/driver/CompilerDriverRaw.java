@@ -82,7 +82,7 @@ public class CompilerDriverRaw {
                 pm.openedPasses_.add("markConstantArray");
                 pm.openedPasses_.add("ListScheduling");
                 pm.openedPasses_.add("Peephole");
-                pm.openedPasses_.add("IfToCond");
+                pm.openedPasses_.add("CondExec");
             }
 
             if (source.contains("register_alloc")) {
