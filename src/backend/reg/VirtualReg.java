@@ -34,7 +34,7 @@ public class VirtualReg extends Reg {
     private boolean isUnMoveable=false;
 
     public void setDef(MachineCode defMC, int cost) {
-        assert(defMC!=null);
+     //   assert(defMC!=null);
         if(this.defMC==null && !isMultDef && !isUnMoveable){
             this.defMC = defMC;
             this.cost=cost;
