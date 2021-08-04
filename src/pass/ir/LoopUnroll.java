@@ -103,12 +103,12 @@ public class LoopUnroll implements IRPass {
   }
 
   public static void addLoopToQueue(Loop loop, Queue<Loop> queue) {
-    queue.add(loop);
     for (var subLoop : loop.getSubLoops()) {
       if (subLoop != null) {
         queue.add(subLoop);
       }
     }
+    queue.add(loop);
   }
 
   @Override
@@ -143,6 +143,7 @@ public class LoopUnroll implements IRPass {
   }
 
   public void runOnLoop(Loop loop) {
+
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
     if (!loop.isCanonical()) {
       return;
