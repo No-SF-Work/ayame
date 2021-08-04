@@ -504,7 +504,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                             assert instr instanceof MCBinary;
                             var addInstr = (MCBinary) instr;
 
-                            assert addInstr.getRhs().getState() != imm;
+//                            assert addInstr.getRhs().getState() != imm;
 
                             var nxtInstrEntry = instrEntry.getNext();
                             if (nxtInstrEntry == null) {

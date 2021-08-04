@@ -65,17 +65,17 @@ public class CondExec implements Pass.MCPass {
                                 case Lt -> Ge;
                             };
 
-                            for (var instrEntry2 : nxtBlock.getmclist()) {
-                                var instr2 = instrEntry2.getVal();
+                            for (var instrEntry : nxtBlock.getmclist()) {
+                                var instr = instrEntry.getVal();
                                 var cond = getOppoCond.apply(lastInstr.getCond());
-                                if (instr2 instanceof MCLoad) {
-                                    MCLoad loadInstr = (MCLoad) instr2;
+                                if (instr instanceof MCLoad) {
+                                    MCLoad loadInstr = (MCLoad) instr;
                                     loadInstr.setCond(cond);
-                                } else if (instr2 instanceof MCStore) {
-                                    MCStore storeInstr = (MCStore) instr2;
+                                } else if (instr instanceof MCStore) {
+                                    MCStore storeInstr = (MCStore) instr;
                                     storeInstr.setCond(cond);
-                                } else if (instr2 instanceof MCFma) {
-                                    MCFma fmaInstr = (MCFma) instr2;
+                                } else if (instr instanceof MCFma) {
+                                    MCFma fmaInstr = (MCFma) instr;
                                     fmaInstr.setCond(cond);
                                 } else {
                                     assert false;
