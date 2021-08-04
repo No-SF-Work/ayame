@@ -116,8 +116,6 @@ public class LoopUnroll implements IRPass {
     return "loopUnroll";
   }
 
-
-
   @Override
   public void run(MyModule m) {
     log.info("Running pass : LoopUnroll");
@@ -222,6 +220,9 @@ public class LoopUnroll implements IRPass {
     }
 
     // remove latch br inst
+    latchBr.CORemoveAllOperand();
+    latchBlock.getSuccessor_().remove(header);
+    latchBlock.getSuccessor_().remove(exit);
     latchBr.node.removeSelf();
 
     ArrayList<BasicBlock> headers = new ArrayList<>();
@@ -245,6 +246,7 @@ public class LoopUnroll implements IRPass {
               latchIncomingVal = lastValueMap.get(latchIncomingVal);
             }
             valueMap.put(phi, latchIncomingVal);
+            newPhi.CORemoveAllOperand();
             newPhi.node.removeSelf();
           }
         }
@@ -255,7 +257,7 @@ public class LoopUnroll implements IRPass {
         }
         currLoopInfo.addBBToLoop(newBB, loop);
 
-        // 暂时不考虑多个 exitingBlocks 时的循环外 phi 更新
+        // TODO 多个出口时在这里更新 LCSSA 生成的 phi
 
         if (bb == header) {
           headers.add(newBB);
@@ -273,8 +275,29 @@ public class LoopUnroll implements IRPass {
       }
     }
 
-    // latch block 跳到的基本块更新 phi
+    // latch block 跳到的 exit block 更新 LCSSA phi
     if (tripCount > 1) {
+      var lastBB = (BasicBlock) lastValueMap.get(latchBlock);
+
+      for (var exitBB : loop.getExitBlocks()) {
+        if (exitBB.getPredecessor_().contains(latchBlock)) {
+          var latchIndex = exitBB.getPredecessor_().indexOf(latchBlock);
+          for (var instNode : exitBB.getList()) {
+            var inst = instNode.getVal();
+            if (!(inst instanceof Phi)) {
+              break;
+            }
+
+            var phi = (Phi) inst;
+            var incomingVal = phi.getIncomingVals().get(latchIndex);
+            if (incomingVal instanceof Instruction && (loop.getBlocks().contains(((Instruction) incomingVal).getBB()))) {
+              incomingVal = lastValueMap.get(incomingVal);
+            }
+            phi.CoReplaceOperandByIndex(latchIndex, incomingVal);
+          }
+        }
+      }
+
 
     }
 
@@ -288,10 +311,39 @@ public class LoopUnroll implements IRPass {
 
     // link the new blocks
     for (int i = 1; i < latches.size(); i++) {
-      factory.buildBr(headers.get(i), latches.get(i - 1));
-    }
-    factory.buildBr(exit, latches.get(latches.size() - 1));
+      var succ = headers.get(i);
+      var pred = latches.get(i - 1);
+      factory.buildBr(succ, pred);
 
+      var latchIndex = succ.getPredecessor_().indexOf(latchBlock);
+      if (latchIndex != -1) {
+        succ.getPredecessor_().set(latchIndex, pred);
+      } else {
+        succ.getPredecessor_().add(pred);
+      }
+      var headIndex = pred.getSuccessor_().indexOf(succ);
+      if (headIndex != -1) {
+        pred.getSuccessor_().set(headIndex, succ);
+      } else {
+        pred.getSuccessor_().add(succ);
+      }
+    }
+    var last = latches.get(latches.size() - 1);
+    factory.buildBr(exit, last);
+    var latchIndex = exit.getPredecessor_().indexOf(latchBlock);
+    if (latchIndex != -1) {
+      exit.getPredecessor_().set(latchIndex, last);
+    } else {
+      exit.getPredecessor_().add(last);
+    }
+    var headIndex = last.getSuccessor_().indexOf(exit);
+    if (headIndex != -1) {
+      last.getSuccessor_().set(headIndex, exit);
+    } else {
+      last.getSuccessor_().add(exit);
+    }
+
+    header.getPredecessor_().remove(latchBlock);
     currLoopInfo.removeLoop(loop);
   }
 

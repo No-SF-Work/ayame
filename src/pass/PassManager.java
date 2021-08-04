@@ -37,14 +37,17 @@ public class PassManager {
         irPasses.add(new GVNGCM());
         irPasses.add(new DeadCodeEmit());
         irPasses.add(new LoopInfoFullAnalysis());
-
+        irPasses.add(new EmitLLVM("beforeLCSSA.ll"));
+        irPasses.add(new LCSSA());
         irPasses.add(new EmitLLVM("beforeUnroll.ll"));
         irPasses.add(new LoopUnroll());
+        irPasses.add(new LoopInfoFullAnalysis());
         irPasses.add(new EmitLLVM("afterUnroll.ll"));
         irPasses.add(new BranchOptimization());
         irPasses.add(new GVNGCM());
         irPasses.add(new DeadCodeEmit());
 
+        irPasses.add(new LoopInfoFullAnalysis());
         irPasses.add(new EmitLLVM());
 
         mcPasses.add(new PeepholeOptimization());
