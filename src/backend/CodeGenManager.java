@@ -490,27 +490,27 @@ public class CodeGenManager {
                     INode<MachineCode, MachineBlock> mcNode = mcIte.next();
                     MachineCode mc = mcNode.getVal();
                     String str = mc.toString();
-                    if(mc instanceof MCMove ||mc instanceof MCLoad||mc instanceof MCBinary){
-                        if(mc instanceof MCMove){
-                            str+=((MCMove)mc).getDst().getName();
-                            if(((MCMove)mc).getDst() instanceof VirtualReg){
-                                str+=" cost:"+((VirtualReg)((MCMove)mc).getDst()).getCost();
-                            }
-                            str+="\n";
-                        }else if(mc instanceof MCLoad){
-                            str+=((MCLoad)mc).getDst().getName();
-                            if(((MCLoad)mc).getDst() instanceof VirtualReg){
-                                str+=" cost:"+((VirtualReg)((MCLoad)mc).getDst()).getCost();
-                            }
-                            str+="\n";
-                        }else{
-                            str+=((MCBinary)mc).getDst().getName();
-                            if(((MCBinary)mc).getDst() instanceof VirtualReg){
-                                str+=" cost:"+((VirtualReg)((MCBinary)mc).getDst()).getCost();
-                            }
-                            str+="\n";
-                        }
-                    }
+//                    if(mc instanceof MCMove ||mc instanceof MCLoad||mc instanceof MCBinary){
+//                        if(mc instanceof MCMove){
+//                            str+=((MCMove)mc).getDst().getName();
+//                            if(((MCMove)mc).getDst() instanceof VirtualReg){
+//                                str+=" cost:"+((VirtualReg)((MCMove)mc).getDst()).getCost();
+//                            }
+//                            str+="\n";
+//                        }else if(mc instanceof MCLoad){
+//                            str+=((MCLoad)mc).getDst().getName();
+//                            if(((MCLoad)mc).getDst() instanceof VirtualReg){
+//                                str+=" cost:"+((VirtualReg)((MCLoad)mc).getDst()).getCost();
+//                            }
+//                            str+="\n";
+//                        }else{
+//                            str+=((MCBinary)mc).getDst().getName();
+//                            if(((MCBinary)mc).getDst() instanceof VirtualReg){
+//                                str+=" cost:"+((VirtualReg)((MCBinary)mc).getDst()).getCost();
+//                            }
+//                            str+="\n";
+//                        }
+//                    }
                     arm += str;
                     strOffset += str.length();
                 }
@@ -1126,34 +1126,68 @@ public class CodeGenManager {
                 boolean lhsIsConst = ir.getOperands().get(0) instanceof Constants.ConstantInt;
                 MachineOperand lhs;
                 MachineOperand rhs;
+                MachineOperand dst = analyzeValue(ir, mb, true);
                 BinaryInst b = (BinaryInst) ir;
-                if (b.isAdd() && lhsIsConst && !rhsIsConst) {
+                assert(!(lhsIsConst && rhsIsConst));
+                if(lhsIsConst && !rhsIsConst){
                     lhs = analyzeValue(ir.getOperands().get(1), mb, true);
-                    rhs = analyzeValue(ir.getOperands().get(0), mb, true);
-                } else {
+                    //如果左边是常量并且ir是减法，那改成rsb，两个操作数交换位置
+                    if(b.isSub()){
+                        rhs = analyzeValue(ir.getOperands().get(0), mb, true);
+                        MCBinary binary=new MCBinary(MachineCode.TAG.Rsb,mb);
+                        binary.setLhs(lhs);
+                        binary.setRhs(rhs);
+                        binary.setDst(dst);
+                    }else{
+                        int imm=((Constants.ConstantInt)ir.getOperands().get(0)).getVal();
+                        if(canEncodeImm(imm)){
+                            MCBinary binary=new MCBinary(MachineCode.TAG.Add,mb);
+                            binary.setLhs(lhs);
+                            binary.setRhs(new MachineOperand(imm));
+                            binary.setDst(dst);
+                        }else if(canEncodeImm(-imm)){
+                            MCBinary binary=new MCBinary(MachineCode.TAG.Sub,mb);
+                            binary.setLhs(lhs);
+                            binary.setRhs(new MachineOperand(-imm));
+                            binary.setDst(dst);
+                        }else{
+                            rhs=analyzeValue(ir.getOperands().get(0), mb, true);
+                            MCBinary binary = new MCBinary(MachineCode.TAG.Add,mb);
+                            binary.setLhs(lhs);
+                            binary.setRhs(rhs);
+                            binary.setDst(dst);
+                        }
+                    }
+                }else if(!lhsIsConst && rhsIsConst){
+                    lhs = analyzeValue(ir.getOperands().get(0), mb, true);
+                    int imm=((Constants.ConstantInt)ir.getOperands().get(1)).getVal();
+                    boolean n=false;
+                    if(!canEncodeImm(imm)&&canEncodeImm(-imm)){
+                        n=true;
+                        rhs=new MachineOperand(-imm);
+                    }else{
+                        rhs=analyzeValue(ir.getOperands().get(1),mb,true);
+                    }
+                    MachineCode.TAG t;
+                    if(n){
+                        t=b.isAdd()? MachineCode.TAG.Sub:MachineCode.TAG.Add;
+                    }else{
+                        t=b.isAdd()? MachineCode.TAG.Add: MachineCode.TAG.Sub;
+                    }
+                    MCBinary binary=new MCBinary(t,mb);
+                    binary.setRhs(rhs);
+                    binary.setLhs(lhs);
+                    binary.setDst(dst);
+                }else{
                     lhs = analyzeNoImm(ir.getOperands().get(0), mb);
                     rhs = analyzeValue(ir.getOperands().get(1), mb, true);
+                    MCBinary binary;
+                    binary = ((BinaryInst) ir).isAdd() ? new MCBinary(MachineCode.TAG.Add, mb) : new MCBinary(MachineCode.TAG.Sub, mb);
+                    binary.setRhs(rhs);
+                    binary.setLhs(lhs);
+                    binary.setDst(dst);
                 }
-                if (rhs.getState() == MachineOperand.state.imm) {
-                    int imm = rhs.getImm();
-                    if (!canEncodeImm(imm) && canEncodeImm(-imm)) {
-                        imm = -imm;
-                        MachineOperand immm = genImm(imm, mb);
-                        MCBinary in;
-                        in = ((BinaryInst) ir).isAdd() ? new MCBinary(MachineCode.TAG.Sub, mb) : new MCBinary(MachineCode.TAG.Add, mb);
-                        MachineOperand dst = analyzeValue(ir, mb, true);
-                        in.setRhs(immm);
-                        in.setLhs(lhs);
-                        in.setDst(dst);
-                        continue;
-                    }
-                }
-                MCBinary binary;
-                binary = ((BinaryInst) ir).isAdd() ? new MCBinary(MachineCode.TAG.Add, mb) : new MCBinary(MachineCode.TAG.Sub, mb);
-                MachineOperand dst = analyzeValue(ir, mb, true);
-                binary.setRhs(rhs);
-                binary.setLhs(lhs);
-                binary.setDst(dst);
+
             } else if (ir instanceof BinaryInst && ((BinaryInst) ir).isCond()) {
                 continue;
             } else if (ir.tag == Instruction.TAG_.Br) {

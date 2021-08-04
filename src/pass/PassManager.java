@@ -31,18 +31,19 @@ public class PassManager {
         irPasses.add(new BranchOptimization());
         irPasses.add(new GVNGCM());
 
-        irPasses.add(new FunctionInline());
+//        irPasses.add(new FunctionInline());
 //        irPasses.add(new MarkConstantArray()); // 等数组传参 alias 修好才能用
         irPasses.add(new BranchOptimization());
         irPasses.add(new GVNGCM());
         irPasses.add(new DeadCodeEmit());
         irPasses.add(new EmitLLVM());
 
+
         mcPasses.add(new RegAllocator());
-        mcPasses.add(new PeepholeOptimization());
-        mcPasses.add(new ListScheduling());
-        mcPasses.add(new PeepholeOptimization());
-        mcPasses.add(new IfToCond());
+//        mcPasses.add(new PeepholeOptimization());
+//        mcPasses.add(new ListScheduling());
+//        mcPasses.add(new PeepholeOptimization());
+//        mcPasses.add(new IfToCond());
     }
 
     public static PassManager getPassManager() {
