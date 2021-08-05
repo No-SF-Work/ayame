@@ -22,6 +22,7 @@ public class Loop {
   private BasicBlock latchBlock; // 跳回循环头的基本块
   private MemInst.Phi indVar; // 索引 phi
   private Value indVarInit; // 索引初值
+  private Value indVarEnd; // 索引边界（可不可以等于边界，自己判断）
   private Instruction stepInst; // 索引迭代指令
 
   public Loop(Loop parentLoop) {
@@ -82,6 +83,10 @@ public class Loop {
     return indVarInit;
   }
 
+  public Value getIndVarEnd() {
+    return indVarEnd;
+  }
+
   public void setLatchBlock(BasicBlock latchBlock) {
     this.latchBlock = latchBlock;
   }
@@ -94,9 +99,12 @@ public class Loop {
     this.stepInst = stepInst;
   }
 
-
   public void setIndVarInit(Value indVarInit) {
     this.indVarInit = indVarInit;
+  }
+  
+  public void setIndVarEnd(Value indVarEnd) {
+    this.indVarEnd = indVarEnd;
   }
 
 
