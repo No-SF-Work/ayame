@@ -1105,6 +1105,7 @@ public class CodeGenManager {
                         mc.setLhs(lhs);
                         mc.setRhs(lhs);
                         mc.setShift(ArmAddition.ShiftType.Lsl, log+1);
+                        mc.setDst(dst);
                         continue;
                     }
                     if (lhsIsConst) {
