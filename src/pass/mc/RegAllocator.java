@@ -3,6 +3,7 @@ package pass.mc;
 import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.*;
+import driver.Config;
 import util.Pair;
 
 import java.util.*;
@@ -36,6 +37,8 @@ public class RegAllocator implements MCPass {
         BlockLiveInfo(MachineBlock block) {
         }
     }
+
+    private boolean isOpt=false;
 
     private HashMap<MachineBlock, BlockLiveInfo> livenessAnalysis(MachineFunction func) {
         var liveInfoMap = new HashMap<MachineBlock, BlockLiveInfo>();
@@ -531,7 +534,8 @@ public class RegAllocator implements MCPass {
 
                     for (var n : spilledNodes) {
                         assert n instanceof VirtualReg;
-                        var storeInStack = ((VirtualReg) n).getCost() >= 4;
+                        var storeInStack = ((VirtualReg) n).getCost() >= 10;
+//                        var storeInStack = true;
 
                         for (var blockEntry : func.getmbList()) {
                             var block = blockEntry.getVal();
