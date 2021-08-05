@@ -25,7 +25,7 @@ import util.Mylogger;
 
 public class LoopUnroll implements IRPass {
 
-  private static final int threshold = 3000;
+  private static final int threshold = 800;
   private static final Logger log = Mylogger.getLogger(IRPass.class);
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
   private LoopInfo currLoopInfo;
