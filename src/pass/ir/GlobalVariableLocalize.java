@@ -3,6 +3,7 @@ package pass.ir;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.Use;
+import ir.values.BasicBlock;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.GlobalVariable;
@@ -35,9 +36,12 @@ public class GlobalVariableLocalize implements IRPass {
    *
    * */
   HashMap<GlobalVariable, ArrayList<Function>> gvUserFunc = new HashMap<>();
+  //一个函数通过调用关系bfs出去，如果用到了gv就认为是related
+  HashMap<Function, HashSet<GlobalVariable>> relatedGVs = new HashMap<>();
   MyModule m;
   MyFactoryBuilder f;
   HashSet<Function> recFuncs = new HashSet<>();
+  HashSet<Function> visitfunc = new HashSet<>();
 
   @Override
   public void run(MyModule m) {
@@ -45,7 +49,7 @@ public class GlobalVariableLocalize implements IRPass {
     this.f = MyFactoryBuilder.getInstance();
     loadUserFuncs();
     findRecursion();
-
+    findRelatedFunc();
     localize();
   }
 
@@ -56,7 +60,7 @@ public class GlobalVariableLocalize implements IRPass {
         //直接局部化
         if (userFuncs.size() == 1) {
           var fun = userFuncs.get(0);
-          if (!recFuncs.contains(fun)) {
+          if (!recFuncs.contains(fun) && fun.getName().equals("main")) {
             var entry = fun.getList_().getEntry();
             var alloca = f.buildAlloca(entry.getVal(), f.getI32Ty());
             var iter = entry.getVal().getList().getEntry();
@@ -67,7 +71,58 @@ public class GlobalVariableLocalize implements IRPass {
             gv.COReplaceAllUseWith(alloca);
           }
         } else {//间接局部化
+          /*todo
+              1.使用了gv的函数中把gv换掉
+              2.在退出的时候store
+          * */
+          for (Function func : userFuncs) {
+            localizeOneFunc(gv, func);
+          }
+        }
+      }
+    }
+  }
 
+  private void localizeOneFunc(GlobalVariable gv, Function f) {
+    /*todo
+       1.找到所有退出的点(ret|call)
+       2.对于ret,都进行
+       3.对于所有call,如果是related就store,不是related就不store（对于一些拿全局变量当迭代器的恶心测试点，这里能起到比较好的效果）
+    */
+
+
+
+
+
+
+  }
+
+  //找related gvs 的目的是：在退出函数的时候，需要进行一个store把局部的值存回gv
+//在通过call退出的时候，如果gv和call的func的所有callee以及callee的callee都无关系，可以省去一条store
+  private boolean bfsFuncs(Function start, GlobalVariable gv) {
+    if (visitfunc.contains(start)) {
+      return false;
+    }
+    visitfunc.add(start);
+    if (gvUserFunc.get(gv).contains(start)) {
+      return true;
+    }
+    var result = false;
+    for (Function callee : start.getCalleeList()) {
+      result |= bfsFuncs(callee, gv);
+    }
+    return result;
+  }
+
+
+  private void findRelatedFunc() {
+    for (INode<Function, MyModule> function : m.__functions) {
+      var val = function.getVal();
+      relatedGVs.put(val, new HashSet<>());
+      for (GlobalVariable globalVariable : m.__globalVariables) {
+        visitfunc.clear();
+        if (bfsFuncs(val, globalVariable)) {
+          relatedGVs.get(val).add(globalVariable);
         }
       }
     }
@@ -77,6 +132,7 @@ public class GlobalVariableLocalize implements IRPass {
   private void findRecursion() {
     for (INode<Function, MyModule> func : m.__functions) {
       var f = func.getVal();
+      visitfunc.clear();
       if (!f.isBuiltin_() && findF(f, f)) {
         recFuncs.add(f);
       }
@@ -88,23 +144,21 @@ public class GlobalVariableLocalize implements IRPass {
         recFuncs.addAll(func.getCalleeList());
       }
     } while (size != recFuncs.size());
-
-
   }
 
   private boolean findF(Function start, Function target) {
-    if (recFuncs.contains(target)) {
-      return true;
+    if (visitfunc.contains(start)) {
+      return false;
     }
+    visitfunc.add(start);
     if (start.getCalleeList().contains(target)) {
       return true;
     }
-    for (Function i : start.getCalleeList()) {
-      if (!i.isBuiltin_() && findF(i, target)) {
-        return true;
-      }
+    var result = false;
+    for (Function function : start.getCalleeList()) {
+      result |= findF(function, target);
     }
-    return false;
+    return result;
   }
 
 
