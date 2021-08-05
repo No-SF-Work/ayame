@@ -38,7 +38,6 @@ public class RegAllocator implements MCPass {
         }
     }
 
-    private boolean isOpt=false;
 
     private HashMap<MachineBlock, BlockLiveInfo> livenessAnalysis(MachineFunction func) {
         var liveInfoMap = new HashMap<MachineBlock, BlockLiveInfo>();
@@ -534,8 +533,7 @@ public class RegAllocator implements MCPass {
 
                     for (var n : spilledNodes) {
                         assert n instanceof VirtualReg;
-                        var storeInStack = ((VirtualReg) n).getCost() >= 10;
-//                        var storeInStack = true;
+                        var storeInStack = ((VirtualReg) n).getCost() >= 4;
 
                         for (var blockEntry : func.getmbList()) {
                             var block = blockEntry.getVal();

@@ -42,9 +42,9 @@ public class CondExec implements Pass.MCPass {
                             var instr = instrEntry.getVal();
                             ++cntInstr;
 
-                            boolean correctInstr = true;
+                            boolean correctInstr = instr instanceof MCLoad || instr instanceof MCStore || instr instanceof MCFma;
                             boolean hasNoCond = instr.getCond() == Any;
-                            boolean tooMuchInstr = false;
+                            boolean tooMuchInstr = cntInstr > 4;
 
                             if (!(correctInstr && hasNoCond) || tooMuchInstr) {
                                 canBeOptimized = false;
