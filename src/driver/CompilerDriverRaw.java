@@ -84,6 +84,9 @@ public class CompilerDriverRaw {
                 pm.openedPasses_.add("ListScheduling");
                 pm.openedPasses_.add("Peephole");
                 pm.openedPasses_.add("CondExec");
+                pm.openedPasses_.add("loopInfoFullAnalysis");
+                pm.openedPasses_.add("LCSSA");
+                pm.openedPasses_.add("loopUnroll");
             }
 
             if (source.contains("register_alloc")) {

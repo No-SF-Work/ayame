@@ -105,7 +105,7 @@ public class CompilerDriver {
         pm.openedPasses_.add("markConstantArray");
         pm.openedPasses_.add("ListScheduling");
         pm.openedPasses_.add("Peephole");
-        pm.openedPasses_.add("IfToCond");
+        pm.openedPasses_.add("CondExec");
         pm.openedPasses_.add("loopInfoFullAnalysis");
         pm.openedPasses_.add("LCSSA");
         pm.openedPasses_.add("loopUnroll");
