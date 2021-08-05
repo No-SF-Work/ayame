@@ -5,7 +5,7 @@ import ir.MyModule;
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
 import pass.ir.*;
-import pass.mc.IfToCond;
+import pass.mc.CondExec;
 import pass.mc.ListScheduling;
 import pass.mc.PeepholeOptimization;
 import pass.mc.RegAllocator;
@@ -27,6 +27,7 @@ public class PassManager {
         irPasses.add(new BBPredSucc());
 //        irPasses.add(new EmitLLVM("tt.ll"));
         irPasses.add(new InterproceduralAnalysis());
+        irPasses.add(new GlobalVariableLocalize());
         irPasses.add(new Mem2reg());
         irPasses.add(new BranchOptimization());
         irPasses.add(new GVNGCM());
@@ -50,12 +51,12 @@ public class PassManager {
         irPasses.add(new LoopInfoFullAnalysis());
         irPasses.add(new EmitLLVM());
 
-        mcPasses.add(new PeepholeOptimization());
+
         mcPasses.add(new RegAllocator());
         mcPasses.add(new PeepholeOptimization());
         mcPasses.add(new ListScheduling());
         mcPasses.add(new PeepholeOptimization());
-        mcPasses.add(new IfToCond());
+        mcPasses.add(new CondExec());
     }
 
     public static PassManager getPassManager() {

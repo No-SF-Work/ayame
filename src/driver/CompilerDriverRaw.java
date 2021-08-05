@@ -75,6 +75,7 @@ public class CompilerDriverRaw {
             pm.openedPasses_.add("gvngcm");
             pm.openedPasses_.add("interproceduralAnalysis");
             if (Config.getInstance().isO2) {
+                pm.openedPasses_.add("gvlocalize");
                 pm.openedPasses_.add("branchOptimization");
                 pm.openedPasses_.add("emitllvm");
                 pm.openedPasses_.add("deadcodeemit");
@@ -82,7 +83,7 @@ public class CompilerDriverRaw {
                 pm.openedPasses_.add("markConstantArray");
                 pm.openedPasses_.add("ListScheduling");
                 pm.openedPasses_.add("Peephole");
-                pm.openedPasses_.add("IfToCond");
+                pm.openedPasses_.add("CondExec");
             }
 
             if (source.contains("register_alloc")) {
