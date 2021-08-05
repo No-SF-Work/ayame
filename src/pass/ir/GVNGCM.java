@@ -305,28 +305,30 @@ public class GVNGCM implements IRPass {
         GlobalVariable globalArray = (GlobalVariable) array;
         if (globalArray.isConst || inst.getOperands().get(1).getName().equals("UndefValue")) {
           boolean constIndex = true;
-          assert globalArray.fixedInit instanceof ConstantArray;
-          ConstantArray constantArray = (ConstantArray) globalArray.fixedInit;
-          Stack<Integer> indexList = new Stack<>();
-          Value tmpPtr = pointer;
-          while (tmpPtr instanceof GEPInst) {
-            Value index = ((Instruction) tmpPtr).getOperands().get(2);
-            if (!(index instanceof ConstantInt)) {
-              constIndex = false;
-              break;
+          if (globalArray.fixedInit != null) {
+            assert globalArray.fixedInit instanceof ConstantArray;
+            ConstantArray constantArray = (ConstantArray) globalArray.fixedInit;
+            Stack<Integer> indexList = new Stack<>();
+            Value tmpPtr = pointer;
+            while (tmpPtr instanceof GEPInst) {
+              Value index = ((Instruction) tmpPtr).getOperands().get(2);
+              if (!(index instanceof ConstantInt)) {
+                constIndex = false;
+                break;
+              }
+              indexList.push(((ConstantInt) index).getVal());
+              tmpPtr = ((Instruction) tmpPtr).getOperands().get(0);
             }
-            indexList.push(((ConstantInt) index).getVal());
-            tmpPtr = ((Instruction) tmpPtr).getOperands().get(0);
-          }
-          if (constIndex) {
-            Constant c = constantArray;
-            while (!indexList.isEmpty()) {
-              int index = indexList.pop();
-              c = ((ConstantArray) c).getConst_arr_().get(index);
+            if (constIndex) {
+              Constant c = constantArray;
+              while (!indexList.isEmpty()) {
+                int index = indexList.pop();
+                c = ((ConstantArray) c).getConst_arr_().get(index);
+              }
+              assert c instanceof ConstantInt;
+              replace(inst, c);
+              getConst = true;
             }
-            assert c instanceof ConstantInt;
-            replace(inst, c);
-            getConst = true;
           }
         }
       }
