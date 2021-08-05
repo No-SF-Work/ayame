@@ -183,6 +183,11 @@ public class Loop {
     return loopHeader.getPredecessor_().size() == 2 && exitingBlocks.size() == 1;
   }
 
+  // FIXME: more specific
+  public boolean isSimplifyForm() {
+    return loopHeader.getPredecessor_().size() == 2;
+  }
+
   public void addBlock(BasicBlock bb) {
     var loop = this;
     while (loop != null) {

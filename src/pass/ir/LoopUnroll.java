@@ -171,20 +171,7 @@ public class LoopUnroll implements IRPass {
 
   public void runOnLoop(Loop loop) {
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
-    if (!loop.isCanonical()) {
-      return;
-    }
-
-    for (var bb : loop.getBlocks()) {
-      for (var instNode : bb.getList()) {
-        var inst = instNode.getVal();
-        if (inst instanceof CallInst) {
-          return;
-        }
-      }
-    }
-
-    rearrangeBBOrder(loop);
+     rearrangeBBOrder(loop);
 
     if (loop.getTripCount() != null) {
       constantUnroll(loop);
@@ -196,12 +183,17 @@ public class LoopUnroll implements IRPass {
   public void constantUnroll(Loop loop) {
     log.info("Run constant unroll");
 
+    if (!loop.isCanonical()) {
+      doubleUnroll(loop);
+    }
+
     int instNum = 0;
     // FIXME: maybe exit block is better
     var latchBr = loop.getLatchBlock().getList().getLast().getVal();
     var tripCount = loop.getTripCount();
 
-    ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks()); // we will update loop.getBlocks() later
+    ArrayList<BasicBlock> loopBlocks = new ArrayList<>(
+        loop.getBlocks()); // we will update loop.getBlocks() later
 
     BasicBlock header = loop.getLoopHeader();
     BasicBlock exit = null; // 循环结束跳到的基本块
@@ -278,13 +270,6 @@ public class LoopUnroll implements IRPass {
             newPhi.CORemoveAllOperand();
             newPhi.node.removeSelf();
           }
-        } else {
-//          for (var pred: bb.getPredecessor_()) {
-//            assert loopBlocks.contains(pred);
-//            BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
-//            newPred.getSuccessor_().add(newBB);
-//            newBB.getPredecessor_().add(newPred);
-//          }
         }
 
         lastValueMap.put(bb, newBB);
@@ -310,10 +295,10 @@ public class LoopUnroll implements IRPass {
           remapInstruction(instNode.getVal(), lastValueMap);
         });
         if (newBB != newHeader) {
-          for (var key: lastValueMap.keySet()) {
+          for (var key : lastValueMap.keySet()) {
             if (lastValueMap.get(key) == newBB) {
               BasicBlock oldBB = (BasicBlock) key;
-              for (var pred: oldBB.getPredecessor_()) {
+              for (var pred : oldBB.getPredecessor_()) {
                 assert loopBlocks.contains(pred);
                 BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
                 newPred.getSuccessor_().add(newBB);
@@ -398,5 +383,29 @@ public class LoopUnroll implements IRPass {
 
   public void doubleUnroll(Loop loop) {
     log.info("Run double unroll");
+
+    if (!loop.isSimplifyForm()) {
+      return;
+    }
+
+    for (var bb : loop.getBlocks()) {
+      for (var instNode : bb.getList()) {
+        var inst = instNode.getVal();
+        if (inst instanceof CallInst) {
+          return;
+        }
+      }
+    }
+
+    // latchBr 跳转到的循环外基本块
+    var latchBr = loop.getLatchBlock().getList().getLast().getVal();
+    ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks());
+    BasicBlock header = loop.getLoopHeader();
+    BasicBlock exit = null;
+    if (loopBlocks.contains((BasicBlock) (latchBr.getOperands().get(1)))) {
+      exit = (BasicBlock) (latchBr.getOperands().get(2));
+    } else {
+      exit = (BasicBlock) (latchBr.getOperands().get(1));
+    }
   }
 }
