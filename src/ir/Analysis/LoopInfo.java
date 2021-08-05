@@ -2,8 +2,11 @@ package ir.Analysis;
 
 import ir.Loop;
 import ir.values.BasicBlock;
+import ir.values.Constant;
+import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.instructions.Instruction;
+import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
 import util.IList.INode;
 
@@ -125,19 +128,21 @@ public class LoopInfo {
     populateLoopsDFS(entry);
 
     computeAllLoops();
-//    computeAdditionalLoopInfo();
   }
 
   public void computeAdditionalLoopInfo() {
-    for (var loop: allLoops) {
+    for (var loop : allLoops) {
       loop.setIndVarInit(null);
       loop.setIndVar(null);
+      loop.setIndVarEnd(null);
       loop.setLatchBlock(null);
       loop.setStepInst(null);
+      loop.setStep(null);
       loop.getExitingBlocks().clear();
     }
 
     computeExitingBlocks();
+    computeExitBlocks();
     computeLatchBlock();
     computeIndVarInfo();
   }
@@ -193,10 +198,22 @@ public class LoopInfo {
       for (var bb : loop.getBlocks()) {
         var inst = bb.getList().getLast().getVal();
         if (inst.tag == Instruction.TAG_.Br && inst.getNumOP() == 3) {
-          var bb1 = inst.getOperands().get(1);
-          var bb2 = inst.getOperands().get(2);
+          BasicBlock bb1 = (BasicBlock) inst.getOperands().get(1);
+          BasicBlock bb2 = (BasicBlock) inst.getOperands().get(2);
           if (!loop.getBlocks().contains(bb1) || !loop.getBlocks().contains(bb2)) {
             loop.getExitingBlocks().add(bb);
+          }
+        }
+      }
+    }
+  }
+
+  private void computeExitBlocks() {
+    for (var loop : allLoops) {
+      for (var bb : loop.getBlocks()) {
+        for (var succBB : bb.getSuccessor_()) {
+          if (!loop.getBlocks().contains(succBB)) {
+            loop.getExitBlocks().add(succBB);
           }
         }
       }
@@ -227,12 +244,13 @@ public class LoopInfo {
 
       var header = loop.getLoopHeader();
 
+      // FIXME: 找 stepInst 有 bug，如 while (i + 1 < 100) { i = i + 1; }，找到的 stepInst 是 { i + 1 < 100 } 中的 i + 1
       // stepInst
       for (var i = 0; i <= 1; i++) {
         var op = latchCmpInst.getOperands().get(i);
         if (op instanceof Instruction) {
           Instruction opInst = (Instruction) op;
-          if (getLoopDepthForBB(opInst.getBB()) != getLoopDepthForBB(latchCmpInst.getBB())) {
+          if (!getLoopDepthForBB(opInst.getBB()).equals(getLoopDepthForBB(latchCmpInst.getBB()))) {
             loop.setStepInst(
                 (Instruction) latchCmpInst.getOperands().get(1 - i));
             loop.setIndVarEnd(latchCmpInst.getOperands().get(i));
@@ -268,6 +286,125 @@ public class LoopInfo {
           break;
         }
       }
+
+      // step
+      var indVarIndex = stepInst.getOperands().indexOf(loop.getIndVar());
+      if (indVarIndex == -1) {
+        return;
+      }
+      loop.setStep(stepInst.getOperands().get(1 - indVarIndex));
+
+      // tripCount
+      if (stepInst.tag == TAG_.Add &&
+          loop.getStep() instanceof Constant &&
+          loop.getIndVarInit() instanceof Constant &&
+          loop.getIndVarEnd() instanceof Constant) {
+        var init = ((ConstantInt) loop.getIndVarInit()).getVal();
+        var end = ((ConstantInt) loop.getIndVarEnd()).getVal();
+        var step = ((ConstantInt) loop.getStep()).getVal();
+        int tripCount = (int) (1e9 + 7); //
+
+        // 只考虑 Lt, Le, Gt, Ge, Ne
+        // Lt, Gt: |end - init| / |step|
+        // Le, Ge: (|end - init| + 1) / |step|
+        // Ne: |end - init| / |step| (有余数时则为 inf)
+        switch (latchCmpInst.tag) {
+          case Lt -> {
+            if (step > 0) {
+              tripCount = init < end ? ceilDiv(end - init, step) : 0;
+            }
+          }
+          case Gt -> {
+            if (step < 0) {
+              tripCount = init > end ? ceilDiv(init - end, -step) : 0;
+            }
+          }
+          case Le -> {
+            if (step > 0) {
+              tripCount = init <= end ? ceilDiv(end - init + 1, step) : 0;
+            }
+          }
+          case Ge -> {
+            if (step < 0) {
+              tripCount = init >= end ? ceilDiv(init - end + 1, -step) : 0;
+            }
+          }
+          case Ne -> {
+            if (end - init == 0) {
+              tripCount = 0;
+            } else if (step * (end - init) > 0 && (end - init) % step == 0) {
+              tripCount = (end - init) / step;
+            }
+          }
+        }
+        loop.setTripCount(tripCount);
+      }
     }
   }
+
+  private int ceilDiv(int a, int b) {
+    return (int) Math.ceil((double) a / b);
+  }
+
+  public HashMap<BasicBlock, Loop> getBbLoopMap() {
+    return bbLoopMap;
+  }
+
+  public void addBBToLoop(BasicBlock bb, Loop loop) {
+    this.bbLoopMap.put(bb, loop);
+    loop.addBlock(bb);
+  }
+
+  public void removeBBFromAllLoops(BasicBlock bb) {
+    var loop = getLoopForBB(bb);
+    while (loop != null) {
+      loop.removeBlock(bb);
+      loop = loop.getParentLoop();
+    }
+    this.bbLoopMap.remove(bb);
+  }
+
+  public void removeTopLevelLoop(Loop loop) {
+    this.topLevelLoops.remove(loop);
+  }
+
+  public void addTopLevelLoop(Loop loop) {
+    this.topLevelLoops.add(loop);
+  }
+
+  public void removeLoop(Loop loop) {
+    ArrayList<BasicBlock> loopBlocks = new ArrayList<>();
+    loopBlocks.addAll(loop.getBlocks());
+    if (loop.getParentLoop() != null) {
+      var parentLoop = loop.getParentLoop();
+      for (var bb : loopBlocks) {
+        if (this.getLoopForBB(bb) == loop) {
+          this.getBbLoopMap().put(bb, parentLoop);
+        }
+      }
+
+      parentLoop.removeSubLoop(loop);
+
+      while (loop.getSubLoops().size() != 0) {
+        var subLoop = loop.getSubLoops().get(0);
+        loop.removeSubLoop(subLoop);
+        parentLoop.addSubLoop(subLoop);
+      }
+    } else {
+      for (var bb : loopBlocks) {
+        if (this.getLoopForBB(bb) == loop) {
+          // bb 在最外层循环里了
+          this.removeBBFromAllLoops(bb);
+        }
+      }
+
+      this.removeTopLevelLoop(loop);
+      while (loop.getSubLoops().size() != 0) {
+        var subLoop = loop.getSubLoops().get(0);
+        loop.removeSubLoop(subLoop);
+        this.addTopLevelLoop(subLoop);
+      }
+    }
+  }
+
 }

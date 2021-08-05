@@ -16,7 +16,8 @@ public class Loop {
   private ArrayList<Loop> subLoops;
   private ArrayList<BasicBlock> blocks;
 
-  private HashSet<BasicBlock> exitingBlocks; // blocks that jump out from the loop
+  private HashSet<BasicBlock> exitingBlocks; // 跳转到循环外的基本块
+  private HashSet<BasicBlock> exitBlocks; // 循环跳转到的循环外基本块
 
   // 这两个只在 Canonical 的循环中才计算，loop header 有两个 pred，只有一个 exiting block，只有一个 latch block
   private BasicBlock latchBlock; // 跳回循环头的基本块
@@ -24,12 +25,15 @@ public class Loop {
   private Value indVarInit; // 索引初值
   private Value indVarEnd; // 索引边界（可不可以等于边界，自己判断）
   private Instruction stepInst; // 索引迭代指令
+  private Value step; // 迭代长度
+  private Integer tripCount; // 迭代次数（只考虑 init/end/step 都是常量的情况）
 
   public Loop(Loop parentLoop) {
     this.parentLoop = parentLoop;
     this.subLoops = new ArrayList<>();
     this.blocks = new ArrayList<>();
     this.exitingBlocks = new HashSet<>();
+    this.exitBlocks = new HashSet<>();
   }
 
 
@@ -38,6 +42,7 @@ public class Loop {
     this.subLoops = new ArrayList<>();
     this.blocks = new ArrayList<>();
     this.exitingBlocks = new HashSet<>();
+    this.exitBlocks = new HashSet<>();
     this.loopHeader = header;
     this.blocks.add(header);
   }
@@ -62,6 +67,7 @@ public class Loop {
     return exitingBlocks;
   }
 
+  public HashSet<BasicBlock> getExitBlocks() { return exitBlocks; }
 
   public BasicBlock getLoopHeader() {
     return loopHeader;
@@ -87,6 +93,14 @@ public class Loop {
     return indVarEnd;
   }
 
+  public Value getStep() {
+    return step;
+  }
+
+  public Integer getTripCount() {
+    return tripCount;
+  }
+
   public void setLatchBlock(BasicBlock latchBlock) {
     this.latchBlock = latchBlock;
   }
@@ -102,9 +116,17 @@ public class Loop {
   public void setIndVarInit(Value indVarInit) {
     this.indVarInit = indVarInit;
   }
-  
+
   public void setIndVarEnd(Value indVarEnd) {
     this.indVarEnd = indVarEnd;
+  }
+
+  public void setStep(Value step) {
+    this.step = step;
+  }
+
+  public void setTripCount(Integer tripCount) {
+    this.tripCount = tripCount;
   }
 
 
@@ -144,6 +166,7 @@ public class Loop {
     return null;
   }
 
+
   public Integer getLoopDepth() {
     int depth = 0;
     for (Loop curLoop = this; curLoop != null; curLoop = curLoop.parentLoop) {
@@ -158,5 +181,28 @@ public class Loop {
 
   public boolean isCanonical() {
     return loopHeader.getPredecessor_().size() == 2 && exitingBlocks.size() == 1;
+  }
+
+  public void addBlock(BasicBlock bb) {
+    var loop = this;
+    while (loop != null) {
+      loop.getBlocks().add(bb);
+      loop = loop.getParentLoop();
+    }
+  }
+
+  public void removeBlock(BasicBlock bb) {
+    this.blocks.remove(bb);
+  }
+
+
+  public void addSubLoop(Loop subLoop) {
+    this.subLoops.add(subLoop);
+    subLoop.setParentLoop(this);
+  }
+
+  public void removeSubLoop(Loop subLoop) {
+    this.subLoops.remove(subLoop);
+    subLoop.setParentLoop(null);
   }
 }

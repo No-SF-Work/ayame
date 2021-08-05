@@ -25,18 +25,30 @@ public class PassManager {
     private PassManager() {
         //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
         irPasses.add(new BBPredSucc());
-        irPasses.add(new EmitLLVM("tt.ll"));
+//        irPasses.add(new EmitLLVM("tt.ll"));
         irPasses.add(new InterproceduralAnalysis());
         irPasses.add(new GlobalVariableLocalize());
         irPasses.add(new Mem2reg());
         irPasses.add(new BranchOptimization());
         irPasses.add(new GVNGCM());
 
-//        irPasses.add(new FunctionInline());
+        irPasses.add(new FunctionInline());
 //        irPasses.add(new MarkConstantArray()); // 等数组传参 alias 修好才能用
         irPasses.add(new BranchOptimization());
         irPasses.add(new GVNGCM());
         irPasses.add(new DeadCodeEmit());
+        irPasses.add(new LoopInfoFullAnalysis());
+        irPasses.add(new EmitLLVM("beforeLCSSA.ll"));
+        irPasses.add(new LCSSA());
+        irPasses.add(new EmitLLVM("beforeUnroll.ll"));
+        irPasses.add(new LoopUnroll());
+        irPasses.add(new LoopInfoFullAnalysis());
+        irPasses.add(new EmitLLVM("afterUnroll.ll"));
+        irPasses.add(new BranchOptimization());
+        irPasses.add(new GVNGCM());
+        irPasses.add(new DeadCodeEmit());
+
+        irPasses.add(new LoopInfoFullAnalysis());
         irPasses.add(new EmitLLVM());
 
 
