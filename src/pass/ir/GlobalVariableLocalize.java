@@ -9,6 +9,8 @@ import ir.values.Function;
 import ir.values.GlobalVariable;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.MemInst.AllocaInst;
+import ir.values.instructions.TerminatorInst.CallInst;
+import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +33,7 @@ public class GlobalVariableLocalize implements IRPass {
    *  a:直接局部化
    *   1.只被main函数使用的全局变量
    *   2.只被只调用一次的函数使用的全局变量
-   *  b:间接局部化（保证局部性）
+   *  b:间接局部化（保证局部性) (update:这种优化在某些情况下性能会受到极大损失，得不偿失,所以我们写一半放弃了)
    *   1.全局变量在循环里面被反复du,就将其局部化
    *
    * */
@@ -70,35 +72,11 @@ public class GlobalVariableLocalize implements IRPass {
             f.buildStoreAfter(gv.init, alloca, iter.getVal());
             gv.COReplaceAllUseWith(alloca);
           }
-        } else {//间接局部化
-          /*todo
-              1.使用了gv的函数中把gv换掉
-              2.在退出的时候store
-          * */
-          for (Function func : userFuncs) {
-            localizeOneFunc(gv, func);
-          }
         }
       }
     }
   }
 
-  private void localizeOneFunc(GlobalVariable gv, Function f) {
-    /*todo
-       1.找到所有退出的点(ret|call)
-       2.对于ret,都进行
-       3.对于所有call,如果是related就store,不是related就不store（对于一些拿全局变量当迭代器的恶心测试点，这里能起到比较好的效果）
-    */
-
-
-
-
-
-
-  }
-
-  //找related gvs 的目的是：在退出函数的时候，需要进行一个store把局部的值存回gv
-//在通过call退出的时候，如果gv和call的func的所有callee以及callee的callee都无关系，可以省去一条store
   private boolean bfsFuncs(Function start, GlobalVariable gv) {
     if (visitfunc.contains(start)) {
       return false;
