@@ -33,7 +33,7 @@ public class PassManager {
         irPasses.add(new GVNGCM());
 
         irPasses.add(new FunctionInline());
-        irPasses.add(new MarkConstantArray()); // 等数组传参 alias 修好才能用
+//        irPasses.add(new MarkConstantArray()); // 等数组传参 alias 修好才能用
         irPasses.add(new BranchOptimization());
         irPasses.add(new GVNGCM());
         irPasses.add(new DeadCodeEmit());
