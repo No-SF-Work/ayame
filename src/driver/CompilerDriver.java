@@ -106,7 +106,7 @@ public class CompilerDriver {
                 pm.openedPasses_.add("IfToCond");
                 pm.openedPasses_.add("loopInfoFullAnalysis");
                 pm.openedPasses_.add("LCSSA");
-                pm.openedPasses_.add("loopUnroll");
+//                pm.openedPasses_.add("loopUnroll");
             }
 
 
