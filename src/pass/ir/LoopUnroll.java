@@ -165,6 +165,7 @@ public class LoopUnroll implements IRPass {
     while (!loopQueue.isEmpty()) {
       var loop = loopQueue.remove();
       runOnLoop(loop);
+//      loopQueue.remove();
     }
   }
 
@@ -278,12 +279,12 @@ public class LoopUnroll implements IRPass {
             newPhi.node.removeSelf();
           }
         } else {
-          for (var pred: bb.getPredecessor_()) {
-            assert loopBlocks.contains(pred);
-            BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
-            newPred.getSuccessor_().add(newBB);
-            newBB.getPredecessor_().add(newPred);
-          }
+//          for (var pred: bb.getPredecessor_()) {
+//            assert loopBlocks.contains(pred);
+//            BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
+//            newPred.getSuccessor_().add(newBB);
+//            newBB.getPredecessor_().add(newPred);
+//          }
         }
 
         lastValueMap.put(bb, newBB);
@@ -303,10 +304,24 @@ public class LoopUnroll implements IRPass {
         newBlocks.add(newBB);
       }
 
+      var newHeader = lastValueMap.get(header);
       for (var newBB : newBlocks) {
         newBB.getList().forEach(instNode -> {
           remapInstruction(instNode.getVal(), lastValueMap);
         });
+        if (newBB != newHeader) {
+          for (var key: lastValueMap.keySet()) {
+            if (lastValueMap.get(key) == newBB) {
+              BasicBlock oldBB = (BasicBlock) key;
+              for (var pred: oldBB.getPredecessor_()) {
+                assert loopBlocks.contains(pred);
+                BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
+                newPred.getSuccessor_().add(newBB);
+                newBB.getPredecessor_().add(newPred);
+              }
+            }
+          }
+        }
       }
     }
 
