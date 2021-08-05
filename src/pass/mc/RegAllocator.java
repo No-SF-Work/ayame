@@ -622,7 +622,7 @@ public class RegAllocator implements MCPass {
 
                                         Consumer<MachineCode> addDefiners = instr -> {
                                             if (instr instanceof MCBinary) {
-                                                var lhs = ((MCBinary) defMC).getLhs();
+                                                var lhs = ((MCBinary) instr).getLhs();
                                                 if (lhs instanceof VirtualReg && !((VirtualReg) lhs).isGlobal()) {
                                                     var lhsDefiner = ((VirtualReg) lhs).getDefMC();
                                                     if (!toInsertMCSet.contains(lhsDefiner)) {
