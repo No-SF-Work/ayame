@@ -1089,8 +1089,8 @@ public class CodeGenManager {
                         add.setLhs(lhs);
                         add.setRhs(lhs);
                         add.setShift(ArmAddition.ShiftType.Lsl, log);
-                        mf.addVirtualReg(v1);
                         if(imm<0){
+                            mf.addVirtualReg(v1);
                             add.setDst(v1);
                             rsb.setMb(mb);
                             rsb.setLhs(v1);
