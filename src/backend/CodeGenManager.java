@@ -1,29 +1,52 @@
 package backend;
 
-import backend.machinecodes.*;
+import backend.machinecodes.ArmAddition;
+import backend.machinecodes.ArmAddition.CondType;
+import backend.machinecodes.MCBinary;
+import backend.machinecodes.MCBranch;
+import backend.machinecodes.MCCall;
+import backend.machinecodes.MCComment;
+import backend.machinecodes.MCCompare;
+import backend.machinecodes.MCFma;
+import backend.machinecodes.MCJump;
+import backend.machinecodes.MCLoad;
+import backend.machinecodes.MCLongMul;
+import backend.machinecodes.MCMove;
+import backend.machinecodes.MCReturn;
+import backend.machinecodes.MCStore;
+import backend.machinecodes.MachineBlock;
+import backend.machinecodes.MachineCode;
+import backend.machinecodes.MachineFunction;
 import backend.reg.MachineOperand;
 import backend.reg.VirtualReg;
-import ir.Analysis.LoopInfo;
 import ir.MyModule;
 import ir.types.ArrayType;
 import ir.types.IntegerType;
 import ir.types.PointerType;
 import ir.types.Type;
-import ir.values.*;
+import ir.values.BasicBlock;
+import ir.values.Constant;
+import ir.values.Constants;
+import ir.values.Function;
+import ir.values.GlobalVariable;
+import ir.values.UndefValue;
+import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.MemInst;
+import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Stack;
+import java.util.logging.Logger;
 import util.IList;
 import util.IList.INode;
-import ir.values.instructions.MemInst.Phi;
 import util.Mylogger;
-import backend.machinecodes.ArmAddition.CondType;
-import driver.Config;
 import util.Pair;
-
-import java.util.*;
-import java.util.logging.Logger;
 
 /**
  * 后端的顶层模块，管理整个后端的流程，
@@ -36,7 +59,7 @@ public class CodeGenManager {
     //ir moudle
     private static MyModule myModule;
 
-    private boolean isO2 = false;
+    private boolean isO2 = true;
 
     private boolean ifPrintIR = false;
 
@@ -44,7 +67,7 @@ public class CodeGenManager {
 
     private CodeGenManager() {
         logger = Mylogger.getLogger(CodeGenManager.class);
-        this.isO2 = false;
+        this.isO2 = true;
         this.ifPrintIR = false;
     }
 
