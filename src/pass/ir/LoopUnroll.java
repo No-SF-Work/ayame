@@ -29,6 +29,7 @@ public class LoopUnroll implements IRPass {
   private static final Logger log = Mylogger.getLogger(IRPass.class);
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
   private LoopInfo currLoopInfo;
+  private Function currFunction;
 
   // return a new instruction but uses the old inst operands
   public static Instruction copyInstruction(Instruction inst) {
@@ -111,6 +112,30 @@ public class LoopUnroll implements IRPass {
     queue.add(loop);
   }
 
+  public static void rearrangeBBOrder(Loop loop) {
+    for (var bb : loop.getBlocks()) {
+      bb.setDirty(false);
+    }
+    var header = loop.getLoopHeader();
+    ArrayList<BasicBlock> tmp = new ArrayList<>();
+    rearrangeDFS(header, loop, tmp);
+    loop.getBlocks().clear();
+    loop.getBlocks().addAll(tmp);
+  }
+
+  public static void rearrangeDFS(BasicBlock curr, Loop loop, ArrayList<BasicBlock> tmp) {
+    if (curr.isDirty()) {
+      return;
+    }
+    curr.setDirty(true);
+    tmp.add(curr);
+    for (var bb : curr.getSuccessor_()) {
+      if (loop.getBlocks().contains(bb)) {
+        rearrangeDFS(bb, loop, tmp);
+      }
+    }
+  }
+
   @Override
   public String getName() {
     return "loopUnroll";
@@ -131,6 +156,7 @@ public class LoopUnroll implements IRPass {
   public void runOnFunction(Function func) {
     Queue<Loop> loopQueue = new LinkedList<>();
     this.currLoopInfo = func.getLoopInfo();
+    this.currFunction = func;
 
     // run on loop manager
     for (var topLoop : this.currLoopInfo.getTopLevelLoops()) {
@@ -143,7 +169,6 @@ public class LoopUnroll implements IRPass {
   }
 
   public void runOnLoop(Loop loop) {
-
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
     if (!loop.isCanonical()) {
       return;
@@ -158,6 +183,8 @@ public class LoopUnroll implements IRPass {
       }
     }
 
+    rearrangeBBOrder(loop);
+
     if (loop.getTripCount() != null) {
       constantUnroll(loop);
     } else {
@@ -169,16 +196,15 @@ public class LoopUnroll implements IRPass {
     log.info("Run constant unroll");
 
     int instNum = 0;
-    var latchBr = loop.getLatchBlock().getList().getLast()
-        .getVal(); // FIXME: maybe exit block is better
+    // FIXME: maybe exit block is better
+    var latchBr = loop.getLatchBlock().getList().getLast().getVal();
     var tripCount = loop.getTripCount();
 
-    ArrayList<BasicBlock> loopBlocks = new ArrayList<>();
-    loopBlocks.addAll(loop.getBlocks()); // we will update loop.getBlocks() later
+    ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks()); // we will update loop.getBlocks() later
 
     BasicBlock header = loop.getLoopHeader();
     BasicBlock exit = null; // 循环结束跳到的基本块
-    if (loopBlocks.contains(latchBr.getOperands().get(1))) {
+    if (loopBlocks.contains((BasicBlock) (latchBr.getOperands().get(1)))) {
       exit = (BasicBlock) (latchBr.getOperands().get(2));
     } else {
       exit = (BasicBlock) (latchBr.getOperands().get(1));
@@ -201,6 +227,7 @@ public class LoopUnroll implements IRPass {
       return;
     }
 
+    // start constant unroll
     HashMap<Value, Value> lastValueMap = new HashMap<>();
     ArrayList<Phi> originPhis = new ArrayList<>();
     var latchBlock = loop.getLatchBlock();
@@ -250,6 +277,13 @@ public class LoopUnroll implements IRPass {
             newPhi.CORemoveAllOperand();
             newPhi.node.removeSelf();
           }
+        } else {
+          for (var pred: bb.getPredecessor_()) {
+            assert loopBlocks.contains(pred);
+            BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
+            newPred.getSuccessor_().add(newBB);
+            newBB.getPredecessor_().add(newPred);
+          }
         }
 
         lastValueMap.put(bb, newBB);
@@ -291,15 +325,14 @@ public class LoopUnroll implements IRPass {
 
             var phi = (Phi) inst;
             var incomingVal = phi.getIncomingVals().get(latchIndex);
-            if (incomingVal instanceof Instruction && (loop.getBlocks().contains(((Instruction) incomingVal).getBB()))) {
+            if (incomingVal instanceof Instruction && (loop.getBlocks()
+                .contains(((Instruction) incomingVal).getBB()))) {
               incomingVal = lastValueMap.get(incomingVal);
             }
             phi.CoReplaceOperandByIndex(latchIndex, incomingVal);
           }
         }
       }
-
-
     }
 
     // set original values of head phi
