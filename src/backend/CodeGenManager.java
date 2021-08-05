@@ -36,16 +36,16 @@ public class CodeGenManager {
     //ir moudle
     private static MyModule myModule;
 
-    private boolean isO2 = true;
+    private boolean isO2 = false;
 
-    private boolean ifPrintIR = true;
+    private boolean ifPrintIR = false;
 
     private static Logger logger;
 
     private CodeGenManager() {
         logger = Mylogger.getLogger(CodeGenManager.class);
-        this.isO2 = Config.getInstance().isO2;
-        this.ifPrintIR = true;
+        this.isO2 = false;
+        this.ifPrintIR = false;
     }
 
     public void load(MyModule m) {
@@ -946,9 +946,7 @@ public class CodeGenManager {
 
     private void processBB(BasicBlock bb) {
         MachineBlock mb = bMap.get(bb);
-        if (ifPrintIR) {
-            MCComment bc = new MCComment("bb:" + bb.getName(), mb);
-        }
+        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
         for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
             Instruction ir = iIt.next().getVal();
             if (ifPrintIR) {
@@ -1012,8 +1010,8 @@ public class CodeGenManager {
                 VirtualReg v=new VirtualReg();
                 VirtualReg v1=new VirtualReg();
                 if(!isO2){
-                    mf.addVirtualReg(v);
                     if(abs!=2){
+                        mf.addVirtualReg(v);
                         MCMove mv1 = new MCMove(mb);
                         mv1.setRhs(lhs);
                         mv1.setShift(ArmAddition.ShiftType.Asr, 31);
@@ -1078,6 +1076,7 @@ public class CodeGenManager {
                         mc.setShift(ArmAddition.ShiftType.Lsl, log);
                         if(imm<0){
                             mc.setDst(v1);
+                            mf.addVirtualReg(v1);
                             rsb.setMb(mb);
                             rsb.setLhs(v1);
                             rsb.setDst(dst);
@@ -1090,6 +1089,7 @@ public class CodeGenManager {
                         add.setLhs(lhs);
                         add.setRhs(lhs);
                         add.setShift(ArmAddition.ShiftType.Lsl, log);
+                        mf.addVirtualReg(v1);
                         if(imm<0){
                             add.setDst(v1);
                             rsb.setMb(mb);
