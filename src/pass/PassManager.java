@@ -42,7 +42,7 @@ public class PassManager {
     irPasses.add(new EmitLLVM("beforeLCSSA.ll"));
     irPasses.add(new LCSSA());
     irPasses.add(new EmitLLVM("beforeUnroll.ll"));
-    irPasses.add(new LoopUnroll());
+//    irPasses.add(new LoopUnroll());
     irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new EmitLLVM("afterUnroll.ll"));
     irPasses.add(new BranchOptimization());
