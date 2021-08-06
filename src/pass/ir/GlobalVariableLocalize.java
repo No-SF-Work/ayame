@@ -95,7 +95,7 @@ public class GlobalVariableLocalize implements IRPass {
       */
   private void localizeOneFunc(GlobalVariable gv, Function fun) {
     var entry = fun.getList_().getEntry();
-    var alloca = f.buildAlloca(entry.getVal(), f.getI32Ty());
+    var alloca = f.buildAlloca(entry.getVal(), f.getI32Ty());//ok
     var iter = entry.getVal().getList().getEntry();
     while (iter.getNext() != null && iter.getNext().getVal() instanceof AllocaInst) {
       iter = iter.getNext();
@@ -109,12 +109,13 @@ public class GlobalVariableLocalize implements IRPass {
         tobeReplace.add(use);
       }
     }
-    tobeReplace.forEach(use -> {
+    for (Use use : tobeReplace) {
       var user = use.getUser();
       var rank = use.getOperandRank();
-      user.CORemoveUse(use);
+      use.getValue().CORemoveUse(use);
       user.CoSetOperand(rank, alloca);
-    });
+      use.getUser();
+    }
 
     var load = f.buildLoadAfter(f.getI32Ty(), gv, iter.getVal());
     var store = f.buildStoreAfter(load, alloca, load);
