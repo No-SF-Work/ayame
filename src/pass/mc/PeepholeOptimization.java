@@ -406,6 +406,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     assert nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0;
                                     var addImm = new MachineOperand(loadInstr.getOffset().getImm() + imm);
                                     var subImm = new MachineOperand(loadInstr.getOffset().getImm() - imm);
+                                    if ((isAdd && addImm.getImm() > 4095) || (!isAdd && subImm.getImm() < 0)) {
+                                        return true;
+                                    }
+
                                     loadInstr.setAddr(binInstr.getLhs());
                                     loadInstr.setOffset(isAdd ? addImm : subImm);
                                     instrEntryIter.remove();
@@ -443,6 +447,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                                         assert nxt2Instr.getShift().getType() == None || nxt2Instr.getShift().getImm() == 0;
                                         var addImm = new MachineOperand(storeInstr.getOffset().getImm() + imm);
                                         var subImm = new MachineOperand(storeInstr.getOffset().getImm() - imm);
+                                        if ((isAdd && addImm.getImm() > 4095) || (!isAdd && subImm.getImm() < 0)) {
+                                            return true;
+                                        }
+
                                         storeInstr.setAddr(binInstr.getLhs());
                                         storeInstr.setOffset(isAdd ? addImm : subImm);
                                         instrEntryIter.remove();
