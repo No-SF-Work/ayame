@@ -171,10 +171,12 @@ public class FunctionInline implements IRPass {
           if (use.getUser() instanceof StoreInst) {
             StoreInst store = (StoreInst) use.getUser();
             AllocaInst alc = (AllocaInst) store.getOperands().get(1);
+            alc.node.removeSelf();
             for (Use use1 : alc.getUsesList()) {
               if (use1.getUser() instanceof LoadInst) {
                 use1.getUser().COReplaceAllUseWith(callerArg);
               }
+              ((Instruction) use1.getUser()).node.removeSelf();
             }
           }
         }
