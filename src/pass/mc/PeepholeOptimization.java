@@ -407,10 +407,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     var addImm = new MachineOperand(loadInstr.getOffset().getImm() + imm);
                                     var subImm = new MachineOperand(loadInstr.getOffset().getImm() - imm);
 
-                                    if (isAdd ? addImm.getImm() > 4095 || subImm.getImm() < 0) {
+                                    if (isAdd ? addImm.getImm() > 4095 : subImm.getImm() < 0) {
                                         return true;
                                     }
-                                    
+
                                     loadInstr.setAddr(binInstr.getLhs());
                                     loadInstr.setOffset(isAdd ? addImm : subImm);
                                     instrEntryIter.remove();
@@ -449,7 +449,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                                         var addImm = new MachineOperand(storeInstr.getOffset().getImm() + imm);
                                         var subImm = new MachineOperand(storeInstr.getOffset().getImm() - imm);
 
-                                        if (isAdd ? addImm.getImm() > 4095 || subImm.getImm() < 0) {
+                                        if (isAdd ? addImm.getImm() > 4095 : subImm.getImm() < 0) {
                                             return true;
                                         }
 
