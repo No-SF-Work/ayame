@@ -175,14 +175,14 @@ public class LoopUnroll implements IRPass {
   }
 
   public void runOnLoop(Loop loop) {
-    for (var bb : loop.getBlocks()) {
-      for (var instNode : bb.getList()) {
-        var inst = instNode.getVal();
-        if (inst instanceof CallInst) {
-          return;
-        }
-      }
-    }
+//    for (var bb : loop.getBlocks()) {
+//      for (var instNode : bb.getList()) {
+//        var inst = instNode.getVal();
+//        if (inst instanceof CallInst) {
+//          return;
+//        }
+//      }
+//    }
 
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
     rearrangeBBOrder(loop);
