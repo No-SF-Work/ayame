@@ -60,9 +60,9 @@ public class GlobalVariableLocalize implements IRPass {
       var userFuncs = gvUserFunc.get(gv);
       if (gv.init instanceof ConstantInt) {
         //直接局部化
-        if (userFuncs.size() == 1) {
+        if (userFuncs.size() == 1 && userFuncs.get(0).getName().equals("main")) {
           var fun = userFuncs.get(0);
-          if (!recFuncs.contains(fun) && fun.getName().equals("main")) {
+          if (!recFuncs.contains(fun)) {
             var entry = fun.getList_().getEntry();
             var alloca = f.buildAlloca(entry.getVal(), f.getI32Ty());
             var iter = entry.getVal().getList().getEntry();
@@ -113,7 +113,7 @@ public class GlobalVariableLocalize implements IRPass {
       var user = use.getUser();
       var rank = use.getOperandRank();
       user.CORemoveUse(use);
-      user.CoSetOperand(rank,alloca);
+      user.CoSetOperand(rank, alloca);
     });
 
     var load = f.buildLoadAfter(f.getI32Ty(), gv, iter.getVal());
