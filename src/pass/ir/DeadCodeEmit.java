@@ -4,6 +4,7 @@ import ir.Analysis.ArrayAliasAnalysis;
 import ir.MyModule;
 import ir.values.Function;
 import ir.values.instructions.Instruction;
+import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import java.util.ArrayList;
@@ -73,25 +74,21 @@ public class DeadCodeEmit implements IRPass {
           for (var ninstNode = next; ninstNode != null; ) {
             var nnext = ninstNode.getNext();
             var ninst = ninstNode.getVal();
-            switch (ninst.tag) {
-              case Store -> {
-                if (inst.getOperands().get(0) == ninst.getOperands().get(0)
-                    && inst.getOperands().get(1) == ninst.getOperands().get(1)) {
-                  inst.CORemoveAllOperand();
-                  inst.node.removeSelf();
-                  break;
-                }
+            if (ninst.tag == TAG_.Store) {
+              if (inst.getOperands().get(0) == ninst.getOperands().get(0)
+                  && inst.getOperands().get(1) == ninst.getOperands().get(1)) {
+                inst.CORemoveAllOperand();
+                inst.node.removeSelf();
+                break;
               }
-              case Load -> {
-                var npointer = ArrayAliasAnalysis.getArrayValue(ninst.getOperands().get(0));
-                if (ArrayAliasAnalysis.alias(pointer, npointer)) {
-                  break;
-                }
+            } else if (ninst.tag == TAG_.Load) {
+              var npointer = ArrayAliasAnalysis.getArrayValue(ninst.getOperands().get(0));
+              if (ArrayAliasAnalysis.alias(pointer, npointer)) {
+                break;
               }
-              case Call -> {
-                if (ArrayAliasAnalysis.callAlias(pointer, (CallInst) ninst)) {
-                  break;
-                }
+            } else if (ninst.tag == TAG_.Call) {
+              if (ArrayAliasAnalysis.callAlias(pointer, (CallInst) ninst)) {
+                break;
               }
             }
             ninstNode = nnext;
@@ -102,7 +99,8 @@ public class DeadCodeEmit implements IRPass {
     }
 
     usefulInstSet.clear();
-    for (var bbNode : func.getList_()) {
+    for (
+        var bbNode : func.getList_()) {
       var bb = bbNode.getVal();
       for (var instNode : bb.getList()) {
         var instruction = instNode.getVal();
@@ -112,7 +110,8 @@ public class DeadCodeEmit implements IRPass {
       }
     }
 
-    for (var bbNode : func.getList_()) {
+    for (
+        var bbNode : func.getList_()) {
       var bb = bbNode.getVal();
       for (var instNode = bb.getList().getEntry(); instNode != null; ) {
         var tmp = instNode.getNext();
