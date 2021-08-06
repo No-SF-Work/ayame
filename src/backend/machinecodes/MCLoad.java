@@ -87,9 +87,31 @@ public class MCLoad extends MachineCode {
             return "";
 //            "\tldr\t"+dst.getName()+",\t="+addr.getName()+"\n"
         }
-        String res = "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
-        res += ",\t" + offset.getName() + getShift().toString() + "]\n";
-        CodeGenManager.getInstance().addOffset(1, res.length());
+        String res = "";
+        if(getOffset().getState()== MachineOperand.state.imm && getOffset().getImm()>4095){
+            int imm=getOffset().getImm();
+            if(!CodeGenManager.canEncodeImm(imm)){
+                int immH = imm >>> 16;
+                int immL = (imm << 16) >>> 16;
+                res += "\tmovw" + condString(cond) + "\t" + dst.getName() + ",\t#" + immL + "\n";
+                if (immH != 0) {
+                    res += "\tmovt" + condString(cond) + "\t" + dst.getName() + ",\t#" + immH + "\n";
+                }
+                res += "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
+                res += ",\t" + dst.getName()  + "]\n";
+                CodeGenManager.getInstance().addOffset(3, res.length());
+            }else{
+                res+="\tmov"+condString(cond)+"\t"+dst.getName()+",\t#"+imm+"\n";
+                res += "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
+                res += ",\t" + dst.getName()  + "]\n";
+                CodeGenManager.getInstance().addOffset(2, res.length());
+            }
+        }
+        else{
+            res = "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
+            res += ",\t" + offset.getName() + getShift().toString() + "]\n";
+            CodeGenManager.getInstance().addOffset(1, res.length());
+        }
         return res;
     }
 
