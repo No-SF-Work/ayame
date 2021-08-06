@@ -294,11 +294,11 @@ public class MyFactoryBuilder {
     return new LoadInst(type, value, bb);
   }
 
-  public LoadInst buildAfter(Type type, Value value, Instruction prev) {
+  public LoadInst buildLoadAfter(Type type, Value value, Instruction prev) {
     return new LoadInst(type, value, prev);
   }
 
-  public LoadInst buildBefore(Type type, Value value, Instruction next) {
+  public LoadInst buildLoadBefore(Type type, Value value, Instruction next) {
     return new LoadInst(next, value, type);
   }
 
