@@ -203,7 +203,7 @@ public class Loop {
   // 1 pre header, 1 latch block, 1 exit block
   public boolean isSimpleForLoop() {
     return latchBlocks.size() == 1 && loopHeader.getPredecessor_().size() == 2
-        && exitBlocks.size() == 1;
+        && exitBlocks.size() == 1 && exitingBlocks.size() == 1;
   }
 
   public void addBlock(BasicBlock bb) {
