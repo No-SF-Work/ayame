@@ -305,7 +305,14 @@ public class GVNGCM implements IRPass {
         GlobalVariable globalArray = (GlobalVariable) array;
         if (globalArray.isConst) {
           boolean constIndex = true;
+          if (globalArray.fixedInit == null) {
+            // mark global const 产生的常量数组
+            ConstantInt c = ConstantInt.newOne(factory.getI32Ty(), 0);
+            replace(inst, c);
+            return;
+          }
           assert globalArray.fixedInit instanceof ConstantArray;
+
           ConstantArray constantArray = (ConstantArray) globalArray.fixedInit;
           Stack<Integer> indexList = new Stack<>();
           Value tmpPtr = pointer;
