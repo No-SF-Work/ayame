@@ -52,10 +52,10 @@ run_func_1_onpi:
   script:
     - mv testcases/functional_test/* testcases/
     - bash scripts/server_scripts/build_ayame.sh
-    - bash scripts/trivial-autotest-ayame.py
+    - bash scripts/trivial-autotest-ayame.sh
   tags:
     - arm
-  timeout: 10m
+  timeout: 30m
 
 run_perf_1:
   when: manual
