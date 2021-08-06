@@ -167,6 +167,7 @@ public class FunctionInline implements IRPass {
             2.找到这个alloca的load
             3.把这些个load换成对callerarg的使用（不是RAU,load的是）
         * */
+       /* tmparg.COReplaceAllUseWith(callerArg);*/
         for (Use use : tmparg.getUsesList()) {
           if (use.getUser() instanceof StoreInst) {
             StoreInst store = (StoreInst) use.getUser();
