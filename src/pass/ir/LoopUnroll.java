@@ -171,7 +171,7 @@ public class LoopUnroll implements IRPass {
 
   public void runOnLoop(Loop loop) {
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
-     rearrangeBBOrder(loop);
+    rearrangeBBOrder(loop);
 
     if (loop.getTripCount() != null) {
       constantUnroll(loop);
@@ -183,13 +183,13 @@ public class LoopUnroll implements IRPass {
   public void constantUnroll(Loop loop) {
     log.info("Run constant unroll");
 
-    if (!loop.isCanonical()) {
+    // 目前只对 simpleForLoop 做 constantUnroll
+    if (!loop.isSimpleForLoop()) {
       doubleUnroll(loop);
     }
 
     int instNum = 0;
-    // FIXME: maybe exit block is better
-    var latchBr = loop.getLatchBlock().getList().getLast().getVal();
+    var latchBr = loop.getSingleLatchBlock().getList().getLast().getVal();
     var tripCount = loop.getTripCount();
 
     ArrayList<BasicBlock> loopBlocks = new ArrayList<>(
@@ -223,7 +223,7 @@ public class LoopUnroll implements IRPass {
     // start constant unroll
     HashMap<Value, Value> lastValueMap = new HashMap<>();
     ArrayList<Phi> originPhis = new ArrayList<>();
-    var latchBlock = loop.getLatchBlock();
+    var latchBlock = loop.getSingleLatchBlock();
     var latchPredIndex = header.getPredecessor_().indexOf(latchBlock);
     for (var instNode : header.getList()) {
       var inst = instNode.getVal();
@@ -384,7 +384,8 @@ public class LoopUnroll implements IRPass {
   public void doubleUnroll(Loop loop) {
     log.info("Run double unroll");
 
-    if (!loop.isSimplifyForm()) {
+    // 目前只对 simpleForLoop 做 doubleUnroll
+    if (!loop.isSimpleForLoop()) {
       return;
     }
 
@@ -398,7 +399,8 @@ public class LoopUnroll implements IRPass {
     }
 
     // latchBr 跳转到的循环外基本块
-    var latchBr = loop.getLatchBlock().getList().getLast().getVal();
+    var latchBlock = loop.getSingleLatchBlock();
+    var latchBr = latchBlock.getList().getLast().getVal();
     ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks());
     BasicBlock header = loop.getLoopHeader();
     BasicBlock exit = null;

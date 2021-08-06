@@ -135,7 +135,6 @@ public class LoopInfo {
       loop.setIndVarInit(null);
       loop.setIndVar(null);
       loop.setIndVarEnd(null);
-      loop.setLatchBlock(null);
       loop.setStepInst(null);
       loop.setStep(null);
       loop.getExitingBlocks().clear();
@@ -143,7 +142,8 @@ public class LoopInfo {
 
     computeExitingBlocks();
     computeExitBlocks();
-    computeLatchBlock();
+    computeLatchBlocks();
+    // 只计算 isSimpleForLoop() == true 的循环的 indVarInfo
     computeIndVarInfo();
   }
 
@@ -220,14 +220,11 @@ public class LoopInfo {
     }
   }
 
-  private void computeLatchBlock() {
+  private void computeLatchBlocks() {
     for (var loop : allLoops) {
-      if (!loop.isCanonical()) {
-        continue;
-      }
       for (var predbb : loop.getLoopHeader().getPredecessor_()) {
         if (loop.getBlocks().contains(predbb)) {
-          loop.setLatchBlock(predbb);
+          loop.getLatchBlocks().add(predbb);
         }
       }
     }
@@ -238,7 +235,7 @@ public class LoopInfo {
   private void computeIndVarInfo() {
     for (var loop : allLoops) {
       var latchCmpInst = loop.getLatchCmpInst();
-      if (!loop.isCanonical() || latchCmpInst == null) {
+      if (!loop.isSimpleForLoop() || latchCmpInst == null) {
         continue;
       }
 

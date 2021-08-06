@@ -18,9 +18,9 @@ public class Loop {
 
   private HashSet<BasicBlock> exitingBlocks; // 跳转到循环外的基本块
   private HashSet<BasicBlock> exitBlocks; // 循环跳转到的循环外基本块
+  private ArrayList<BasicBlock> latchBlocks; // 跳回循环头的基本块
 
-  // 这两个只在 Canonical 的循环中才计算，loop header 有两个 pred，只有一个 exiting block，只有一个 latch block
-  private BasicBlock latchBlock; // 跳回循环头的基本块
+  // 这两个只在 SimpleFor 的循环中才计算，loop header 有两个 pred，只有一个 exiting block，只有一个 latch block
   private MemInst.Phi indVar; // 索引 phi
   private Value indVarInit; // 索引初值
   private Value indVarEnd; // 索引边界（可不可以等于边界，自己判断）
@@ -34,6 +34,7 @@ public class Loop {
     this.blocks = new ArrayList<>();
     this.exitingBlocks = new HashSet<>();
     this.exitBlocks = new HashSet<>();
+    this.latchBlocks = new ArrayList<>();
   }
 
 
@@ -43,6 +44,7 @@ public class Loop {
     this.blocks = new ArrayList<>();
     this.exitingBlocks = new HashSet<>();
     this.exitBlocks = new HashSet<>();
+    this.latchBlocks = new ArrayList<>();
     this.loopHeader = header;
     this.blocks.add(header);
   }
@@ -67,7 +69,9 @@ public class Loop {
     return exitingBlocks;
   }
 
-  public HashSet<BasicBlock> getExitBlocks() { return exitBlocks; }
+  public HashSet<BasicBlock> getExitBlocks() {
+    return exitBlocks;
+  }
 
   public BasicBlock getLoopHeader() {
     return loopHeader;
@@ -77,8 +81,8 @@ public class Loop {
     return indVar;
   }
 
-  public BasicBlock getLatchBlock() {
-    return latchBlock;
+  public ArrayList<BasicBlock> getLatchBlocks() {
+    return latchBlocks;
   }
 
   public Instruction getStepInst() {
@@ -99,10 +103,6 @@ public class Loop {
 
   public Integer getTripCount() {
     return tripCount;
-  }
-
-  public void setLatchBlock(BasicBlock latchBlock) {
-    this.latchBlock = latchBlock;
   }
 
   public void setIndVar(Phi indVar) {
@@ -129,13 +129,20 @@ public class Loop {
     this.tripCount = tripCount;
   }
 
+  public BasicBlock getSingleLatchBlock() {
+    if (latchBlocks.size() != 1) {
+      return null;
+    }
+    return latchBlocks.get(0);
+  }
+
 
   // 判断循环是否结束的 icmp 指令
   public Instruction getLatchCmpInst() {
-    if (latchBlock == null) {
+    if (getSingleLatchBlock() == null) {
       return null;
     }
-    var brInst = latchBlock.getList().getLast().getVal();
+    var brInst = getSingleLatchBlock().getList().getLast().getVal();
     assert brInst instanceof BrInst;
 
     // dead loop or constant condition
@@ -179,13 +186,24 @@ public class Loop {
     return blocks.get(0);
   }
 
+  // 1 pre header, 1 latch block, n exit blocks with all pred in loop
   public boolean isCanonical() {
-    return loopHeader.getPredecessor_().size() == 2 && exitingBlocks.size() == 1;
+    boolean exitPredInLoop = true;
+    for (var exitBB : exitBlocks) {
+      for (var pred : exitBB.getPredecessor_()) {
+        if (!this.getBlocks().contains(pred)) {
+          exitPredInLoop = false;
+        }
+      }
+    }
+    return latchBlocks.size() == 1 && loopHeader.getPredecessor_().size() == 2
+        && exitPredInLoop;
   }
 
-  // FIXME: more specific
-  public boolean isSimplifyForm() {
-    return loopHeader.getPredecessor_().size() == 2;
+  // 1 pre header, 1 latch block, 1 exit block
+  public boolean isSimpleForLoop() {
+    return latchBlocks.size() == 1 && loopHeader.getPredecessor_().size() == 2
+        && exitBlocks.size() == 1;
   }
 
   public void addBlock(BasicBlock bb) {
