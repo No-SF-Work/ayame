@@ -2,6 +2,7 @@ package pass.ir;
 
 import ir.MyFactoryBuilder;
 import ir.MyModule;
+import ir.Use;
 import ir.values.BasicBlock;
 import ir.values.Constant;
 import ir.values.Function;
@@ -14,6 +15,7 @@ import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.Phi;
+import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
@@ -161,18 +163,19 @@ public class FunctionInline implements IRPass {
         tmparg.COReplaceAllUseWith(callerArg);
       } else {
         /* todo:
-            1.找到arg对应的alloca
+            1.找到arg对应的alloca（通过store连接）
             2.找到这个alloca的load
             3.把这些个load换成对callerarg的使用（不是RAU,load的是）
         * */
-        tmparg.getUsesList().forEach(
-            use -> {
-              if (use.getUser() instanceof LoadInst){
-                use.getUser().COReplaceAllUseWith(callerArg);
-              }
+        for (Use use : tmparg.getUsesList()) {
+          if (use.getUser() instanceof StoreInst) {
+            StoreInst store = (StoreInst) use.getUser();
+            AllocaInst alc = (AllocaInst) store.getOperands().get(2);
+            for (Use use1 : alc.getUsesList()) {
+              use1.getUser().COReplaceAllUseWith(callerArg);
             }
-        );
-        tmparg.COReplaceAllUseWith(callerArg);
+          }
+        }
       }
     }
     //维护originBB和funcEntry的前驱后继关系 fixme
