@@ -9,7 +9,6 @@ import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
-import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.Phi;
@@ -53,7 +52,7 @@ public class LoopUnroll implements IRPass {
         default -> throw new RuntimeException();
       };
     } else if (inst instanceof TerminatorInst) {
-      assert inst.tag != TAG_.Call;
+//      assert inst.tag != TAG_.Call;
       switch (inst.tag) {
         case Br -> {
           if (ops.size() == 3) {
@@ -63,13 +62,19 @@ public class LoopUnroll implements IRPass {
             copy = factory.getBr((BasicBlock) ops.get(0));
           }
         }
-
         case Ret -> {
           if (ops.size() == 1) {
             copy = factory.getRet(ops.get(0));
           } else {
             copy = factory.getRet();
           }
+        }
+        case Call -> {
+          copy = factory.getFuncCall((Function) ops.get(0), new ArrayList<>() {{
+            for (int i = 1; i < ops.size(); i++) {
+              add(ops.get(i));
+            }
+          }});
         }
       }
     }
