@@ -40,7 +40,7 @@ public class MCLoad extends MachineCode {
             }
             if (offset.getState() == MachineOperand.state.imm) {
             } else if (offset instanceof PhyReg) {
-                ((VirtualReg)dst).setUnMoveable();
+                ((VirtualReg) dst).setUnMoveable();
             } else {
                 cost += ((VirtualReg) offset).getCost();
             }
@@ -78,8 +78,8 @@ public class MCLoad extends MachineCode {
     }
 
     @Override
-    public String toString(){
-        if(addr instanceof VirtualReg && ((VirtualReg)addr).isGlobal()){
+    public String toString() {
+        if (addr instanceof VirtualReg && ((VirtualReg) addr).isGlobal()) {
             CodeGenManager.getInstance().setGlobalInfo(this);
 //            String res="\tmovw\t"+dst.getName()+",\t:lower16:"+addr.getName()+"\n";
 //            res+="\tmovt\t"+dst.getName()+",\t:upper16:"+addr.getName()+"\n";
@@ -88,30 +88,9 @@ public class MCLoad extends MachineCode {
 //            "\tldr\t"+dst.getName()+",\t="+addr.getName()+"\n"
         }
         String res = "";
-        if(getOffset().getState()== MachineOperand.state.imm && getOffset().getImm()>4095){
-            int imm=getOffset().getImm();
-            if(!CodeGenManager.canEncodeImm(imm)){
-                int immH = imm >>> 16;
-                int immL = (imm << 16) >>> 16;
-                res += "\tmovw" + condString(cond) + "\t" + dst.getName() + ",\t#" + immL + "\n";
-                if (immH != 0) {
-                    res += "\tmovt" + condString(cond) + "\t" + dst.getName() + ",\t#" + immH + "\n";
-                }
-                res += "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
-                res += ",\t" + dst.getName()  + "]\n";
-                CodeGenManager.getInstance().addOffset(3, res.length());
-            }else{
-                res+="\tmov"+condString(cond)+"\t"+dst.getName()+",\t#"+imm+"\n";
-                res += "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
-                res += ",\t" + dst.getName()  + "]\n";
-                CodeGenManager.getInstance().addOffset(2, res.length());
-            }
-        }
-        else{
-            res = "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
-            res += ",\t" + offset.getName() + getShift().toString() + "]\n";
-            CodeGenManager.getInstance().addOffset(1, res.length());
-        }
+        res = "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
+        res += ",\t" + offset.getName() + getShift().toString() + "]\n";
+        CodeGenManager.getInstance().addOffset(1, res.length());
         return res;
     }
 
