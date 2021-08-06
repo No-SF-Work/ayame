@@ -303,7 +303,7 @@ public class GVNGCM implements IRPass {
       if (pointer instanceof GEPInst && ArrayAliasAnalysis
           .isGlobal(array)) {
         GlobalVariable globalArray = (GlobalVariable) array;
-        if (globalArray.isConst || inst.getOperands().get(1).getName().equals("UndefValue")) {
+        if (globalArray.isConst) {
           boolean constIndex = true;
 
           if (globalArray.fixedInit == null) {
