@@ -128,11 +128,12 @@ public class GlobalVariableLocalize implements IRPass {
             var l = f.buildLoadBefore(f.getI32Ty(), alloca, val);
             f.buildStoreBefore(l, gv, val);
             var lf = f.buildLoadAfter(f.getI32Ty(), gv, val);
-            f.buildStoreAfter(lf, alloca, val);
+            f.buildStoreAfter(lf, alloca, lf);
           }
         }
         if (val instanceof RetInst) {
-          f.buildStoreBefore(f.buildLoadBefore(f.getI32Ty(), alloca, val), gv, val);
+          var ld = f.buildLoadBefore(f.getI32Ty(), alloca, val);
+          f.buildStoreBefore(ld, gv, val);
         }
 
       });
