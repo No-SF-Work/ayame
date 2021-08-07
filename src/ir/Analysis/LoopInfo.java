@@ -8,12 +8,12 @@ import ir.values.Function;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
-import util.IList.INode;
-
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Stack;
+import util.IList.INode;
 
 public class LoopInfo {
 
@@ -128,6 +128,8 @@ public class LoopInfo {
     populateLoopsDFS(entry);
 
     computeAllLoops();
+    reorderLoops(function);
+    computeAllLoops();
   }
 
   public void computeAdditionalLoopInfo() {
@@ -135,7 +137,6 @@ public class LoopInfo {
       loop.setIndVarInit(null);
       loop.setIndVar(null);
       loop.setIndVarEnd(null);
-      loop.setLatchBlock(null);
       loop.setStepInst(null);
       loop.setStep(null);
       loop.getExitingBlocks().clear();
@@ -143,7 +144,8 @@ public class LoopInfo {
 
     computeExitingBlocks();
     computeExitBlocks();
-    computeLatchBlock();
+    computeLatchBlocks();
+    // 只计算 isSimpleForLoop() == true 的循环的 indVarInfo
     computeIndVarInfo();
   }
 
@@ -180,7 +182,26 @@ public class LoopInfo {
     }
   }
 
+  private class LoopOrderComparator implements Comparator<Loop> {
+
+    @Override
+    public int compare(Loop o1, Loop o2) {
+      int header = o1.getLoopHeader().getDomLevel().compareTo(o2.getLoopHeader().getDomLevel());
+      return header != 0 ? header : 1 - o1.getLoopDepth().compareTo(o2.getLoopDepth());
+    }
+  }
+
+  public void reorderLoops(Function function) {
+    Collections.sort(this.topLevelLoops, new LoopOrderComparator());
+    for (var loop : allLoops) {
+      if (loop.getSubLoops() != null && !loop.getSubLoops().isEmpty()) {
+        Collections.sort(loop.getSubLoops(), new LoopOrderComparator());
+      }
+    }
+  }
+
   private void computeAllLoops() {
+    this.allLoops = new ArrayList<>();
     Stack<Loop> loopStack = new Stack<>();
     allLoops.addAll(topLevelLoops);
     loopStack.addAll(topLevelLoops);
@@ -220,14 +241,11 @@ public class LoopInfo {
     }
   }
 
-  private void computeLatchBlock() {
+  private void computeLatchBlocks() {
     for (var loop : allLoops) {
-      if (!loop.isCanonical()) {
-        continue;
-      }
       for (var predbb : loop.getLoopHeader().getPredecessor_()) {
         if (loop.getBlocks().contains(predbb)) {
-          loop.setLatchBlock(predbb);
+          loop.getLatchBlocks().add(predbb);
         }
       }
     }
@@ -238,7 +256,7 @@ public class LoopInfo {
   private void computeIndVarInfo() {
     for (var loop : allLoops) {
       var latchCmpInst = loop.getLatchCmpInst();
-      if (!loop.isCanonical() || latchCmpInst == null) {
+      if (!loop.isSimpleForLoop() || latchCmpInst == null) {
         continue;
       }
 

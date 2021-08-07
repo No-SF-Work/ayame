@@ -19,7 +19,7 @@ class Print_C:
         content = f"{Print_C.GREEN}{Print_C.BOLD}{msg}{Print_C.ENDC}"
         print(content)
         Print_C.log_file.write(content + "\n")
-w
+
     def print_pass(msg):
         content = f"{Print_C.GREEN}{msg}{Print_C.ENDC}"
         print(content)

@@ -175,7 +175,7 @@ public class RegAllocator implements MCPass {
     public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
             var done = false;
-
+            HashMap<VirtualReg, VirtualReg> newToOldMap = new HashMap<>();
             while (!done) {
                 var liveInfoMap = livenessAnalysis(func);
 
@@ -529,8 +529,6 @@ public class RegAllocator implements MCPass {
                 if (spilledNodes.isEmpty()) {
                     done = true;
                 } else {
-//                    HashMap<VirtualReg, VirtualReg> fatherVRegMap = new HashMap<>();
-
                     for (var n : spilledNodes) {
                         assert n instanceof VirtualReg;
                         var storeInStack = ((VirtualReg) n).getCost() >= 4;
@@ -546,13 +544,16 @@ public class RegAllocator implements MCPass {
                                 MachineCode lastDef = null;
                             };
 
-                            Function<VirtualReg, VirtualReg> cloneVReg = oldReg -> {
+                            Function<VirtualReg, VirtualReg> cloneVReg = oldVReg -> {
                                 var newVReg = new VirtualReg();
                                 func.addVirtualReg(newVReg);
 
-                                if (oldReg != null && !oldReg.isGlobal()) {
-//                                    fatherVRegMap.put(newVReg, fatherVRegMap.getOrDefault(oldReg, oldReg));
-                                    newVReg.setDef(oldReg.getDefMC(), oldReg.getCost());
+                                if (oldVReg != null && !oldVReg.isGlobal()) {
+                                    while (newToOldMap.containsKey(oldVReg)) {
+                                        oldVReg = newToOldMap.get(oldVReg);
+                                    }
+                                    newToOldMap.put(newVReg, oldVReg);
+                                    newVReg.setDef(oldVReg.getDefMC(), oldVReg.getCost());
                                 }
 
                                 return newVReg;
@@ -677,6 +678,7 @@ public class RegAllocator implements MCPass {
 
                                         var defReg = defMC.getDef().get(0);
                                         assert defReg instanceof VirtualReg;
+                                        defReg = newToOldMap.getOrDefault(defReg, (VirtualReg) defReg);
                                         regMap.put((VirtualReg) defReg, ref.vreg);
 
                                         while (!toInsertMCList.isEmpty()) {
@@ -691,7 +693,7 @@ public class RegAllocator implements MCPass {
 
                                                 var dst = ((MCBinary) instr).getDst();
                                                 if (dst instanceof VirtualReg && !((VirtualReg) dst).isGlobal()) {
-                                                    var dstVReg = (VirtualReg) dst;
+                                                    var dstVReg = newToOldMap.getOrDefault(dst, (VirtualReg) dst);
                                                     if (!regMap.containsKey(dstVReg)) {
                                                         regMap.put(dstVReg, cloneVReg.apply(dstVReg));
                                                     }
@@ -703,7 +705,7 @@ public class RegAllocator implements MCPass {
 
                                                 var lhs = ((MCBinary) instr).getLhs();
                                                 if (lhs instanceof VirtualReg && !((VirtualReg) lhs).isGlobal()) {
-                                                    var lhsVReg = (VirtualReg) lhs;
+                                                    var lhsVReg = newToOldMap.getOrDefault(lhs, (VirtualReg) lhs);
                                                     if (!regMap.containsKey(lhsVReg)) {
                                                         regMap.put(lhsVReg, cloneVReg.apply(lhsVReg));
                                                     }
@@ -715,7 +717,7 @@ public class RegAllocator implements MCPass {
 
                                                 var rhs = ((MCBinary) instr).getRhs();
                                                 if (rhs instanceof VirtualReg && !((VirtualReg) rhs).isGlobal()) {
-                                                    var rhsVReg = (VirtualReg) rhs;
+                                                    var rhsVReg = newToOldMap.getOrDefault(rhs, (VirtualReg) rhs);
                                                     if (!regMap.containsKey(rhsVReg)) {
                                                         regMap.put(rhsVReg, cloneVReg.apply(rhsVReg));
                                                     }
@@ -734,7 +736,7 @@ public class RegAllocator implements MCPass {
 
                                                 var dst = ((MCMove) instr).getDst();
                                                 if (dst instanceof VirtualReg && !((VirtualReg) dst).isGlobal()) {
-                                                    var dstVReg = (VirtualReg) dst;
+                                                    var dstVReg = newToOldMap.getOrDefault(dst, (VirtualReg) dst);
                                                     if (!regMap.containsKey(dstVReg)) {
                                                         regMap.put(dstVReg, cloneVReg.apply(dstVReg));
                                                     }
@@ -746,7 +748,7 @@ public class RegAllocator implements MCPass {
 
                                                 var rhs = ((MCMove) instr).getRhs();
                                                 if (rhs instanceof VirtualReg && !((VirtualReg) rhs).isGlobal()) {
-                                                    var rhsVReg = (VirtualReg) rhs;
+                                                    var rhsVReg = newToOldMap.getOrDefault(rhs, (VirtualReg) rhs);
                                                     if (!regMap.containsKey(rhsVReg)) {
                                                         regMap.put(rhsVReg, cloneVReg.apply(rhsVReg));
                                                     }
@@ -765,7 +767,7 @@ public class RegAllocator implements MCPass {
 
                                                 var dst = ((MCLoad) instr).getDst();
                                                 if (dst instanceof VirtualReg && !((VirtualReg) dst).isGlobal()) {
-                                                    var dstVReg = (VirtualReg) dst;
+                                                    var dstVReg = newToOldMap.getOrDefault(dst, (VirtualReg) dst);
                                                     if (!regMap.containsKey(dstVReg)) {
                                                         regMap.put(dstVReg, cloneVReg.apply(dstVReg));
                                                     }
@@ -777,7 +779,7 @@ public class RegAllocator implements MCPass {
 
                                                 var addr = ((MCLoad) instr).getAddr();
                                                 if (addr instanceof VirtualReg && !((VirtualReg) addr).isGlobal()) {
-                                                    var addrVReg = (VirtualReg) addr;
+                                                    var addrVReg = newToOldMap.getOrDefault(addr, (VirtualReg) addr);
                                                     if (!regMap.containsKey(addrVReg)) {
                                                         regMap.put(addrVReg, cloneVReg.apply(addrVReg));
                                                     }
@@ -789,7 +791,7 @@ public class RegAllocator implements MCPass {
 
                                                 var off = ((MCLoad) instr).getOffset();
                                                 if (off instanceof VirtualReg && !((VirtualReg) off).isGlobal()) {
-                                                    var offVReg = (VirtualReg) off;
+                                                    var offVReg = newToOldMap.getOrDefault(off, (VirtualReg) off);
                                                     if (!regMap.containsKey(offVReg)) {
                                                         regMap.put(offVReg, cloneVReg.apply(offVReg));
                                                     }
