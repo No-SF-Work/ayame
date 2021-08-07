@@ -101,7 +101,7 @@ public class LoopUnroll implements IRPass {
   public static void remapInstruction(Instruction inst, HashMap<Value, Value> vMap) {
     for (int i = 0; i < inst.getOperands().size(); i++) {
       var op = inst.getOperands().get(i);
-      if (vMap.containsKey(op)) {
+      if (vMap.containsKey(op) && !op.isFunction()) {
         var newOp = vMap.get(op);
         inst.CoReplaceOperandByIndex(i, newOp);
       }
@@ -175,14 +175,14 @@ public class LoopUnroll implements IRPass {
   }
 
   public void runOnLoop(Loop loop) {
-//    for (var bb : loop.getBlocks()) {
-//      for (var instNode : bb.getList()) {
-//        var inst = instNode.getVal();
-//        if (inst instanceof CallInst) {
-//          return;
+//      for (var bb : loop.getBlocks()) {
+//        for (var instNode : bb.getList()) {
+//          var inst = instNode.getVal();
+//          if (inst instanceof CallInst) {
+//            return;
+//          }
 //        }
 //      }
-//    }
 
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
     rearrangeBBOrder(loop);
