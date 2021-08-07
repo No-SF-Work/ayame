@@ -1,6 +1,5 @@
 package ir.values.instructions;
 
-import ir.Use;
 import ir.types.ArrayType;
 import ir.types.PointerType;
 import ir.types.Type;
@@ -10,7 +9,6 @@ import ir.values.GlobalVariable;
 import ir.values.UndefValue;
 import ir.values.Value;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.stream.Collectors;
 
 public abstract class MemInst extends Instruction {
@@ -345,6 +343,13 @@ public abstract class MemInst extends Instruction {
 
     public Phi(Instruction next, TAG_ tag, Type type, int numOP) {
       super(next, tag, type, numOP);
+    }
+
+    public Phi(TAG_ tag, Type type, int numOP, ArrayList<Value> incomingVals) {
+      super(tag, type, numOP);
+      for (int i = 0; i < incomingVals.size(); i++) {
+        this.CoSetOperand(i, incomingVals.get(i));
+      }
     }
 
     public ArrayList<Value> getIncomingVals() {

@@ -2,6 +2,7 @@ package pass.ir;
 
 import ir.MyFactoryBuilder;
 import ir.MyModule;
+import ir.Use;
 import ir.values.BasicBlock;
 import ir.values.Constant;
 import ir.values.Function;
@@ -12,7 +13,9 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
+import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.Phi;
+import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
@@ -159,7 +162,25 @@ public class FunctionInline implements IRPass {
       if (callerArg.getType().isI32()) {
         tmparg.COReplaceAllUseWith(callerArg);
       } else {
-        tmparg.COReplaceAllUseWith(callerArg);
+        /* todo:
+            1.找到arg对应的alloca（通过store连接）
+            2.找到这个alloca的load
+            3.把这些个load换成对callerarg的使用（不是RAU,load的是）
+        * */
+       /* tmparg.COReplaceAllUseWith(callerArg);*/
+        for (Use use : tmparg.getUsesList()) {
+          if (use.getUser() instanceof StoreInst) {
+            StoreInst store = (StoreInst) use.getUser();
+            AllocaInst alc = (AllocaInst) store.getOperands().get(1);
+            alc.node.removeSelf();
+            for (Use use1 : alc.getUsesList()) {
+              if (use1.getUser() instanceof LoadInst) {
+                use1.getUser().COReplaceAllUseWith(callerArg);
+              }
+              ((Instruction) use1.getUser()).node.removeSelf();
+            }
+          }
+        }
       }
     }
     //维护originBB和funcEntry的前驱后继关系 fixme

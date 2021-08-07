@@ -8,10 +8,11 @@ import ir.values.Function;
 import ir.values.GlobalVariable;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.StoreInst;
-import java.util.HashMap;
-import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.Mylogger;
+
+import java.util.HashMap;
+import java.util.logging.Logger;
 
 public class MarkConstantArray implements IRPass {
 
@@ -36,27 +37,39 @@ public class MarkConstantArray implements IRPass {
 
     for (var funcNode : m.__functions) {
       if (!funcNode.getVal().isBuiltin_()) {
-        for (var bbNode : funcNode.getVal().getList_()) {
-          for (var instNode : bbNode.getVal().getList()) {
-            var inst = instNode.getVal();
-            switch (inst.tag) {
-              case Store -> {
-                var pointer = ArrayAliasAnalysis.getArrayValue(((StoreInst) inst).getPointer());
-                if (hasModify.containsKey(pointer)) {
-                  hasModify.replace((GlobalVariable) pointer, true);
-                }
-              }
-              case Call -> {
-                var callFunc = (Function) inst.getOperands().get(0);
-                if (callFunc.isHasSideEffect()) {
-                  for (var arg: inst.getOperands()) {
-                    // FIXME call 传数组还有 Load，等内联修复
-                    if (arg instanceof GEPInst) {
-                      var pointer = ArrayAliasAnalysis.getArrayValue(((GEPInst) arg).getOperands().get(0));
-                      if (hasModify.containsKey(pointer)) {
-                        hasModify.replace((GlobalVariable) pointer, true);
-                      }
-                    }
+        runOnFunction(funcNode.getVal());
+      }
+    }
+
+    for (var gv : hasModify.keySet()) {
+      if (!hasModify.get(gv)) {
+        gv.setConst();
+      }
+    }
+
+  }
+
+  public void runOnFunction(Function func) {
+    for (var bbNode : func.getList_()) {
+      for (var instNode : bbNode.getVal().getList()) {
+        var inst = instNode.getVal();
+        switch (inst.tag) {
+          case Store -> {
+            var pointer = ArrayAliasAnalysis.getArrayValue(((StoreInst) inst).getPointer());
+            if (pointer instanceof GlobalVariable && hasModify.containsKey(pointer)) {
+              hasModify.replace((GlobalVariable) pointer, true);
+            }
+          }
+          case Call -> {
+            var callFunc = (Function) inst.getOperands().get(0);
+            if (callFunc.isHasSideEffect()) {
+              for (var arg : inst.getOperands()) {
+                // FIXME call 传数组还有 Load，等内联修复
+                if (arg instanceof GEPInst) {
+                  var pointer = ArrayAliasAnalysis
+                      .getArrayValue(((GEPInst) arg).getOperands().get(0));
+                  if (pointer instanceof GlobalVariable && hasModify.containsKey(pointer)) {
+                    hasModify.replace((GlobalVariable) pointer, true);
                   }
                 }
               }
@@ -65,12 +78,5 @@ public class MarkConstantArray implements IRPass {
         }
       }
     }
-
-    for (var gv: hasModify.keySet()) {
-      if (!hasModify.get(gv)) {
-        gv.setConst();
-      }
-    }
-
   }
 }
