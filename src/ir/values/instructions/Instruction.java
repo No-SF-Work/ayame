@@ -42,7 +42,10 @@ public abstract class Instruction extends User {
     Zext,
     Phi,
     MemPhi,
-    LoadDep
+    LoadDep,
+    // vector op
+    InsertEle,
+    ExtractEle
   }
 
   public Instruction(TAG_ tag, Type type, int numOP) {
@@ -125,6 +128,7 @@ public abstract class Instruction extends User {
     return this.node.getParent().getVal();
   }
 
+  public boolean canBeDeleteAfterInline = false;
   public INode<Instruction, BasicBlock> node;//(BasicBlock)parent =node.getparent.getval;
   public TAG_ tag; //TAG作为分辨指令的凭据
   public final int handle;//fixme 生成一个全局唯一的表示符作为从module中的container里存取的依据
