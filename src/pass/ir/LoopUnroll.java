@@ -111,7 +111,7 @@ public class LoopUnroll implements IRPass {
   public static void addLoopToQueue(Loop loop, Queue<Loop> queue) {
     for (var subLoop : loop.getSubLoops()) {
       if (subLoop != null) {
-        queue.add(subLoop);
+        addLoopToQueue(subLoop, queue);
       }
     }
     queue.add(loop);

@@ -8,12 +8,12 @@ import ir.values.Function;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
-import util.IList.INode;
-
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Stack;
+import util.IList.INode;
 
 public class LoopInfo {
 
@@ -128,6 +128,8 @@ public class LoopInfo {
     populateLoopsDFS(entry);
 
     computeAllLoops();
+    reorderLoops(function);
+    computeAllLoops();
   }
 
   public void computeAdditionalLoopInfo() {
@@ -180,7 +182,26 @@ public class LoopInfo {
     }
   }
 
+  private class LoopOrderComparator implements Comparator<Loop> {
+
+    @Override
+    public int compare(Loop o1, Loop o2) {
+      int header = o1.getLoopHeader().getDomLevel().compareTo(o2.getLoopHeader().getDomLevel());
+      return header != 0 ? header : 1 - o1.getLoopDepth().compareTo(o2.getLoopDepth());
+    }
+  }
+
+  public void reorderLoops(Function function) {
+    Collections.sort(this.topLevelLoops, new LoopOrderComparator());
+    for (var loop : allLoops) {
+      if (loop.getSubLoops() != null && !loop.getSubLoops().isEmpty()) {
+        Collections.sort(loop.getSubLoops(), new LoopOrderComparator());
+      }
+    }
+  }
+
   private void computeAllLoops() {
+    this.allLoops = new ArrayList<>();
     Stack<Loop> loopStack = new Stack<>();
     allLoops.addAll(topLevelLoops);
     loopStack.addAll(topLevelLoops);
