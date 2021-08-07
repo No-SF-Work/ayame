@@ -40,7 +40,7 @@ public class MCLoad extends MachineCode {
             }
             if (offset.getState() == MachineOperand.state.imm) {
             } else if (offset instanceof PhyReg) {
-                ((VirtualReg)dst).setUnMoveable();
+                ((VirtualReg) dst).setUnMoveable();
             } else {
                 cost += ((VirtualReg) offset).getCost();
             }
@@ -78,8 +78,8 @@ public class MCLoad extends MachineCode {
     }
 
     @Override
-    public String toString(){
-        if(addr instanceof VirtualReg && ((VirtualReg)addr).isGlobal()){
+    public String toString() {
+        if (addr instanceof VirtualReg && ((VirtualReg) addr).isGlobal()) {
             CodeGenManager.getInstance().setGlobalInfo(this);
 //            String res="\tmovw\t"+dst.getName()+",\t:lower16:"+addr.getName()+"\n";
 //            res+="\tmovt\t"+dst.getName()+",\t:upper16:"+addr.getName()+"\n";
@@ -87,7 +87,8 @@ public class MCLoad extends MachineCode {
             return "";
 //            "\tldr\t"+dst.getName()+",\t="+addr.getName()+"\n"
         }
-        String res = "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
+        String res = "";
+        res = "\tldr" + condString(cond) + "\t" + dst.getName() + ",\t[" + addr.getName();
         res += ",\t" + offset.getName() + getShift().toString() + "]\n";
         CodeGenManager.getInstance().addOffset(1, res.length());
         return res;
