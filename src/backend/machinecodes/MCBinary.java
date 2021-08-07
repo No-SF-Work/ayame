@@ -31,6 +31,8 @@ public class MCBinary extends MachineCode{
         }
         if(lhs instanceof PhyReg){
             if(((PhyReg)lhs).getName().equals("sp")){
+
+            }else{
                 ((VirtualReg)dst).setUnMoveable();
             }
         }else {
