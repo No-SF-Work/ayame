@@ -52,12 +52,10 @@ public class RegAllocator implements MCPass {
                         .filter(MachineOperand::needsColor)
                         .filter(use -> !blockLiveInfo.liveDef.contains(use))
                         .forEach(blockLiveInfo.liveUse::add);
-                if (instr.getCond() == ArmAddition.CondType.Any) {
-                    instr.getDef().stream()
-                            .filter(MachineOperand::needsColor)
-                            .filter(def -> !blockLiveInfo.liveUse.contains(def))
-                            .forEach(blockLiveInfo.liveDef::add);
-                }
+                instr.getDef().stream()
+                        .filter(MachineOperand::needsColor)
+                        .filter(def -> !blockLiveInfo.liveUse.contains(def))
+                        .forEach(blockLiveInfo.liveDef::add);
             }
 
             blockLiveInfo.liveIn.addAll(blockLiveInfo.liveUse);
@@ -268,9 +266,7 @@ public class RegAllocator implements MCPass {
                                 loopDepth.compute(u, (key, value) -> value == null ? 0 : value + block.getLoopDepth());
                             });
 
-                            if (instr.getCond() == ArmAddition.CondType.Any) {
-                                defs.stream().filter(MachineOperand::needsColor).forEach(live::remove);
-                            }
+                            defs.stream().filter(MachineOperand::needsColor).forEach(live::remove);
 
                             uses.stream().filter(MachineOperand::needsColor).forEach(live::add);
                         }
