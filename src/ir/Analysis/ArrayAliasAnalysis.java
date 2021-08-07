@@ -1,22 +1,43 @@
 package ir.Analysis;
 
 import ir.MyFactoryBuilder;
+import ir.MyModule;
+import ir.Use;
 import ir.types.ArrayType;
 import ir.types.PointerType;
-import ir.values.*;
+import ir.values.BasicBlock;
 import ir.values.Constants.ConstantArray;
+import ir.values.Function;
+import ir.values.GlobalVariable;
+import ir.values.UndefValue;
+import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
-import ir.values.instructions.MemInst.*;
+import ir.values.instructions.MemInst.AllocaInst;
+import ir.values.instructions.MemInst.GEPInst;
+import ir.values.instructions.MemInst.LoadDepInst;
+import ir.values.instructions.MemInst.LoadInst;
+import ir.values.instructions.MemInst.MemPhi;
+import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.CallInst;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Stack;
+import java.util.stream.Collectors;
 import util.IList.INode;
-
-import java.util.*;
 
 public class ArrayAliasAnalysis {
 
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
   public static ArrayList<ArrayDefUses> arrays = new ArrayList<>();
+
+  private static MyModule m;
+  private static HashMap<GlobalVariable, ArrayList<Function>> gvUserFunc = new HashMap<>();
+  private static HashMap<Function, HashSet<GlobalVariable>> relatedGVs = new HashMap<>();
+  private static HashSet<Function> visitfunc = new HashSet<>();
 
   public static class ArrayDefUses {
 
@@ -60,6 +81,14 @@ public class ArrayAliasAnalysis {
     }
     // pointer should be an AllocaInst or GlobalVariable
     if (pointer instanceof AllocaInst || pointer instanceof GlobalVariable) {
+      if (pointer instanceof AllocaInst && ((AllocaInst) pointer).getAllocatedType()
+          .isPointerTy()) {
+        for (Use use : pointer.getUsesList()) {
+          if (use.getUser() instanceof StoreInst) {
+            pointer = ((StoreInst) use.getUser()).getPointer();
+          }
+        }
+      }
       return pointer;
     } else {
       return null;
@@ -84,7 +113,9 @@ public class ArrayAliasAnalysis {
   }
 
   public static boolean isGlobalArray(Value array) {
-    if (!isGlobal(array)) return false;
+    if (!isGlobal(array)) {
+      return false;
+    }
     var gv = (GlobalVariable) array;
     return !gv.isConst && ((PointerType) gv.getType()).getContained().isArrayTy();
   }
@@ -154,11 +185,15 @@ public class ArrayAliasAnalysis {
   // TODO: 可能有问题，还不太懂
   public static boolean callAlias(Value arr, CallInst callinst) {
     // 条件宽泛到了不是 local array 就可能 alias，不管是 Global 还是 Param，都是外来的，都有可能被 call 改变
-    if (isGlobal(arr) || isParam(arr)) {
+    if (isParam(arr)) {
       return true;
     }
+
+    if (isGlobal(arr) && relatedGVs.get(callinst.getFunc()).contains(arr)) {
+      return true;
+    }
+
     for (Value arg : callinst.getOperands()) {
-      // FIXME call 传数组还有 Load，等内联修复
       if (arg instanceof GEPInst) {
         GEPInst gepInst = (GEPInst) arg;
         if (alias(arr, getArrayValue(gepInst))) {
@@ -457,9 +492,61 @@ public class ArrayAliasAnalysis {
     }
   }
 
+  private static void loadUserFuncs() {
+    m.__globalVariables.forEach(
+        gv -> {
+          ArrayList<Function> parents = new ArrayList<>();
+          for (Use use : gv.getUsesList()) {
+            var func = ((Instruction) use.getUser()).getBB().getParent();
+            if (!(func.getCallerList().isEmpty() && !func.getName().equals("main"))) {
+              parents.add(((Instruction) use.getUser()).getBB().getParent());
+            }
+          }
+          parents = (ArrayList<Function>) parents.stream().distinct().collect(Collectors.toList());
+          gvUserFunc.put(gv, parents);
+        }
+    );
+  }
+
+  private static boolean bfsFuncs(Function start, GlobalVariable gv) {
+    if (visitfunc.contains(start)) {
+      return false;
+    }
+    visitfunc.add(start);
+    if (gvUserFunc.get(gv).contains(start)) {
+      return true;
+    }
+    var result = false;
+    for (Function callee : start.getCalleeList()) {
+      result |= bfsFuncs(callee, gv);
+    }
+    return result;
+  }
+
+
+  private static void findRelatedFunc() {
+    for (INode<Function, MyModule> function : m.__functions) {
+      var val = function.getVal();
+      relatedGVs.put(val, new HashSet<>());
+      for (GlobalVariable globalVariable : m.__globalVariables) {
+        visitfunc.clear();
+        if (bfsFuncs(val, globalVariable)) {
+          relatedGVs.get(val).add(globalVariable);
+        }
+      }
+    }
+  }
+
   public static void run(Function function) {
     DomInfo.computeDominanceInfo(function);
     DomInfo.computeDominanceFrontier(function);
+
+    m = function.getNode().getParent().getVal();
+    gvUserFunc = new HashMap<>();
+    visitfunc = new HashSet<>();
+    relatedGVs = new HashMap<>();
+    loadUserFuncs();
+    findRelatedFunc();
 
     arrays = new ArrayList<>();
     runLoadDependStore(function);
