@@ -308,10 +308,10 @@ public class ArrayAliasAnalysis {
           for (ArrayDefUses arrayDefUse : arrays) {
             if (arrayDefUse.defs.contains(inst)) {
               index = arraysLookup.get(arrayDefUse.array);
+              if (index != null) {
+                currValues.set(index, inst);
+              }
             }
-          }
-          if (index != null) {
-            currValues.set(index, inst);
           }
         }
       }
