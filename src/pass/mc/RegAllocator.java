@@ -234,13 +234,13 @@ public class RegAllocator implements MCPass {
                             var defs = instr.getDef();
                             var uses = instr.getUse();
 
-                            if (instr instanceof MCMove) {
+                            if (instr instanceof MCMove &&
+                                    instr.getCond() == ArmAddition.CondType.Any &&
+                                    (instr.getShift().getType() == ArmAddition.ShiftType.None || instr.getShift().getImm() == 0)) {
                                 var mcInstr = (MCMove) instr;
                                 var dst = mcInstr.getDst();
                                 var rhs = mcInstr.getRhs();
-                                if (dst.needsColor() && rhs.needsColor() &&
-                                        mcInstr.getCond() == ArmAddition.CondType.Any &&
-                                        mcInstr.getShift().getType() == ArmAddition.ShiftType.None) {
+                                if (dst.needsColor() && rhs.needsColor()) {
                                     live.remove(mcInstr.getRhs());
 
                                     moveList.putIfAbsent(rhs, new HashSet<>());
