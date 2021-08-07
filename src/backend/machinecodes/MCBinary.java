@@ -30,7 +30,7 @@ public class MCBinary extends MachineCode{
             return;
         }
         if(lhs instanceof PhyReg){
-            if(((PhyReg)lhs).getName().equals("sp")){
+            if(((PhyReg)lhs).getName().equals("sp") && getTag()==TAG.Add){
 
             }else{
                 ((VirtualReg)dst).setUnMoveable();
