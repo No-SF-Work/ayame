@@ -96,7 +96,7 @@ public class CompilerDriver {
       pm.openedPasses_.add("Mem2reg");
       pm.openedPasses_.add("RegAlloc");
       if (Config.getInstance().isO2) {
-//        pm.openedPasses_.add("gvlocalize");
+        pm.openedPasses_.add("gvlocalize");
         pm.openedPasses_.add("branchOptimization");
         pm.openedPasses_.add("emitllvm");
         pm.openedPasses_.add("gvngcm");
