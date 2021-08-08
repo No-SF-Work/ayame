@@ -83,7 +83,7 @@ class Compiler:
         log_file = open(log, "a+")
 
         Print_C.print_procedure(f"Generating {self.scheme}.o")
-        subprocess.run(f"arm-linux-gnueabihf-as -march=armv7-a -mfloat-abi=hard {asm} -o {obj}".split(), stdout=log_file, stderr=log_file, bufsize=1)
+        subprocess.run(f"arm-none-linux-gnueabihf-as -march=armv7-a -mfloat-abi=hard {asm} -o {obj}".split(), stdout=log_file, stderr=log_file, bufsize=1)
 
         log_file.close()
 
@@ -95,7 +95,7 @@ class Compiler:
         log_file = open(log, "a+")
 
         Print_C.print_procedure(f"Generating {self.scheme}")
-        subprocess.run(f"arm-linux-gnueabihf-gcc -Ofast -marm -march=armv7-a -mfpu=neon -mfloat-abi=hard {obj} {lib} -o {bin}".split(), stdout=log_file, stderr=log_file, bufsize=1)
+        subprocess.run(f"arm-none-linux-gnueabihf-gcc -Ofast -marm -march=armv7-a -mfpu=neon -mfloat-abi=hard {obj} {lib} -o {bin}".split(), stdout=log_file, stderr=log_file, bufsize=1)
 
         log_file.close()
 
