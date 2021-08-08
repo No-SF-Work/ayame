@@ -290,9 +290,9 @@ public class CodeGenManager {
             //还有一种情况，如果True块和False块都被访问过，但是本块和True块之间有waiting，本块和False之间没有，
             //也交换
             if (!isVisit.containsKey(mb.getTrueSucc())
-//                    || (isVisit.containsKey(mb.getTrueSucc())&&isVisit.containsKey(mb.getFalseSucc())&&
-//                            waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()&&
-//                            (!waiting.containsKey(falsePair)||waiting.get(falsePair).isEmpty()))
+                    || (isVisit.containsKey(mb.getTrueSucc())&&isVisit.containsKey(mb.getFalseSucc())&&
+                            waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()&&
+                            (!waiting.containsKey(falsePair)||waiting.get(falsePair).isEmpty()))
             ) {
                 MachineBlock temp = mb.getTrueSucc();
                 mb.setTrueSucc(mb.getFalseSucc());
@@ -314,13 +314,13 @@ public class CodeGenManager {
                         mci.insertBeforeNode(mb.getTrueSucc().getmclist().getEntry().getVal());
                     }
                 } else {
-//                    if (true && waiting.get(truePair).size() <= 4) {
-//                        MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
-//                        for (MachineCode mci : waiting.get(truePair)) {
-//                            ((MCMove) mci).setCond(br.getCond());
-//                            mci.insertBeforeNode(br);
-//                        }
-//                    } else {
+                    if (false && waiting.get(truePair).size() <= 4) {
+                        MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
+                        for (MachineCode mci : waiting.get(truePair)) {
+                            ((MCMove) mci).setCond(br.getCond());
+                            mci.insertBeforeNode(br);
+                        }
+                    } else {
 
                         //如果true块有多个前驱块，那么只能在当前块和true块之间新建一个块插入waiting中的copy
                         MachineBlock newMB = new MachineBlock(mf);
@@ -340,7 +340,7 @@ public class CodeGenManager {
                         mb.setTrueSucc(newMB);
                         MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
                         br.setTarget(mb.getTrueSucc());
-//                    }
+                    }
                 }
 
             }
