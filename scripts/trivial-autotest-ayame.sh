@@ -15,6 +15,6 @@ echo -e "\033[32m\033[1m[Fetched]\033[0m"
 
 echo ""
 echo -e "\033[32m\033[1m[Running]\033[0m"
-python3 scripts/server_scripts/test_std.py
+python3 scripts/trivial-autotest-ayame.py
 
 echo ""
