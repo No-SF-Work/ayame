@@ -67,7 +67,6 @@ run_func_1_onpi:
     - chmod 700 ~/.ssh
   script:
     - mv testcases/functional_test/* testcases/
-    - bash scripts/server_scripts/build_ayame.sh
     - bash scripts/trivial-autotest-ayame.sh
   tags:
     - arm
