@@ -5,6 +5,7 @@ import ir.values.BasicBlock;
 import ir.values.Constant;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
+import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
@@ -182,7 +183,7 @@ public class LoopInfo {
     }
   }
 
-  private class LoopOrderComparator implements Comparator<Loop> {
+  private static class LoopOrderComparator implements Comparator<Loop> {
 
     @Override
     public int compare(Loop o1, Loop o2) {
@@ -192,10 +193,10 @@ public class LoopInfo {
   }
 
   public void reorderLoops(Function function) {
-    Collections.sort(this.topLevelLoops, new LoopOrderComparator());
+    this.topLevelLoops.sort(new LoopOrderComparator());
     for (var loop : allLoops) {
       if (loop.getSubLoops() != null && !loop.getSubLoops().isEmpty()) {
-        Collections.sort(loop.getSubLoops(), new LoopOrderComparator());
+        loop.getSubLoops().sort(new LoopOrderComparator());
       }
     }
   }
@@ -263,63 +264,112 @@ public class LoopInfo {
       var header = loop.getLoopHeader();
 
       // FIXME: 找 stepInst 有 bug，如 while (i + 1 < 100) { i = i + 1; }，找到的 stepInst 是 { i + 1 < 100 } 中的 i + 1
-      // stepInst
+
+      // indVarCondInst
       for (var i = 0; i <= 1; i++) {
         var op = latchCmpInst.getOperands().get(i);
         if (op instanceof Instruction) {
           Instruction opInst = (Instruction) op;
           if (!getLoopDepthForBB(opInst.getBB()).equals(getLoopDepthForBB(latchCmpInst.getBB()))) {
-            loop.setStepInst(
+            loop.setIndVarCondInst(
                 (Instruction) latchCmpInst.getOperands().get(1 - i));
             loop.setIndVarEnd(latchCmpInst.getOperands().get(i));
           } else {
-            loop.setStepInst(
+            loop.setIndVarCondInst(
                 (Instruction) latchCmpInst.getOperands().get(i));
             loop.setIndVarEnd(latchCmpInst.getOperands().get(1 - i));
           }
         } else {
-          loop.setStepInst(
+          loop.setIndVarCondInst(
               (Instruction) latchCmpInst.getOperands().get(1 - i));
           loop.setIndVarEnd(latchCmpInst.getOperands().get(i));
         }
       }
 
-      if (loop.getStepInst() == null) {
+      if (loop.getIndVarCondInst() == null) {
         return;
       }
 
-      var stepInst = loop.getStepInst();
-      for (var instNode : header.getList()) {
-        var inst = instNode.getVal();
-        if (!(inst instanceof Phi)) {
-          break;
+      // indVar
+      // 假设 indVarCondInst = Binary (indVar, OP2)，且 indVar 是 phi
+      var indVarCondInst = loop.getIndVarCondInst();
+      Value compareBias = null;
+      for (var op : indVarCondInst.getOperands()) {
+        if (op instanceof Phi) {
+          loop.setIndVar((Phi) op);
+        } else {
+          compareBias = op;
         }
+      }
+      assert compareBias != null;
 
-        var phi = (Phi) inst;
-        // indVar and indVarInit
-        if (phi.getOperands().contains(stepInst)) {
-          loop.setIndVar(phi);
-          var stepIndex = phi.getOperands().indexOf(stepInst);
-          loop.setIndVarInit(phi.getOperands().get(1 - stepIndex));
-          break;
+      if (loop.getIndVar() == null) {
+        return;
+      }
+
+      // indVarInit
+      var indVar = loop.getIndVar();
+      int indVarDepth = this.getLoopDepthForBB(indVar.getBB());
+      for (var incomingVal : indVar.getIncomingVals()) {
+        if (incomingVal instanceof Instruction) {
+          Instruction inst = (Instruction) incomingVal;
+          int incomingDepth = this.getLoopDepthForBB(inst.getBB());
+          if (indVarDepth != incomingDepth) {
+            loop.setIndVarInit(incomingVal);
+          } else {
+            loop.setStepInst((Instruction) incomingVal);
+          }
+        } else {
+          loop.setIndVarInit(incomingVal);
         }
       }
 
       // step
-      var indVarIndex = stepInst.getOperands().indexOf(loop.getIndVar());
-      if (indVarIndex == -1) {
+      // 假设 stepInst = Binary (indVar, step)
+      var stepInst = loop.getStepInst();
+      if (stepInst == null) {
         return;
       }
-      loop.setStep(stepInst.getOperands().get(1 - indVarIndex));
+      for (var op : stepInst.getOperands()) {
+        if (op != indVar) {
+          loop.setStep(op);
+        }
+      }
+
+      // old method to find indvar and indVarInit
+//      for (var instNode : header.getList()) {
+//        var inst = instNode.getVal();
+//        if (!(inst instanceof Phi)) {
+//          break;
+//        }
+//
+//        var phi = (Phi) inst;
+//        // indVar and indVarInit
+//        if (phi.getOperands().contains(stepInst)) {
+//          loop.setIndVar(phi);
+//          var stepIndex = phi.getOperands().indexOf(stepInst);
+//          loop.setIndVarInit(phi.getOperands().get(1 - stepIndex));
+//          break;
+//        }
+//      }
+
+      // old method to find step
+//      var indVarIndex = stepInst.getOperands().indexOf(loop.getIndVar());
+//      if (indVarIndex == -1) {
+//        return;
+//      }
+//      loop.setStep(stepInst.getOperands().get(1 - indVarIndex));
 
       // tripCount
       if (stepInst.tag == TAG_.Add &&
           loop.getStep() instanceof Constant &&
           loop.getIndVarInit() instanceof Constant &&
-          loop.getIndVarEnd() instanceof Constant) {
+          loop.getIndVarEnd() instanceof Constant &&
+          compareBias instanceof Constant) {
         var init = ((ConstantInt) loop.getIndVarInit()).getVal();
         var end = ((ConstantInt) loop.getIndVarEnd()).getVal();
         var step = ((ConstantInt) loop.getStep()).getVal();
+        var bias = ((ConstantInt) compareBias).getVal();
         int tripCount = (int) (1e9 + 7); //
 
         // 只考虑 Lt, Le, Gt, Ge, Ne
@@ -355,6 +405,9 @@ public class LoopInfo {
             }
           }
         }
+
+        tripCount -= (bias - step);
+
         loop.setTripCount(tripCount);
       }
     }
