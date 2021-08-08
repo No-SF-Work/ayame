@@ -190,7 +190,7 @@ public class LoopUnroll implements IRPass {
     if (loop.getTripCount() != null) {
       constantUnroll(loop);
     } else {
-//      doubleUnroll(loop);
+      doubleUnroll(loop);
     }
   }
 
@@ -406,6 +406,7 @@ public class LoopUnroll implements IRPass {
     var latchBlock = loop.getSingleLatchBlock();
     var latchBr = latchBlock.getList().getLast().getVal();
     var latchCmpInst = loop.getLatchCmpInst();
+    var stepInst = loop.getStepInst();
     ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks());
     BasicBlock header = loop.getLoopHeader();
     BasicBlock exit = null;
@@ -477,6 +478,8 @@ public class LoopUnroll implements IRPass {
       }
       newBlocks.add(newBB);
     }
+    assert secondHeader != null;
+    assert secondLatch != null;
 
     // remap instruction and link new bb in the loop
     for (var newBB : newBlocks) {
@@ -498,9 +501,9 @@ public class LoopUnroll implements IRPass {
       }
     }
 
-    // build new icmp
+    // build new icmp in loop
     // while (i < n) { i = i + 1; } => while (i + 1 < n) { i = i + 1; i = i + 1; }
-    BinaryInst secondStepInst = (BinaryInst) lastValueMap.get(loop.getStepInst());
+    BinaryInst secondStepInst = (BinaryInst) lastValueMap.get(stepInst);
     int stepIndex = secondStepInst.getOperands().indexOf(loop.getStep());
     assert stepIndex != -1;
     Value lhs = null, rhs = null;
@@ -535,43 +538,203 @@ public class LoopUnroll implements IRPass {
     // update header phi
     updatePhiNewIncoming(header, latchPredIndex, loop, lastValueMap);
     // update exit phi
+    // 后面设置 restBBLast 的 incomingVals 时使用这里缓存的原 incomingVals 作为查找 lastValueMap 的索引
     var exitLatchPredIndex = exit.getPredecessor_().indexOf(latchBlock);
-    updatePhiNewIncoming(exit, exitLatchPredIndex, loop, lastValueMap);
+    ArrayList<Value> cachedExitIncoming = new ArrayList<>();
+    for (var instNode : exit.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+      cachedExitIncoming.add(inst.getOperands().get(exitLatchPredIndex));
+    }
+//    updatePhiNewIncoming(exit, exitLatchPredIndex, loop, lastValueMap);
 
-    // build bb to process remain iteration
-    // exitIfBB: from preHeader or secondLatch
-    // remainBB: remain calculation
-    // original condition : secondLatch -> exit
-    // unroll condition : secondLatch/preHeader -> exitIfBB, exitIfBB -> remainBB/exit, remainBB -> exit
-    // FIXME: this makes exitIfBB have a pred(preHeader) out of the loop
-    var exitIfBB = exit;
+    // canonical loop 的 header 只有两个前驱
+    var preHeader = header.getPredecessor_().get(1 - header.getPredecessor_().indexOf(latchBlock));
 
-    header.getPredecessor_().remove(latchBlock);
-    exit.getPredecessor_().remove(latchBlock);
+    // 修改 preHeader 进入循环的判断条件
+    // while (i < n) => while (i + 1 < n)
+    // preHeader 中的 icmp 的 i 设为 i + 1
+    assert preHeader.getList().getLast().getVal().getOperands().size() == 3;
+    var preIcmpInst = (Instruction) (preHeader.getList().getLast().getVal().getOperands().get(0));
+    var preStepIndex = 1 - preIcmpInst.getOperands().indexOf(loop.getIndVarEnd());
+    var preStepInst = preIcmpInst.getOperands().get(preStepIndex);
+    switch (stepIndex) {
+      case 0 -> {
+        lhs = loop.getStep();
+        rhs = preStepInst;
+      }
+      case 1 -> {
+        lhs = preStepInst;
+        rhs = loop.getStep();
+      }
+    }
+    assert lhs != null && rhs != null;
+    var preStepIterOnce = factory.buildBinaryBefore(preIcmpInst, stepInst.tag, lhs, rhs);
+    preIcmpInst.CoReplaceOperandByIndex(preStepIndex, preStepIterOnce);
+
+    // 多出一次的迭代的收尾工作
+    // original code : secondLatch -> exit
+    // unroll code : secondLatch/preHeader -> exitIfBB, exitIfBB -> restBBHeader/exit, restBBLast -> exit
+    // WARNING: this makes exitIfBB have a pred(preHeader) out of the loop
+
+    // the last iteration
+    // 循环结束或在 preHeader 不进入循环时跳转到 exitIfBB，判断是否执行剩余一次迭代的计算，跳转到剩余一次迭代的基本块或原 exit
+    var exitIfBB = factory.buildBasicBlock("", currFunction);
+    // exitIfBB 中的指令：多个 Phi 承接来自循环或 preHeader 的 incomingVals，一条 Phi 表示迭代器，一个 icmp 指令，一个 Br，跳转到 exit 或 restBBHeader
+    for (var instNode : header.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      } else if (inst == loop.getIndVar()) {
+        continue;
+      }
+
+      var copy = copyInstruction(inst);
+      copy.node.insertAtEnd(exitIfBB.getList());
+      remapInstruction(copy, lastValueMap);
+      lastValueMap.put(inst, copy);
+    }
+    var copyPhi = copyInstruction(loop.getIndVar());
+    var copyIcmp = copyInstruction(latchCmpInst);
+    copyPhi.node.insertAtEnd(exitIfBB.getList());
+    copyIcmp.node.insertAtEnd(exitIfBB.getList());
+    copyIcmp.COReplaceOperand(loop.getIndVarCondInst(), copyPhi);
+    remapInstruction(copyPhi, lastValueMap);
+    lastValueMap.put(loop.getIndVar(), copyPhi);
+    lastValueMap.put(latchCmpInst, copyIcmp);
+
+    exit.getPredecessor_().set(exit.getPredecessor_().indexOf(latchBlock), exitIfBB);
+    var exitExitIfBBIndex=  exit.getPredecessor_().indexOf(exitIfBB);
+    for (var instNode : exit.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+
+      var phi = (Phi) inst;
+      var incomingVal = phi.getIncomingVals().get(exitExitIfBBIndex);
+      if (incomingVal instanceof Instruction && (loop.getBlocks()
+          .contains(((Instruction) incomingVal).getBB()))) {
+        incomingVal = lastValueMap.get(incomingVal);
+      }
+      phi.CoReplaceOperandByIndex(exitExitIfBBIndex, incomingVal);
+    }
+
+    // 复制多余的一次迭代
+    ArrayList<BasicBlock> restBBs = new ArrayList<>();
+    BasicBlock restBBHeader = null, restBBLast = null;
+    for (var bb : loopBlocks) {
+      HashMap<Value, Value> valueMap = new HashMap<>();
+      BasicBlock newBB = getLoopBasicBlockCopy(bb, valueMap);
+      if (bb == header) {
+        for (var phi : originPhis) {
+          var newPhi = (Phi) valueMap.get(phi);
+          var latchIncomingVal = newPhi.getIncomingVals().get(latchPredIndex);
+          valueMap.put(phi, latchIncomingVal);
+          newPhi.CORemoveAllOperand();
+          newPhi.node.removeSelf();
+        }
+      }
+      lastValueMap.put(bb, newBB);
+      for (var key : valueMap.keySet()) {
+        lastValueMap.put(key, valueMap.get(key));
+      }
+      // TODO 多个出口时在这里更新 LCSSA 生成的 phi
+      if (bb == header) {
+        restBBHeader = newBB;
+      }
+      if (bb == latchBlock) {
+        restBBLast = newBB;
+      }
+      restBBs.add(newBB);
+    }
+    assert restBBHeader != null && restBBLast != null;
+    for (var newBB : restBBs) {
+      newBB.getList().forEach(instNode -> {
+        remapInstruction(instNode.getVal(), lastValueMap);
+      });
+      if (newBB != restBBHeader) {
+        for (var key : lastValueMap.keySet()) {
+          if (lastValueMap.get(key) == newBB) {
+            BasicBlock oldBB = (BasicBlock) key;
+            for (var pred : oldBB.getPredecessor_()) {
+              assert loopBlocks.contains(pred);
+              BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
+              newPred.getSuccessor_().add(newBB);
+              newBB.getPredecessor_().add(newPred);
+            }
+          }
+        }
+      }
+    }
+
+    // restBBs 连接到循环中
+    factory.buildBr(copyIcmp, restBBHeader, exit, exitIfBB);
+    factory.buildBr(exit, restBBLast);
+    restBBHeader.getPredecessor_().add(exitIfBB);
+    restBBLast.getSuccessor_().add(exit);
+
+    // 假设 preHeader 只有 header 和 exit 两个后继，修改 exit 为 exitIfBB
+    // exit 的前驱中 latchBlock 的位置替换成 exitIfBB
+    preHeader.getList().getLast().getVal().COReplaceOperand(exit, exitIfBB);
+    preHeader.getSuccessor_().set(preHeader.getSuccessor_().indexOf(exit), exitIfBB);
+    secondLatch.getSuccessor_().add(exitIfBB);
+    int preHeaderIndex = header.getPredecessor_().indexOf(preHeader);
+    switch (preHeaderIndex) {
+      case 0 -> {
+        exitIfBB.getPredecessor_().add(preHeader);
+        exitIfBB.getPredecessor_().add(secondLatch);
+      }
+      case 1 -> {
+        exitIfBB.getPredecessor_().add(secondLatch);
+        exitIfBB.getPredecessor_().add(preHeader);
+      }
+    }
+
+    // exit 的 predecessor 中，latchblock 的位置换成 exitIfBB（前面构造 exitIfBB 做了），加入 restBBLast 前驱，删去 preHeader
+    // 维护 phi：exitIfBB 来源的 incomingVals 替换 latchBlock (前面构造 exitIfBB 时做的，防止 lastValueMap 被更新) ，restBBLast 来源的 incomingVals 通过 lastValueMap 查询 cachedExitIncoming，preHeader 来源的 incomingVals 删去
+    var exitPreHeaderIndex = exit.getPredecessor_().indexOf(preHeader);
+    exit.getPredecessor_().remove(preHeader);
+    exit.getPredecessor_().add(restBBLast);
+
+    int cacheIndex = 0;
+    int[] exitPreHeaderIndexArr = new int[]{exitPreHeaderIndex};
+    for (var instNode : exit.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+
+      var phi = (Phi) inst;
+      var incomingVal = cachedExitIncoming.get(cacheIndex);
+      phi.CORemoveNOperand(exitPreHeaderIndexArr);
+      if (incomingVal instanceof Instruction &&
+          (loopBlocks.contains(((Instruction) incomingVal).getBB()))) {
+        incomingVal = lastValueMap.get(incomingVal);
+      }
+      phi.COaddOperand(incomingVal);
+      cacheIndex++;
+    }
+
     // link latchBlock and secondHeader
     factory.buildBr(secondHeader, latchBlock);
+    header.getPredecessor_().remove(latchBlock);
     linkBasicBlock(latchBlock, secondHeader);
 
     // link secondLatch and header
-    // FIXME: cond br here
     BasicBlock trueBB = latchCmpInst.getOperands().get(1) == header ? header : exitIfBB;
     BasicBlock falseBB = trueBB == header ? exitIfBB : header;
     factory.buildBr(newIcmpInst, trueBB, falseBB, secondLatch);
     linkBasicBlock(secondLatch, header);
-    linkBasicBlock(secondLatch, exitIfBB);
   }
 
   private void linkBasicBlock(BasicBlock pred, BasicBlock succ) {
-    var latchIndex = succ.getPredecessor_().indexOf(pred);
-    if (latchIndex != -1) {
-      succ.getPredecessor_().set(latchIndex, pred);
-    } else {
+    if (!succ.getPredecessor_().contains(pred)) {
       succ.getPredecessor_().add(pred);
     }
-    var headIndex = pred.getSuccessor_().indexOf(succ);
-    if (headIndex != -1) {
-      pred.getSuccessor_().set(headIndex, succ);
-    } else {
+    if (!pred.getSuccessor_().contains(succ)) {
       pred.getSuccessor_().add(succ);
     }
   }
