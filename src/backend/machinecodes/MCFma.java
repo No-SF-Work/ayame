@@ -2,6 +2,7 @@ package backend.machinecodes;
 
 import backend.CodeGenManager;
 import backend.reg.MachineOperand;
+import backend.reg.VirtualReg;
 
 /**
  * Fma
@@ -11,13 +12,13 @@ import backend.reg.MachineOperand;
  */
 public class MCFma extends MachineCode {
 
-    private MachineOperand dst;
+    private MachineOperand dst=null;
 
-    private MachineOperand lhs;
+    private MachineOperand lhs=null;
 
-    private MachineOperand rhs;
+    private MachineOperand rhs=null;
 
-    private MachineOperand acc;
+    private MachineOperand acc=null;
 
     public boolean isAdd() {
         return add;
@@ -47,6 +48,16 @@ public class MCFma extends MachineCode {
         res += condString(cond) + "\t" + dst.getName() + ",\t" + lhs.getName() + ",\t" + rhs.getName() + ",\t" + acc.getName() + "\n";
         CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
+    }
+
+    public void calcCost(){
+        if(dst instanceof VirtualReg){
+            assert(this.lhs!=null);
+            assert(this.rhs!=null);
+            assert(this.acc!=null);
+            int cost=((VirtualReg)lhs).getCost()+((VirtualReg)rhs).getCost()+((VirtualReg)acc).getCost()+3;
+            ((VirtualReg)dst).setDef(this,cost);
+        }
     }
 
     public void setCond(ArmAddition.CondType cond) {
