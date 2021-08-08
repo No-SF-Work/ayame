@@ -287,7 +287,13 @@ public class CodeGenManager {
         } else {
             //和dfsFalseSerial不同，如果True块和False块都没被访问，也要交换，合并条件之后，条件变成
             //只要True块没被访问，那就交换
-            if (!isVisit.containsKey(mb.getTrueSucc())) {
+            //还有一种情况，如果True块和False块都被访问过，但是本块和True块之间有waiting，本块和False之间没有，
+            //也交换
+            if (!isVisit.containsKey(mb.getTrueSucc())
+//                    || (isVisit.containsKey(mb.getTrueSucc())&&isVisit.containsKey(mb.getFalseSucc())&&
+//                            waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()&&
+//                            (!waiting.containsKey(falsePair)||waiting.get(falsePair).isEmpty()))
+            ) {
                 MachineBlock temp = mb.getTrueSucc();
                 mb.setTrueSucc(mb.getFalseSucc());
                 mb.setFalseSucc(temp);
@@ -308,27 +314,34 @@ public class CodeGenManager {
                         mci.insertBeforeNode(mb.getTrueSucc().getmclist().getEntry().getVal());
                     }
                 } else {
+//                    if (true && waiting.get(truePair).size() <= 4) {
+//                        MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
+//                        for (MachineCode mci : waiting.get(truePair)) {
+//                            ((MCMove) mci).setCond(br.getCond());
+//                            mci.insertBeforeNode(br);
+//                        }
+//                    } else {
 
-                    //如果true块有多个前驱块，那么只能在当前块和true块之间新建一个块插入waiting中的copy
-                    MachineBlock newMB = new MachineBlock(mf);
-                    newMB.setLoopDepth(mb.getLoopDepth());
-                    Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
-                    while (mcIte.hasNext()) {
-                        MachineCode mci = mcIte.next();
-                        mci.setMb(newMB);
-                    }
-                    MCJump jump = new MCJump(newMB);
-                    jump.setTarget(mb.getTrueSucc());
-                    assert (mb.getTrueSucc().getPred().contains(mb));
-                    mb.getTrueSucc().removePred(mb);
-                    mb.getTrueSucc().addPred(newMB);
-                    newMB.setTrueSucc(mb.getTrueSucc());
-                    newMB.addPred(mb);
-                    mb.setTrueSucc(newMB);
-                    MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
-                    br.setTarget(mb.getTrueSucc());
+                        //如果true块有多个前驱块，那么只能在当前块和true块之间新建一个块插入waiting中的copy
+                        MachineBlock newMB = new MachineBlock(mf);
+                        newMB.setLoopDepth(mb.getLoopDepth());
+                        Iterator<MachineCode> mcIte = waiting.get(truePair).iterator();
+                        while (mcIte.hasNext()) {
+                            MachineCode mci = mcIte.next();
+                            mci.setMb(newMB);
+                        }
+                        MCJump jump = new MCJump(newMB);
+                        jump.setTarget(mb.getTrueSucc());
+                        assert (mb.getTrueSucc().getPred().contains(mb));
+                        mb.getTrueSucc().removePred(mb);
+                        mb.getTrueSucc().addPred(newMB);
+                        newMB.setTrueSucc(mb.getTrueSucc());
+                        newMB.addPred(mb);
+                        mb.setTrueSucc(newMB);
+                        MCBranch br = (MCBranch) (mb.getmclist().getLast().getVal());
+                        br.setTarget(mb.getTrueSucc());
+//                    }
                 }
-
 
             }
 
@@ -963,7 +976,7 @@ public class CodeGenManager {
 
     private void processBB(BasicBlock bb) {
         MachineBlock mb = bMap.get(bb);
-        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
+//        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
         for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
             Instruction ir = iIt.next().getVal();
             if (ifPrintIR) {

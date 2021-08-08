@@ -35,19 +35,27 @@ public class MergeMachineBlock implements Pass.MCPass {
                 boolean hasCompare = false;
                 boolean hasCond = false;
                 boolean hasCall = false;
+                int branchNum=0;
+                int jumpNum=0;
                 int mcNum = 0;//非comment数量
                 for (var mcEntry : mb.getmclist()) {
                     var mc = mcEntry.getVal();
                     if (!(mc instanceof MCComment)) {
                         mcNum++;
-                        if (mc instanceof MCCompare) {
-                            hasCompare = true;
-                        }
                         if (mc.getCond() != ArmAddition.CondType.Any) {
                             hasCond = true;
                         }
-                        if (mc instanceof MCCall) {
+                        if (mc instanceof MCCompare) {
+                            hasCompare = true;
+                        }
+                        else if (mc instanceof MCCall) {
                             hasCall = true;
+                        }
+                        else if(mc instanceof MCJump){
+                            jumpNum++;
+                        }
+                        else if(mc instanceof MCBranch){
+                            branchNum++;
                         }
                     }
                 }
@@ -88,7 +96,7 @@ public class MergeMachineBlock implements Pass.MCPass {
                         //如果pred有两个后继，且本块是pred的True后继
                         //此处的合并基本块有可能损失性能
                         else if (pred.getTrueSucc() == mb) {
-                            if (hasCompare || hasCall || hasCond || mcNum > 5) {
+                            if (hasCompare || hasCall || hasCond || (mcNum-branchNum-jumpNum) > 10) {
                                 continue;
                             }
                             predToRemove.add(pred);
@@ -107,8 +115,10 @@ public class MergeMachineBlock implements Pass.MCPass {
                                 var mc = mcEntry.getVal();
                                 mcEntry = mcEntry.getNext();
                                 if (!(mc instanceof MCJump) && !(mc instanceof MCComment)) {
-                                    mc.setCond(branch.getCond());
-                                    mc.insertBeforeNode(branch);
+                                    MachineCode m=(MachineCode)(mc.clone());
+                                    m.genNewNode();
+                                    m.setCond(branch.getCond());
+                                    m.insertBeforeNode(branch);
                                 }
                             }
                             ((MCBranch) branch).setTarget(mb.getTrueSucc());
