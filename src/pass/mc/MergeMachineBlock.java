@@ -72,7 +72,11 @@ public class MergeMachineBlock implements Pass.MCPass {
                                     mc.insertBeforeNode(jump);
                                 }
                             }
-                            jump.setTarget(mb.getTrueSucc());
+                            if(pred.getNode().getNext()!=null &&mb.getTrueSucc()==pred.getNode().getNext().getVal()){
+                                jump.getNode().removeSelf();
+                            }else{
+                                jump.setTarget(mb.getTrueSucc());
+                            }
                             predToRemove.add(pred);
                             if (pred.getFalseSucc() == null) {
                                 pred.setTrueSucc(mb.getTrueSucc());
@@ -109,6 +113,9 @@ public class MergeMachineBlock implements Pass.MCPass {
                             }
                             ((MCBranch) branch).setTarget(mb.getTrueSucc());
                             pred.setTrueSucc(mb.getTrueSucc());
+                            if(pred.getTrueSucc()==pred.getFalseSucc()){
+                                branch.getNode().removeSelf();
+                            }
                             mb.getTrueSucc().addPred(pred);
                         }
                     }
