@@ -153,7 +153,7 @@ public class Loop {
     return (Instruction) brInst.getOperands().get(0);
   }
 
-  // 循环边界
+  // [Deprecated] 循环边界
   public Value getFinalIndVar() {
     var latchCmpInst = getLatchCmpInst();
     if (latchCmpInst == null) {

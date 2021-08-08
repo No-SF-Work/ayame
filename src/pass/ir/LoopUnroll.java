@@ -53,7 +53,7 @@ public class LoopUnroll implements IRPass {
         default -> throw new RuntimeException();
       };
     } else if (inst instanceof TerminatorInst) {
-//      assert inst.tag != TAG_.Call;
+      //      assert inst.tag != TAG_.Call;
       switch (inst.tag) {
         case Br -> {
           if (ops.size() == 3) {
@@ -199,7 +199,7 @@ public class LoopUnroll implements IRPass {
 
     // 目前只对 simpleForLoop 做 constantUnroll
     if (!loop.isSimpleForLoop()) {
-//      doubleUnroll(loop);
+      //      doubleUnroll(loop);
       return;
     }
 
@@ -231,7 +231,7 @@ public class LoopUnroll implements IRPass {
       // dead loop or unreachable loop
       return;
     } else if (instNum * tripCount > threshold) {
-//      doubleUnroll(loop);
+      //      doubleUnroll(loop);
       return;
     }
 
@@ -402,18 +402,10 @@ public class LoopUnroll implements IRPass {
       return;
     }
 
-    for (var bb : loop.getBlocks()) {
-      for (var instNode : bb.getList()) {
-        var inst = instNode.getVal();
-        if (inst instanceof CallInst) {
-          return;
-        }
-      }
-    }
-
-    var latchBlock = loop
-        .getSingleLatchBlock(); // 跳转到循环头和循环外的基本块，目前只考虑 latchBlock 和 exitingBlock 只有一个且相同的情况
+    // 跳转到循环头和循环外的基本块，目前只考虑 latchBlock 和 exitingBlock 只有一个且相同的情况
+    var latchBlock = loop.getSingleLatchBlock();
     var latchBr = latchBlock.getList().getLast().getVal();
+    var latchCmpInst = loop.getLatchCmpInst();
     ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks());
     BasicBlock header = loop.getLoopHeader();
     BasicBlock exit = null;
@@ -486,12 +478,12 @@ public class LoopUnroll implements IRPass {
       newBlocks.add(newBB);
     }
 
-    var newHeader = lastValueMap.get(header);
+    // remap instruction and link new bb in the loop
     for (var newBB : newBlocks) {
       newBB.getList().forEach(instNode -> {
         remapInstruction(instNode.getVal(), lastValueMap);
       });
-      if (newBB != newHeader) {
+      if (newBB != secondHeader) {
         for (var key : lastValueMap.keySet()) {
           if (lastValueMap.get(key) == newBB) {
             BasicBlock oldBB = (BasicBlock) key;
@@ -505,52 +497,68 @@ public class LoopUnroll implements IRPass {
         }
       }
     }
+
+    // build new icmp
+    // while (i < n) { i = i + 1; } => while (i + 1 < n) { i = i + 1; i = i + 1; }
+    BinaryInst secondStepInst = (BinaryInst) lastValueMap.get(loop.getStepInst());
+    int stepIndex = secondStepInst.getOperands().indexOf(loop.getStep());
+    assert stepIndex != -1;
+    Value lhs = null, rhs = null;
+    switch (stepIndex) {
+      case 0 -> {
+        lhs = loop.getStep();
+        rhs = secondStepInst;
+      }
+      case 1 -> {
+        lhs = secondStepInst;
+        rhs = loop.getStep();
+      }
+    }
+    var newStepInst = factory.buildBinary(secondStepInst.tag, lhs, rhs, secondLatch);
+
+    int indVarEndIndex = latchCmpInst.getOperands().indexOf(loop.getIndVarEnd());
+    lhs = null;
+    rhs = null;
+    switch (indVarEndIndex) {
+      case 0 -> {
+        lhs = loop.getIndVarEnd();
+        rhs = newStepInst;
+      }
+      case 1 -> {
+        lhs = newStepInst;
+        rhs = loop.getIndVarEnd();
+      }
+    }
+    var newIcmpInst = factory.buildBinary(latchCmpInst.tag, lhs, rhs, secondLatch);
     // end iter simulation
 
     // update header phi
-    for (var instNode : header.getList()) {
-      var inst = instNode.getVal();
-      if (!(inst instanceof Phi)) {
-        break;
-      }
-
-      var phi = (Phi) inst;
-      var incomingVal = phi.getIncomingVals().get(latchPredIndex);
-      if (incomingVal instanceof Instruction && (loop.getBlocks()
-          .contains(((Instruction) incomingVal).getBB()))) {
-        incomingVal = lastValueMap.get(incomingVal);
-      }
-      phi.CoReplaceOperandByIndex(latchPredIndex, incomingVal);
-    }
-
+    updatePhiNewIncoming(header, latchPredIndex, loop, lastValueMap);
     // update exit phi
-    // FIXME: shit code
     var exitLatchPredIndex = exit.getPredecessor_().indexOf(latchBlock);
-    for (var instNode : exit.getList()) {
-      var inst = instNode.getVal();
-      if (!(inst instanceof Phi)) {
-        break;
-      }
+    updatePhiNewIncoming(exit, exitLatchPredIndex, loop, lastValueMap);
 
-      var phi = (Phi) inst;
-      var incomingVal = phi.getIncomingVals().get(exitLatchPredIndex);
-      if (incomingVal instanceof Instruction && (loop.getBlocks()
-          .contains(((Instruction) incomingVal).getBB()))) {
-        incomingVal = lastValueMap.get(incomingVal);
-      }
-      phi.CoReplaceOperandByIndex(exitLatchPredIndex, incomingVal);
-    }
+    // build bb to process remain iteration
+    // exitIfBB: from preHeader or secondLatch
+    // remainBB: remain calculation
+    // original condition : secondLatch -> exit
+    // unroll condition : secondLatch/preHeader -> exitIfBB, exitIfBB -> remainBB/exit, remainBB -> exit
+    // FIXME: this makes exitIfBB have a pred(preHeader) out of the loop
+    var exitIfBB = exit;
 
+    header.getPredecessor_().remove(latchBlock);
+    exit.getPredecessor_().remove(latchBlock);
     // link latchBlock and secondHeader
     factory.buildBr(secondHeader, latchBlock);
     linkBasicBlock(latchBlock, secondHeader);
 
     // link secondLatch and header
     // FIXME: cond br here
-    factory.buildBr(header, secondLatch);
+    BasicBlock trueBB = latchCmpInst.getOperands().get(1) == header ? header : exitIfBB;
+    BasicBlock falseBB = trueBB == header ? exitIfBB : header;
+    factory.buildBr(newIcmpInst, trueBB, falseBB, secondLatch);
     linkBasicBlock(secondLatch, header);
-
-    header.getPredecessor_().remove(latchBlock);
+    linkBasicBlock(secondLatch, exitIfBB);
   }
 
   private void linkBasicBlock(BasicBlock pred, BasicBlock succ) {
@@ -565,6 +573,24 @@ public class LoopUnroll implements IRPass {
       pred.getSuccessor_().set(headIndex, succ);
     } else {
       pred.getSuccessor_().add(succ);
+    }
+  }
+
+  private void updatePhiNewIncoming(BasicBlock bb, int predIndex, Loop loop,
+      HashMap<Value, Value> lastValueMap) {
+    for (var instNode : bb.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+
+      var phi = (Phi) inst;
+      var incomingVal = phi.getIncomingVals().get(predIndex);
+      if (incomingVal instanceof Instruction && (loop.getBlocks()
+          .contains(((Instruction) incomingVal).getBB()))) {
+        incomingVal = lastValueMap.get(incomingVal);
+      }
+      phi.CoReplaceOperandByIndex(predIndex, incomingVal);
     }
   }
 }

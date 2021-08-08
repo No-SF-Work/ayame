@@ -182,7 +182,7 @@ public class LoopInfo {
     }
   }
 
-  private class LoopOrderComparator implements Comparator<Loop> {
+  private static class LoopOrderComparator implements Comparator<Loop> {
 
     @Override
     public int compare(Loop o1, Loop o2) {
@@ -192,10 +192,10 @@ public class LoopInfo {
   }
 
   public void reorderLoops(Function function) {
-    Collections.sort(this.topLevelLoops, new LoopOrderComparator());
+    this.topLevelLoops.sort(new LoopOrderComparator());
     for (var loop : allLoops) {
       if (loop.getSubLoops() != null && !loop.getSubLoops().isEmpty()) {
-        Collections.sort(loop.getSubLoops(), new LoopOrderComparator());
+        loop.getSubLoops().sort(new LoopOrderComparator());
       }
     }
   }
@@ -288,29 +288,58 @@ public class LoopInfo {
         return;
       }
 
+      // indVar and step
       var stepInst = loop.getStepInst();
-      for (var instNode : header.getList()) {
-        var inst = instNode.getVal();
-        if (!(inst instanceof Phi)) {
-          break;
-        }
-
-        var phi = (Phi) inst;
-        // indVar and indVarInit
-        if (phi.getOperands().contains(stepInst)) {
-          loop.setIndVar(phi);
-          var stepIndex = phi.getOperands().indexOf(stepInst);
-          loop.setIndVarInit(phi.getOperands().get(1 - stepIndex));
-          break;
+      for (var op: stepInst.getOperands()) {
+        if (op instanceof Phi) {
+          loop.setIndVar((Phi) op);
+        } else {
+          loop.setStep(op);
         }
       }
 
-      // step
-      var indVarIndex = stepInst.getOperands().indexOf(loop.getIndVar());
-      if (indVarIndex == -1) {
+      if (loop.getIndVar() == null || loop.getStep() == null) {
         return;
       }
-      loop.setStep(stepInst.getOperands().get(1 - indVarIndex));
+
+      // indVarInit
+      var indVar = loop.getIndVar();
+      int indVarDepth = this.getLoopDepthForBB(indVar.getBB());
+      for (var incomingVal: indVar.getIncomingVals()) {
+        if (incomingVal instanceof Instruction) {
+          Instruction inst = (Instruction) incomingVal;
+          int incomingDepth = this.getLoopDepthForBB(inst.getBB());
+          if (indVarDepth != incomingDepth) {
+            loop.setIndVarInit(incomingVal);
+          }
+        } else {
+          loop.setIndVarInit(incomingVal);
+        }
+      }
+
+      // old method to find indvar and indVarInit
+//      for (var instNode : header.getList()) {
+//        var inst = instNode.getVal();
+//        if (!(inst instanceof Phi)) {
+//          break;
+//        }
+//
+//        var phi = (Phi) inst;
+//        // indVar and indVarInit
+//        if (phi.getOperands().contains(stepInst)) {
+//          loop.setIndVar(phi);
+//          var stepIndex = phi.getOperands().indexOf(stepInst);
+//          loop.setIndVarInit(phi.getOperands().get(1 - stepIndex));
+//          break;
+//        }
+//      }
+
+      // old method to find step
+//      var indVarIndex = stepInst.getOperands().indexOf(loop.getIndVar());
+//      if (indVarIndex == -1) {
+//        return;
+//      }
+//      loop.setStep(stepInst.getOperands().get(1 - indVarIndex));
 
       // tripCount
       if (stepInst.tag == TAG_.Add &&
