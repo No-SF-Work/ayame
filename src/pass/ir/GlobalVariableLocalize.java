@@ -184,9 +184,11 @@ public class GlobalVariableLocalize implements IRPass {
     var size = 0;
     do {
       size = recFuncs.size();
+      ArrayList<Function> f = new ArrayList();
       for (Function func : recFuncs) {
-        recFuncs.addAll(func.getCalleeList());
+        f.addAll(func.getCalleeList());
       }
+      recFuncs.addAll(f);
     } while (size != recFuncs.size());
   }
 

@@ -1,17 +1,32 @@
 package pass.mc;
 
+import static backend.machinecodes.ArmAddition.CondType.Any;
+import static backend.machinecodes.ArmAddition.ShiftType.None;
+import static backend.reg.MachineOperand.state.imm;
+
 import backend.CodeGenManager;
-import backend.machinecodes.*;
+import backend.machinecodes.MCBinary;
+import backend.machinecodes.MCBranch;
+import backend.machinecodes.MCCall;
+import backend.machinecodes.MCComment;
+import backend.machinecodes.MCCompare;
+import backend.machinecodes.MCFma;
+import backend.machinecodes.MCJump;
+import backend.machinecodes.MCLoad;
+import backend.machinecodes.MCLongMul;
+import backend.machinecodes.MCMove;
+import backend.machinecodes.MCReturn;
+import backend.machinecodes.MCStore;
+import backend.machinecodes.MachineBlock;
+import backend.machinecodes.MachineCode;
+import backend.machinecodes.MachineFunction;
 import backend.reg.MachineOperand;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.function.Supplier;
 import pass.Pass;
 import util.Pair;
-
-import java.util.*;
-import java.util.function.Supplier;
-
-import static backend.machinecodes.ArmAddition.CondType.*;
-import static backend.machinecodes.ArmAddition.ShiftType.*;
-import static backend.reg.MachineOperand.state.*;
 
 public class PeepholeOptimization implements Pass.MCPass {
     @Override
@@ -36,7 +51,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                     if (instr instanceof MCBinary) {
                         MCBinary binInstr = (MCBinary) instr;
                         boolean isAddOrSub = binInstr.getTag() == MachineCode.TAG.Add ||
-                                binInstr.getTag() == MachineCode.TAG.Sub;
+                            binInstr.getTag() == MachineCode.TAG.Sub;
                         boolean isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
                         boolean hasZeroOperand = binInstr.getRhs().getState() == imm && binInstr.getRhs().getImm() == 0;
 
@@ -182,11 +197,11 @@ public class PeepholeOptimization implements Pass.MCPass {
             var defs = instr.getMCDef();
             var uses = instr.getMCUse();
             var hasSideEffect = instr instanceof MCBranch ||
-                    instr instanceof MCCall ||
-                    instr instanceof MCJump ||
-                    instr instanceof MCStore ||
-                    instr instanceof MCReturn ||
-                    instr instanceof MCComment;
+                instr instanceof MCCall ||
+                instr instanceof MCJump ||
+                instr instanceof MCStore ||
+                instr instanceof MCReturn ||
+                instr instanceof MCComment;
 
             uses.stream().filter(lastDefiner::containsKey).forEach(use -> lastUserMap.put(lastDefiner.get(use), instr));
             defs.forEach(def -> lastDefiner.put(def, instr));
@@ -215,11 +230,11 @@ public class PeepholeOptimization implements Pass.MCPass {
             for (var instrEntry : block.getmclist()) {
                 var instr = instrEntry.getVal();
                 instr.getUse().stream()
-                        .filter(use -> !blockLiveInfo.liveDef.contains(use))
-                        .forEach(blockLiveInfo.liveUse::add);
+                    .filter(use -> !blockLiveInfo.liveDef.contains(use))
+                    .forEach(blockLiveInfo.liveUse::add);
                 instr.getDef().stream()
-                        .filter(def -> !blockLiveInfo.liveUse.contains(def))
-                        .forEach(blockLiveInfo.liveDef::add);
+                    .filter(def -> !blockLiveInfo.liveUse.contains(def))
+                    .forEach(blockLiveInfo.liveDef::add);
             }
 
             blockLiveInfo.liveIn.addAll(blockLiveInfo.liveUse);
@@ -249,8 +264,8 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                     blockLiveInfo.liveIn = new HashSet<>(blockLiveInfo.liveUse);
                     blockLiveInfo.liveOut.stream()
-                            .filter(MachineOperand -> !blockLiveInfo.liveDef.contains(MachineOperand))
-                            .forEach(blockLiveInfo.liveIn::add);
+                        .filter(MachineOperand -> !blockLiveInfo.liveDef.contains(MachineOperand))
+                        .forEach(blockLiveInfo.liveIn::add);
                 }
             }
         }
@@ -406,6 +421,11 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     assert nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0;
                                     var addImm = new MachineOperand(loadInstr.getOffset().getImm() + imm);
                                     var subImm = new MachineOperand(loadInstr.getOffset().getImm() - imm);
+
+                                    if (isAdd ? addImm.getImm() > 4095 : subImm.getImm() < 0) {
+                                        return true;
+                                    }
+
                                     loadInstr.setAddr(binInstr.getLhs());
                                     loadInstr.setOffset(isAdd ? addImm : subImm);
                                     instrEntryIter.remove();
@@ -443,6 +463,11 @@ public class PeepholeOptimization implements Pass.MCPass {
                                         assert nxt2Instr.getShift().getType() == None || nxt2Instr.getShift().getImm() == 0;
                                         var addImm = new MachineOperand(storeInstr.getOffset().getImm() + imm);
                                         var subImm = new MachineOperand(storeInstr.getOffset().getImm() - imm);
+
+                                        if (isAdd ? addImm.getImm() > 4095 : subImm.getImm() < 0) {
+                                            return true;
+                                        }
+
                                         storeInstr.setAddr(binInstr.getLhs());
                                         storeInstr.setOffset(isAdd ? addImm : subImm);
                                         instrEntryIter.remove();
@@ -481,7 +506,12 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 return true;
                             }
 
-                            replaceUseReg(nxtInstr, movInstr.getDst(), movInstr.getRhs());
+                            var rhs = movInstr.getRhs();
+                            if ((nxtInstr instanceof MCLoad || nxtInstr instanceof MCStore) && rhs.getState() == imm && (rhs.getImm() > 4095 || rhs.getImm() < 0)) {
+                                return true;
+                            }
+
+                            replaceUseReg(nxtInstr, movInstr.getDst(), rhs);
 
                             instrEntryIter.remove();
                             return false;
@@ -511,6 +541,11 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 return true;
                             }
                             var nxtInstr = nxtInstrEntry.getVal();
+
+                            var rhs = addInstr.getRhs();
+                            if ((nxtInstr instanceof MCLoad || nxtInstr instanceof MCStore) && rhs.getState() == imm && (rhs.getImm() > 4095 || rhs.getImm() < 0)) {
+                                return true;
+                            }
 
                             if (nxtInstr instanceof MCLoad) {
                                 if (!Objects.equals(lastUser, nxtInstr)) {
@@ -578,7 +613,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     var isOffsetImm = storeInstr.getOffset().getState() == MachineOperand.state.imm;
 
                                     if (isSameData && isSameDstAddr && isOffsetImm &&
-                                            notSameLhsData && notSameRhsData) {
+                                        notSameLhsData && notSameRhsData) {
                                         storeInstr.setAddr(addInstr.getLhs());
                                         storeInstr.setOffset(addInstr.getRhs());
                                         storeInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
@@ -759,6 +794,11 @@ public class PeepholeOptimization implements Pass.MCPass {
                             }
                             var nxtInstr = nxtInstrEntry.getVal();
                             if (!Objects.equals(lastUser, nxtInstr)) {
+                                return true;
+                            }
+
+                            var rhs = movInstr.getRhs();
+                            if ((nxtInstr instanceof MCLoad || nxtInstr instanceof MCStore) && rhs.getState() == imm && (rhs.getImm() > 4095 || rhs.getImm() < 0)) {
                                 return true;
                             }
 

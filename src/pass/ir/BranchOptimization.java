@@ -48,10 +48,10 @@ public class BranchOptimization implements IRPass {
 
       completed = removeUselessPhi(func);
       removePhi = !completed;
-      completed &= mergeCondBr(func);
       completed &= onlyOneUncondBr(func);
       completed &= endWithUncondBr(func);
       completed &= removeDeadBB(func);
+      completed &= mergeCondBr(func);
 
       if (completed) {
         break;
@@ -272,6 +272,11 @@ public class BranchOptimization implements IRPass {
       if (!dead.isDirty()) {
         for (var succ : bbNode.getVal().getSuccessor_()) {
           removePredBasicBlock(dead, succ);
+        }
+        for (var instNode: bbNode.getVal().getList()) {
+          var inst = instNode.getVal();
+          inst.CORemoveAllOperand();
+          inst.COReplaceAllUseWith(null);
         }
         bbNode.removeSelf();
         completed = false;
