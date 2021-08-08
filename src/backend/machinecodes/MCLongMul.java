@@ -68,6 +68,12 @@ public class MCLongMul extends MachineCode {
         ((VirtualReg) dst).setDef(this, cost + 3);
     }
 
+    public void setCond(ArmAddition.CondType cond) {
+        this.cond = cond;
+    }
+
+    private ArmAddition.CondType cond = ArmAddition.CondType.Any;
+
     public void setLhs(MachineOperand lhs) {
         dealReg(this.lhs, lhs, true);
         this.lhs = lhs;

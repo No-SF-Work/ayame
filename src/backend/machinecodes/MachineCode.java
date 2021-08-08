@@ -103,6 +103,9 @@ public class MachineCode {
         return ArmAddition.CondType.Any;
     }
 
+    public void setCond(ArmAddition.CondType cond) {
+
+    }
 
     public void addUse(MachineOperand r) {
         if (r instanceof VirtualReg || r instanceof PhyReg) {
