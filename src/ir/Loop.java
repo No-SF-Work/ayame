@@ -25,6 +25,7 @@ public class Loop {
   private Value indVarInit; // 索引初值
   private Value indVarEnd; // 索引边界（可不可以等于边界，自己判断）
   private Instruction stepInst; // 索引迭代指令
+  private Instruction indVarCondInst; // icmp 中携带 indVar 的操作数（在 while (i < n) 的情况下等于 stepInst）
   private Value step; // 迭代长度
   private Integer tripCount; // 迭代次数（只考虑 init/end/step 都是常量的情况）
 
@@ -89,6 +90,10 @@ public class Loop {
     return stepInst;
   }
 
+  public Instruction getIndVarCondInst() {
+    return indVarCondInst;
+  }
+
   public Value getIndVarInit() {
     return indVarInit;
   }
@@ -113,6 +118,10 @@ public class Loop {
     this.stepInst = stepInst;
   }
 
+  public void setIndVarCondInst(Instruction indVarCondInst) {
+    this.indVarCondInst = indVarCondInst;
+  }
+
   public void setIndVarInit(Value indVarInit) {
     this.indVarInit = indVarInit;
   }
@@ -135,7 +144,6 @@ public class Loop {
     }
     return latchBlocks.get(0);
   }
-
 
   // 判断循环是否结束的 icmp 指令
   public Instruction getLatchCmpInst() {

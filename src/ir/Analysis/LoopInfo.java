@@ -5,6 +5,7 @@ import ir.values.BasicBlock;
 import ir.values.Constant;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
+import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
@@ -263,57 +264,75 @@ public class LoopInfo {
       var header = loop.getLoopHeader();
 
       // FIXME: 找 stepInst 有 bug，如 while (i + 1 < 100) { i = i + 1; }，找到的 stepInst 是 { i + 1 < 100 } 中的 i + 1
-      // stepInst
+
+      // indVarCondInst
       for (var i = 0; i <= 1; i++) {
         var op = latchCmpInst.getOperands().get(i);
         if (op instanceof Instruction) {
           Instruction opInst = (Instruction) op;
           if (!getLoopDepthForBB(opInst.getBB()).equals(getLoopDepthForBB(latchCmpInst.getBB()))) {
-            loop.setStepInst(
+            loop.setIndVarCondInst(
                 (Instruction) latchCmpInst.getOperands().get(1 - i));
             loop.setIndVarEnd(latchCmpInst.getOperands().get(i));
           } else {
-            loop.setStepInst(
+            loop.setIndVarCondInst(
                 (Instruction) latchCmpInst.getOperands().get(i));
             loop.setIndVarEnd(latchCmpInst.getOperands().get(1 - i));
           }
         } else {
-          loop.setStepInst(
+          loop.setIndVarCondInst(
               (Instruction) latchCmpInst.getOperands().get(1 - i));
           loop.setIndVarEnd(latchCmpInst.getOperands().get(i));
         }
       }
 
-      if (loop.getStepInst() == null) {
+      if (loop.getIndVarCondInst() == null) {
         return;
       }
 
-      // indVar and step
-      var stepInst = loop.getStepInst();
-      for (var op: stepInst.getOperands()) {
+      // indVar
+      // 假设 indVarCondInst = Binary (indVar, OP2)，且 indVar 是 phi
+      var indVarCondInst = loop.getIndVarCondInst();
+      Value compareBias = null;
+      for (var op : indVarCondInst.getOperands()) {
         if (op instanceof Phi) {
           loop.setIndVar((Phi) op);
         } else {
-          loop.setStep(op);
+          compareBias = op;
         }
       }
+      assert compareBias != null;
 
-      if (loop.getIndVar() == null || loop.getStep() == null) {
+      if (loop.getIndVar() == null) {
         return;
       }
 
       // indVarInit
       var indVar = loop.getIndVar();
       int indVarDepth = this.getLoopDepthForBB(indVar.getBB());
-      for (var incomingVal: indVar.getIncomingVals()) {
+      for (var incomingVal : indVar.getIncomingVals()) {
         if (incomingVal instanceof Instruction) {
           Instruction inst = (Instruction) incomingVal;
           int incomingDepth = this.getLoopDepthForBB(inst.getBB());
           if (indVarDepth != incomingDepth) {
             loop.setIndVarInit(incomingVal);
+          } else {
+            loop.setStepInst((Instruction) incomingVal);
           }
         } else {
           loop.setIndVarInit(incomingVal);
+        }
+      }
+
+      // step
+      // 假设 stepInst = Binary (indVar, step)
+      var stepInst = loop.getStepInst();
+      if (stepInst == null) {
+        return;
+      }
+      for (var op : stepInst.getOperands()) {
+        if (op != indVar) {
+          loop.setStep(op);
         }
       }
 
@@ -345,10 +364,12 @@ public class LoopInfo {
       if (stepInst.tag == TAG_.Add &&
           loop.getStep() instanceof Constant &&
           loop.getIndVarInit() instanceof Constant &&
-          loop.getIndVarEnd() instanceof Constant) {
+          loop.getIndVarEnd() instanceof Constant &&
+          compareBias instanceof Constant) {
         var init = ((ConstantInt) loop.getIndVarInit()).getVal();
         var end = ((ConstantInt) loop.getIndVarEnd()).getVal();
         var step = ((ConstantInt) loop.getStep()).getVal();
+        var bias = ((ConstantInt) compareBias).getVal();
         int tripCount = (int) (1e9 + 7); //
 
         // 只考虑 Lt, Le, Gt, Ge, Ne
@@ -384,6 +405,9 @@ public class LoopInfo {
             }
           }
         }
+
+        tripCount -= (bias - step);
+
         loop.setTripCount(tripCount);
       }
     }
