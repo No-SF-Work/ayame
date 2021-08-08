@@ -9,7 +9,6 @@ import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
-import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.Phi;
@@ -53,7 +52,7 @@ public class LoopUnroll implements IRPass {
         default -> throw new RuntimeException();
       };
     } else if (inst instanceof TerminatorInst) {
-      assert inst.tag != TAG_.Call;
+//      assert inst.tag != TAG_.Call;
       switch (inst.tag) {
         case Br -> {
           if (ops.size() == 3) {
@@ -63,13 +62,19 @@ public class LoopUnroll implements IRPass {
             copy = factory.getBr((BasicBlock) ops.get(0));
           }
         }
-
         case Ret -> {
           if (ops.size() == 1) {
             copy = factory.getRet(ops.get(0));
           } else {
             copy = factory.getRet();
           }
+        }
+        case Call -> {
+          copy = factory.getFuncCall((Function) ops.get(0), new ArrayList<>() {{
+            for (int i = 1; i < ops.size(); i++) {
+              add(ops.get(i));
+            }
+          }});
         }
       }
     }
@@ -96,7 +101,7 @@ public class LoopUnroll implements IRPass {
   public static void remapInstruction(Instruction inst, HashMap<Value, Value> vMap) {
     for (int i = 0; i < inst.getOperands().size(); i++) {
       var op = inst.getOperands().get(i);
-      if (vMap.containsKey(op)) {
+      if (vMap.containsKey(op) && !op.isFunction()) {
         var newOp = vMap.get(op);
         inst.CoReplaceOperandByIndex(i, newOp);
       }
@@ -106,7 +111,7 @@ public class LoopUnroll implements IRPass {
   public static void addLoopToQueue(Loop loop, Queue<Loop> queue) {
     for (var subLoop : loop.getSubLoops()) {
       if (subLoop != null) {
-        queue.add(subLoop);
+        addLoopToQueue(subLoop, queue);
       }
     }
     queue.add(loop);
@@ -170,11 +175,6 @@ public class LoopUnroll implements IRPass {
   }
 
   public void runOnLoop(Loop loop) {
-    // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
-    if (!loop.isCanonical()) {
-      return;
-    }
-
     for (var bb : loop.getBlocks()) {
       for (var instNode : bb.getList()) {
         var inst = instNode.getVal();
@@ -184,24 +184,30 @@ public class LoopUnroll implements IRPass {
       }
     }
 
+    // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
     rearrangeBBOrder(loop);
 
     if (loop.getTripCount() != null) {
       constantUnroll(loop);
     } else {
-      doubleUnroll(loop);
+//      doubleUnroll(loop);
     }
   }
 
   public void constantUnroll(Loop loop) {
     log.info("Run constant unroll");
 
+    // 目前只对 simpleForLoop 做 constantUnroll
+    if (!loop.isSimpleForLoop()) {
+      doubleUnroll(loop);
+    }
+
     int instNum = 0;
-    // FIXME: maybe exit block is better
-    var latchBr = loop.getLatchBlock().getList().getLast().getVal();
+    var latchBr = loop.getSingleLatchBlock().getList().getLast().getVal();
     var tripCount = loop.getTripCount();
 
-    ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks()); // we will update loop.getBlocks() later
+    ArrayList<BasicBlock> loopBlocks = new ArrayList<>(
+        loop.getBlocks()); // we will update loop.getBlocks() later
 
     BasicBlock header = loop.getLoopHeader();
     BasicBlock exit = null; // 循环结束跳到的基本块
@@ -224,14 +230,14 @@ public class LoopUnroll implements IRPass {
       // dead loop or unreachable loop
       return;
     } else if (instNum * tripCount > threshold) {
-      doubleUnroll(loop);
+//      doubleUnroll(loop);
       return;
     }
 
     // start constant unroll
     HashMap<Value, Value> lastValueMap = new HashMap<>();
     ArrayList<Phi> originPhis = new ArrayList<>();
-    var latchBlock = loop.getLatchBlock();
+    var latchBlock = loop.getSingleLatchBlock();
     var latchPredIndex = header.getPredecessor_().indexOf(latchBlock);
     for (var instNode : header.getList()) {
       var inst = instNode.getVal();
@@ -278,13 +284,6 @@ public class LoopUnroll implements IRPass {
             newPhi.CORemoveAllOperand();
             newPhi.node.removeSelf();
           }
-        } else {
-//          for (var pred: bb.getPredecessor_()) {
-//            assert loopBlocks.contains(pred);
-//            BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
-//            newPred.getSuccessor_().add(newBB);
-//            newBB.getPredecessor_().add(newPred);
-//          }
         }
 
         lastValueMap.put(bb, newBB);
@@ -310,10 +309,10 @@ public class LoopUnroll implements IRPass {
           remapInstruction(instNode.getVal(), lastValueMap);
         });
         if (newBB != newHeader) {
-          for (var key: lastValueMap.keySet()) {
+          for (var key : lastValueMap.keySet()) {
             if (lastValueMap.get(key) == newBB) {
               BasicBlock oldBB = (BasicBlock) key;
-              for (var pred: oldBB.getPredecessor_()) {
+              for (var pred : oldBB.getPredecessor_()) {
                 assert loopBlocks.contains(pred);
                 BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
                 newPred.getSuccessor_().add(newBB);
@@ -398,5 +397,34 @@ public class LoopUnroll implements IRPass {
 
   public void doubleUnroll(Loop loop) {
     log.info("Run double unroll");
+
+    // 目前只对 simpleForLoop 做 doubleUnroll
+    if (!loop.isSimpleForLoop()) {
+      return;
+    }
+
+    for (var bb : loop.getBlocks()) {
+      for (var instNode : bb.getList()) {
+        var inst = instNode.getVal();
+        if (inst instanceof CallInst) {
+          return;
+        }
+      }
+    }
+
+    // latchBr 跳转到的循环外基本块
+    var latchBlock = loop.getSingleLatchBlock();
+    var latchBr = latchBlock.getList().getLast().getVal();
+    ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks());
+    BasicBlock header = loop.getLoopHeader();
+    BasicBlock exit = null;
+    if (loopBlocks.contains((BasicBlock) (latchBr.getOperands().get(1)))) {
+      exit = (BasicBlock) (latchBr.getOperands().get(2));
+    } else {
+      exit = (BasicBlock) (latchBr.getOperands().get(1));
+    }
+
+    // start double unroll
+
   }
 }
