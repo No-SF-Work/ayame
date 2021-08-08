@@ -113,10 +113,6 @@ public abstract class Type {
     return this instanceof PointerType;
   }
 
-  public boolean isVectorTy() {
-    return this instanceof VectorType;
-  }
-
   public boolean isI32() {
     if (this.isIntegerTy()) {
       return ((IntegerType) this).getNumBits() == 32;

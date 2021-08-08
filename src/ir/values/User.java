@@ -64,20 +64,6 @@ public abstract class User extends Value {
   }
 
   /**
-   * @param index: 位置，operand视作从0开始
-   * @param v:     想要设置的operand
-   *               <p>
-   *               在 CoSetOperand 的基础上，维护 operand 的 usesList
-   */
-  public void CoReplaceOperandByIndex(int index, Value v) {
-    var op = operands.get(index);
-    this.CoSetOperand(index, v);
-    if (op != null && !this.operands.contains(op)) {
-      op.removeUseByUser(this);
-    }
-  }
-
-  /**
    * remove一个或多个Operand，
    * <p>
    * 每次调用该函数都可能会导致operandlist的元素顺序变化，所以在需要按位置同时

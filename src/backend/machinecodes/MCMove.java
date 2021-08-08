@@ -2,8 +2,6 @@ package backend.machinecodes;
 
 import backend.CodeGenManager;
 import backend.reg.MachineOperand;
-import backend.reg.PhyReg;
-import backend.reg.VirtualReg;
 
 public class MCMove extends MachineCode {
 
@@ -14,22 +12,8 @@ public class MCMove extends MachineCode {
     public void setDst(MachineOperand dst) {
         dealReg(this.dst, dst, false);
         this.dst = dst;
-    }
-
-    public void calcCost() {
-        assert (dst != null);
-        assert (rhs != null);
-        if(dst instanceof PhyReg){
-            return;
-        }
-        if (rhs instanceof PhyReg) {
-            ((VirtualReg) dst).setUnMoveable();
-        } else if (rhs.getState() == MachineOperand.state.imm) {
-            ((VirtualReg) dst).setDef(this, 1);
-        } else if (!getShift().isNone()) {
-            ((VirtualReg) dst).setDef(this, ((VirtualReg) rhs).getCost() + 2);
-        } else {
-            ((VirtualReg) dst).setDef(this, ((VirtualReg) rhs).getCost() + 1);
+        if (dst.getState() == MachineOperand.state.imm) {
+            dst = null;
         }
     }
 
@@ -44,7 +28,7 @@ public class MCMove extends MachineCode {
 
     private MachineOperand dst;
 
-    private MachineOperand rhs = null;
+    private MachineOperand rhs;
 
     @Override
     public ArmAddition.CondType getCond() {

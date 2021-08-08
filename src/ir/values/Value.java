@@ -13,6 +13,7 @@ import java.util.LinkedList;
  * <p>
  * ***Use(以及Use的paramNum) 和 operand应该保持一致***
  * <p>
+
  */
 public abstract class Value {
 
@@ -61,7 +62,7 @@ public abstract class Value {
    * 删去自身的一条Use，并将User的operand设置为null
    */
   public void CORemoveUse(Use use) {
-    use.getUser().getOperands().set(use.getOperandRank(), null);
+    use.getUser().CoSetOperand(use.getOperandRank(), null);
     usesList.remove(use);
   }
 

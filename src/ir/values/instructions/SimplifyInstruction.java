@@ -182,18 +182,6 @@ public class SimplifyInstruction {
     }
 
     // TODO 加法结合律优化，共4种
-    // (X + Y) + Z -> X + (Y + Z)
-    if (lhs instanceof BinaryInst && ((Instruction) lhs).tag == TAG_.Add) {
-      BinaryInst addInst = (BinaryInst) lhs;
-      var addLhs = addInst.getOperands().get(0);
-      var addRhs = addInst.getOperands().get(1);
-      BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), addRhs, rhs);
-      Value simpleAdd = simplifyAddInst(tmpInst, false);
-      if (simpleAdd != tmpInst) {
-        return simplifyAddInst(
-            new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), addLhs, simpleAdd), false);
-      }
-    }
 
     return inst;
   }

@@ -79,11 +79,11 @@ public class MachineFunction {
 
     private CodeGenManager cgm;
 
-    public ArrayList<PhyReg> getUsedSavedRegs() {
+    public HashSet<PhyReg> getUsedSavedRegs() {
         return usedSavedRegs;
     }
 
-    private ArrayList<PhyReg> usedSavedRegs=new ArrayList<>();
+    private HashSet<PhyReg> usedSavedRegs=new HashSet<>();
 
     public PhyReg getPhyReg(String name){
         return new PhyReg(regNameMap.get(name));

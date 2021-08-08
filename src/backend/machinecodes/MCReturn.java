@@ -34,21 +34,11 @@ public class MCReturn extends MachineCode{
             }
 
         }
-        boolean usedLR=false;
         StringBuilder sb = new StringBuilder();
-        for(PhyReg phyReg:mf.getUsedSavedRegs()){
-            if(phyReg.getName().equals("lr")){
-                sb.append("pc");
-                usedLR=true;
-            }else{
-                sb.append(phyReg.getName());
-            }
+        mf.getUsedSavedRegs().forEach(phyReg -> {
+            sb.append(phyReg.getName());
             sb.append(", ");
-        }
-//        mf.getUsedSavedRegs().forEach(phyReg -> {
-//            sb.append(phyReg.getName());
-//            sb.append(", ");
-//        });
+        });
 
         if (mf.isUsedLr()||!mf.getUsedSavedRegs().isEmpty()) {
             String s=sb.toString();
@@ -59,10 +49,8 @@ public class MCReturn extends MachineCode{
             res += "}\n";
             mcNum+=1;
         }
-        if(!usedLR){
-            res+="\tbx\tlr\n";
-            mcNum+=1;
-        }
+        res+="\tbx\tlr\n";
+        mcNum+=1;
         CodeGenManager.getInstance().addOffset(mcNum,res.length());
         return res;
     }

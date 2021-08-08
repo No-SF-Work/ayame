@@ -66,10 +66,7 @@ public class ListScheduling implements Pass.MCPass {
                 case FMA -> 4;
                 case Mv -> 1;
                 case Branch, Jump, Return, Call -> 1;
-                case Load -> {
-                    var addr = ((MCLoad) instr).getAddr();
-                    yield addr instanceof VirtualReg && ((VirtualReg) addr).isGlobal() ? 1 : 4;
-                }
+                case Load -> 4;
                 case Store -> 3;
                 case Global -> 1;
                 default -> throw new IllegalStateException("Unexpected value: " + instr.getTag());
@@ -81,10 +78,7 @@ public class ListScheduling implements Pass.MCPass {
                 case Mv -> A72FUType.Integer;
                 case Compare -> A72FUType.Integer;
                 case Branch, Jump, Return, Call -> A72FUType.Branch;
-                case Load -> {
-                    var addr = ((MCLoad) instr).getAddr();
-                    yield addr instanceof VirtualReg && ((VirtualReg) addr).isGlobal() ? A72FUType.Integer : A72FUType.Load;
-                }
+                case Load -> A72FUType.Load;
                 case Store -> A72FUType.Store;
                 case Global -> A72FUType.Integer;
                 default -> throw new IllegalStateException("Unexpected value: " + instr.getTag());

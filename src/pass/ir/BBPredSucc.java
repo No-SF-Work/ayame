@@ -1,5 +1,6 @@
 package pass.ir;
 
+import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.values.BasicBlock;
 import ir.values.Function;
@@ -7,9 +8,9 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.TerminatorInst.BrInst;
 import java.util.logging.Logger;
 import pass.Pass.IRPass;
+import util.IList.INode;
 import util.Mylogger;
 
-// ! 只能在 mem2reg 之前用
 public class BBPredSucc implements IRPass {
 
   Logger log = Mylogger.getLogger(IRPass.class);

@@ -3,7 +3,7 @@ from tester import Tester
 from tester import get_sy_testcases
 from pretty_print import Print_C
 
-thu_compiler = "thu_compiler "
+thu_compiler = "build/bin/thu_compiler "
 ustc_compiler = "build/bin/ustc_compiler "
 ustc_compiler_no_vec = "build/bin/ustc_compiler_no_vec "
 ayame_compiler = "java -classpath src:lib/antlr4-runtime-4.8.jar:lib/argparse4j-0.9.0.jar Compiler "
@@ -41,8 +41,7 @@ ayame_ayame_scheme = {"scheme": "ayame_ayame",
 #                     "frontend_instr": ustc_compiler + "-emit -o {ir} {sy}",
 #                     "emit_llvm_ir": True}
 
-# all_schemes = [ayame_ayame_scheme, clang_llvm_scheme, thu_thu_scheme] # gcc_gcc_scheme, ustc_ustc_scheme, ustc_ustc_no_vec_scheme]
-all_schemes = [ayame_ayame_scheme]
+all_schemes = [ayame_ayame_scheme] # clang_llvm_scheme, thu_thu_scheme, gcc_gcc_scheme, ustc_ustc_scheme, ustc_ustc_no_vec_scheme]
 testers = []
 
 Print_C.print_header("[Removing old data...]\n\n")

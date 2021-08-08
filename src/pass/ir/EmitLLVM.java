@@ -46,6 +46,7 @@ public class EmitLLVM implements IRPass {
     m.__functions.forEach(func -> {
       var val = func.getVal();
       if (!val.isBuiltin_()) {
+        val.getLoopInfo().computeLoopInfo(val);
         sb.append("define dso_local ")
             .append(val)
             .append("{");
@@ -95,9 +96,7 @@ public class EmitLLVM implements IRPass {
                 // === start print loop info ===
                 if (val.getLoopInfo().isLoopHeader(bbval)) {
                   sb.append(", is LOOP HEADER");
-                  if (val.getLoopInfo().getLoopForBB(bbval).isSimpleForLoop()) {
-                    sb.append(" (simple for loop)");
-                  } else if (val.getLoopInfo().getLoopForBB(bbval).isCanonical()) {
+                  if (val.getLoopInfo().getLoopForBB(bbval).isCanonical()) {
                     sb.append(" (canonical loop)");
                   }
                 }

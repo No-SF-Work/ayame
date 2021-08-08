@@ -16,25 +16,19 @@ public class Loop {
   private ArrayList<Loop> subLoops;
   private ArrayList<BasicBlock> blocks;
 
-  private HashSet<BasicBlock> exitingBlocks; // 跳转到循环外的基本块
-  private HashSet<BasicBlock> exitBlocks; // 循环跳转到的循环外基本块
-  private ArrayList<BasicBlock> latchBlocks; // 跳回循环头的基本块
+  private HashSet<BasicBlock> exitingBlocks; // blocks that jump out from the loop
 
-  // 这两个只在 SimpleFor 的循环中才计算，loop header 有两个 pred，只有一个 exiting block，只有一个 latch block
+  // 这两个只在 Canonical 的循环中才计算，loop header 有两个 pred，只有一个 exiting block，只有一个 latch block
+  private BasicBlock latchBlock; // 跳回循环头的基本块
   private MemInst.Phi indVar; // 索引 phi
   private Value indVarInit; // 索引初值
-  private Value indVarEnd; // 索引边界（可不可以等于边界，自己判断）
   private Instruction stepInst; // 索引迭代指令
-  private Value step; // 迭代长度
-  private Integer tripCount; // 迭代次数（只考虑 init/end/step 都是常量的情况）
 
   public Loop(Loop parentLoop) {
     this.parentLoop = parentLoop;
     this.subLoops = new ArrayList<>();
     this.blocks = new ArrayList<>();
     this.exitingBlocks = new HashSet<>();
-    this.exitBlocks = new HashSet<>();
-    this.latchBlocks = new ArrayList<>();
   }
 
 
@@ -43,8 +37,6 @@ public class Loop {
     this.subLoops = new ArrayList<>();
     this.blocks = new ArrayList<>();
     this.exitingBlocks = new HashSet<>();
-    this.exitBlocks = new HashSet<>();
-    this.latchBlocks = new ArrayList<>();
     this.loopHeader = header;
     this.blocks.add(header);
   }
@@ -69,9 +61,6 @@ public class Loop {
     return exitingBlocks;
   }
 
-  public HashSet<BasicBlock> getExitBlocks() {
-    return exitBlocks;
-  }
 
   public BasicBlock getLoopHeader() {
     return loopHeader;
@@ -81,8 +70,8 @@ public class Loop {
     return indVar;
   }
 
-  public ArrayList<BasicBlock> getLatchBlocks() {
-    return latchBlocks;
+  public BasicBlock getLatchBlock() {
+    return latchBlock;
   }
 
   public Instruction getStepInst() {
@@ -93,16 +82,8 @@ public class Loop {
     return indVarInit;
   }
 
-  public Value getIndVarEnd() {
-    return indVarEnd;
-  }
-
-  public Value getStep() {
-    return step;
-  }
-
-  public Integer getTripCount() {
-    return tripCount;
+  public void setLatchBlock(BasicBlock latchBlock) {
+    this.latchBlock = latchBlock;
   }
 
   public void setIndVar(Phi indVar) {
@@ -113,36 +94,18 @@ public class Loop {
     this.stepInst = stepInst;
   }
 
+
   public void setIndVarInit(Value indVarInit) {
     this.indVarInit = indVarInit;
-  }
-
-  public void setIndVarEnd(Value indVarEnd) {
-    this.indVarEnd = indVarEnd;
-  }
-
-  public void setStep(Value step) {
-    this.step = step;
-  }
-
-  public void setTripCount(Integer tripCount) {
-    this.tripCount = tripCount;
-  }
-
-  public BasicBlock getSingleLatchBlock() {
-    if (latchBlocks.size() != 1) {
-      return null;
-    }
-    return latchBlocks.get(0);
   }
 
 
   // 判断循环是否结束的 icmp 指令
   public Instruction getLatchCmpInst() {
-    if (getSingleLatchBlock() == null) {
+    if (latchBlock == null) {
       return null;
     }
-    var brInst = getSingleLatchBlock().getList().getLast().getVal();
+    var brInst = latchBlock.getList().getLast().getVal();
     assert brInst instanceof BrInst;
 
     // dead loop or constant condition
@@ -173,7 +136,6 @@ public class Loop {
     return null;
   }
 
-
   public Integer getLoopDepth() {
     int depth = 0;
     for (Loop curLoop = this; curLoop != null; curLoop = curLoop.parentLoop) {
@@ -186,46 +148,7 @@ public class Loop {
     return blocks.get(0);
   }
 
-  // 1 pre header, 1 latch block, n exit blocks with all pred in loop
   public boolean isCanonical() {
-    boolean exitPredInLoop = true;
-    for (var exitBB : exitBlocks) {
-      for (var pred : exitBB.getPredecessor_()) {
-        if (!this.getBlocks().contains(pred)) {
-          exitPredInLoop = false;
-        }
-      }
-    }
-    return latchBlocks.size() == 1 && loopHeader.getPredecessor_().size() == 2
-        && exitPredInLoop;
-  }
-
-  // 1 pre header, 1 latch block, 1 exit block
-  public boolean isSimpleForLoop() {
-    return latchBlocks.size() == 1 && loopHeader.getPredecessor_().size() == 2
-        && exitBlocks.size() == 1 && exitingBlocks.size() == 1;
-  }
-
-  public void addBlock(BasicBlock bb) {
-    var loop = this;
-    while (loop != null) {
-      loop.getBlocks().add(bb);
-      loop = loop.getParentLoop();
-    }
-  }
-
-  public void removeBlock(BasicBlock bb) {
-    this.blocks.remove(bb);
-  }
-
-
-  public void addSubLoop(Loop subLoop) {
-    this.subLoops.add(subLoop);
-    subLoop.setParentLoop(this);
-  }
-
-  public void removeSubLoop(Loop subLoop) {
-    this.subLoops.remove(subLoop);
-    subLoop.setParentLoop(null);
+    return loopHeader.getPredecessor_().size() == 2 && exitingBlocks.size() == 1;
   }
 }

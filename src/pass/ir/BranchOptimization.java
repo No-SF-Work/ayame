@@ -273,11 +273,6 @@ public class BranchOptimization implements IRPass {
         for (var succ : bbNode.getVal().getSuccessor_()) {
           removePredBasicBlock(dead, succ);
         }
-        for (var instNode: bbNode.getVal().getList()) {
-          var inst = instNode.getVal();
-          inst.CORemoveAllOperand();
-          inst.COReplaceAllUseWith(null);
-        }
         bbNode.removeSelf();
         completed = false;
       }
