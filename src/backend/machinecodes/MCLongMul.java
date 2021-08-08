@@ -22,7 +22,7 @@ public class MCLongMul extends MachineCode {
     }
 
     public String toString() {
-        String res = "\tsmmul\t" + dst.getName() + ",\t" + lhs.getName() + ",\t" + rhs.getName() + "\n";
+        String res = "\tsmmul\t" + condString(cond) + dst.getName() + ",\t" + lhs.getName() + ",\t" + rhs.getName() + "\n";
         CodeGenManager.getInstance().addOffset(1, res.length());
         return res;
     }
@@ -48,7 +48,7 @@ public class MCLongMul extends MachineCode {
         assert (this.dst != null);
         assert (this.lhs != null);
         assert (this.rhs != null);
-        if(dst instanceof PhyReg){
+        if (dst instanceof PhyReg) {
             return;
         }
         int cost = 0;
