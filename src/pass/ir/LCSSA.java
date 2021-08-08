@@ -13,12 +13,13 @@ import ir.values.Value;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
+import pass.Pass.IRPass;
+import util.Mylogger;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.logging.Logger;
-import pass.Pass.IRPass;
-import util.Mylogger;
 
 /**
  * 在循环退出时跳转到的基本块开头插入冗余 phi 指令，phi 指令 use 循环内定义的值，循环后面 use 循环内定义的值替换成 use phi，方便循环上的优化
@@ -85,7 +86,7 @@ public class LCSSA implements IRPass {
     // 在循环出口的基本块开头放置 phi，参数为 inst，即循环内定义的变量
     for (var exitBB : loop.getExitBlocks()) {
       if (!bbToPhiMap.containsKey(exitBB) && exitBB.getDomers().contains(bb)) {
-        Phi phi = new Phi(TAG_.Phi, factory.getI32Ty(), exitBB.getPredecessor_().size(), exitBB);
+        Phi phi = new Phi(TAG_.Phi, inst.getType(), exitBB.getPredecessor_().size(), exitBB);
         bbToPhiMap.put(exitBB, phi);
         for (int i = 0; i < exitBB.getPredecessor_().size(); i++) {
           phi.CoReplaceOperandByIndex(i, inst);
