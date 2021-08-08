@@ -82,8 +82,8 @@ public class MCLoad extends MachineCode {
         if (addr instanceof VirtualReg && ((VirtualReg) addr).isGlobal()) {
             //gcc，狗都不用
 //            CodeGenManager.getInstance().setGlobalInfo(this);
-            String res="\tmovw\t"+dst.getName()+",\t:lower16:"+addr.getName()+"\n";
-            res+="\tmovt\t"+dst.getName()+",\t:upper16:"+addr.getName()+"\n";
+            String res = "\tmovw" + condString(cond) + "\t" + dst.getName() + ",\t:lower16:" + addr.getName() + "\n";
+            res += "\tmovt" + condString(cond) + "\t" + dst.getName() + ",\t:upper16:" + addr.getName() + "\n";
             return res;
 //            return "";
 //            "\tldr\t"+dst.getName()+",\t="+addr.getName()+"\n"
