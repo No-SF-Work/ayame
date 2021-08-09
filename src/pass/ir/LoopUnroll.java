@@ -778,6 +778,6 @@ public class LoopUnroll implements IRPass {
 
   // 根据 LoopInfo 分析情况调整
   private boolean canDoubleUnroll(Loop loop) {
-    return loop.getIndVar() != null && loop.getStepInst() != null;
+    return loop.getIndVar() != null && loop.getStepInst() instanceof BinaryInst;
   }
 }
