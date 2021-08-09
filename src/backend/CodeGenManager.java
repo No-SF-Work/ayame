@@ -70,7 +70,7 @@ public class CodeGenManager {
     private CodeGenManager() {
         logger = Mylogger.getLogger(CodeGenManager.class);
         this.isO2 = true;
-        this.ifPrintIR = true;
+        this.ifPrintIR = false;
     }
 
     public void load(MyModule m) {
