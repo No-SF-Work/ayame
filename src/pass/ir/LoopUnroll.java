@@ -14,13 +14,14 @@ import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst;
 import ir.values.instructions.TerminatorInst.CallInst;
+import pass.Pass.IRPass;
+import util.Mylogger;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
-import pass.Pass.IRPass;
-import util.Mylogger;
 
 public class LoopUnroll implements IRPass {
 
@@ -52,7 +53,7 @@ public class LoopUnroll implements IRPass {
         default -> throw new RuntimeException();
       };
     } else if (inst instanceof TerminatorInst) {
-//      assert inst.tag != TAG_.Call;
+      //      assert inst.tag != TAG_.Call;
       switch (inst.tag) {
         case Br -> {
           if (ops.size() == 3) {
@@ -170,7 +171,6 @@ public class LoopUnroll implements IRPass {
     while (!loopQueue.isEmpty()) {
       var loop = loopQueue.remove();
       runOnLoop(loop);
-//      loopQueue.remove();
     }
   }
 
@@ -199,7 +199,8 @@ public class LoopUnroll implements IRPass {
 
     // 目前只对 simpleForLoop 做 constantUnroll
     if (!loop.isSimpleForLoop()) {
-      doubleUnroll(loop);
+      //      doubleUnroll(loop);
+      return;
     }
 
     int instNum = 0;
@@ -230,7 +231,7 @@ public class LoopUnroll implements IRPass {
       // dead loop or unreachable loop
       return;
     } else if (instNum * tripCount > threshold) {
-//      doubleUnroll(loop);
+      //      doubleUnroll(loop);
       return;
     }
 
@@ -326,8 +327,6 @@ public class LoopUnroll implements IRPass {
 
     // latch block 跳到的 exit block 更新 LCSSA phi
     if (tripCount > 1) {
-      var lastBB = (BasicBlock) lastValueMap.get(latchBlock);
-
       for (var exitBB : loop.getExitBlocks()) {
         if (exitBB.getPredecessor_().contains(latchBlock)) {
           var latchIndex = exitBB.getPredecessor_().indexOf(latchBlock);
@@ -403,18 +402,10 @@ public class LoopUnroll implements IRPass {
       return;
     }
 
-    for (var bb : loop.getBlocks()) {
-      for (var instNode : bb.getList()) {
-        var inst = instNode.getVal();
-        if (inst instanceof CallInst) {
-          return;
-        }
-      }
-    }
-
-    // latchBr 跳转到的循环外基本块
+    // 跳转到循环头和循环外的基本块，目前只考虑 latchBlock 和 exitingBlock 只有一个且相同的情况
     var latchBlock = loop.getSingleLatchBlock();
     var latchBr = latchBlock.getList().getLast().getVal();
+    var latchCmpInst = loop.getLatchCmpInst();
     ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks());
     BasicBlock header = loop.getLoopHeader();
     BasicBlock exit = null;
@@ -425,6 +416,181 @@ public class LoopUnroll implements IRPass {
     }
 
     // start double unroll
+    HashMap<Value, Value> lastValueMap = new HashMap<>();
+    ArrayList<Phi> originPhis = new ArrayList<>();
+    var latchPredIndex = header.getPredecessor_().indexOf(latchBlock);
 
+    // collect origin phi
+    for (var instNode : header.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+
+      Phi phi = (Phi) inst;
+      originPhis.add(phi);
+      var latchIncomingVal = phi.getIncomingVals().get(latchPredIndex);
+      if (latchIncomingVal instanceof Instruction &&
+          (loopBlocks.contains(((Instruction) latchIncomingVal).getBB()))) {
+        lastValueMap.put(latchIncomingVal, latchIncomingVal);
+      }
+    }
+
+    // remove latch br inst
+    latchBr.CORemoveAllOperand();
+    latchBlock.getSuccessor_().remove(header);
+    latchBlock.getSuccessor_().remove(exit);
+    latchBr.node.removeSelf();
+
+    BasicBlock secondHeader = null, secondLatch = null;
+
+    // iter only once
+    // start iter simulation
+    ArrayList<BasicBlock> newBlocks = new ArrayList<>();
+    for (var bb : loopBlocks) {
+      HashMap<Value, Value> valueMap = new HashMap<>();
+      BasicBlock newBB = getLoopBasicBlockCopy(bb, valueMap);
+
+      if (bb == header) {
+        for (var phi : originPhis) {
+          var newPhi = (Phi) valueMap.get(phi);
+          var latchIncomingVal = newPhi.getIncomingVals().get(latchPredIndex);
+          valueMap.put(phi, latchIncomingVal);
+          newPhi.CORemoveAllOperand();
+          newPhi.node.removeSelf();
+        }
+      }
+
+      lastValueMap.put(bb, newBB);
+      for (var key : valueMap.keySet()) {
+        lastValueMap.put(key, valueMap.get(key));
+      }
+      currLoopInfo.addBBToLoop(newBB, loop);
+
+      // TODO 多个出口时在这里更新 LCSSA 生成的 phi
+
+      if (bb == header) {
+        secondHeader = newBB;
+      }
+      if (bb == latchBlock) {
+        secondLatch = newBB;
+      }
+      newBlocks.add(newBB);
+    }
+
+    // remap instruction and link new bb in the loop
+    for (var newBB : newBlocks) {
+      newBB.getList().forEach(instNode -> {
+        remapInstruction(instNode.getVal(), lastValueMap);
+      });
+      if (newBB != secondHeader) {
+        for (var key : lastValueMap.keySet()) {
+          if (lastValueMap.get(key) == newBB) {
+            BasicBlock oldBB = (BasicBlock) key;
+            for (var pred : oldBB.getPredecessor_()) {
+              assert loopBlocks.contains(pred);
+              BasicBlock newPred = (BasicBlock) lastValueMap.get(pred);
+              newPred.getSuccessor_().add(newBB);
+              newBB.getPredecessor_().add(newPred);
+            }
+          }
+        }
+      }
+    }
+
+    // build new icmp
+    // while (i < n) { i = i + 1; } => while (i + 1 < n) { i = i + 1; i = i + 1; }
+    BinaryInst secondStepInst = (BinaryInst) lastValueMap.get(loop.getStepInst());
+    int stepIndex = secondStepInst.getOperands().indexOf(loop.getStep());
+    assert stepIndex != -1;
+    Value lhs = null, rhs = null;
+    switch (stepIndex) {
+      case 0 -> {
+        lhs = loop.getStep();
+        rhs = secondStepInst;
+      }
+      case 1 -> {
+        lhs = secondStepInst;
+        rhs = loop.getStep();
+      }
+    }
+    var newStepInst = factory.buildBinary(secondStepInst.tag, lhs, rhs, secondLatch);
+
+    int indVarEndIndex = latchCmpInst.getOperands().indexOf(loop.getIndVarEnd());
+    lhs = null;
+    rhs = null;
+    switch (indVarEndIndex) {
+      case 0 -> {
+        lhs = loop.getIndVarEnd();
+        rhs = newStepInst;
+      }
+      case 1 -> {
+        lhs = newStepInst;
+        rhs = loop.getIndVarEnd();
+      }
+    }
+    var newIcmpInst = factory.buildBinary(latchCmpInst.tag, lhs, rhs, secondLatch);
+    // end iter simulation
+
+    // update header phi
+    updatePhiNewIncoming(header, latchPredIndex, loop, lastValueMap);
+    // update exit phi
+    var exitLatchPredIndex = exit.getPredecessor_().indexOf(latchBlock);
+    updatePhiNewIncoming(exit, exitLatchPredIndex, loop, lastValueMap);
+
+    // build bb to process remain iteration
+    // exitIfBB: from preHeader or secondLatch
+    // remainBB: remain calculation
+    // original condition : secondLatch -> exit
+    // unroll condition : secondLatch/preHeader -> exitIfBB, exitIfBB -> remainBB/exit, remainBB -> exit
+    // FIXME: this makes exitIfBB have a pred(preHeader) out of the loop
+    var exitIfBB = exit;
+
+    header.getPredecessor_().remove(latchBlock);
+    exit.getPredecessor_().remove(latchBlock);
+    // link latchBlock and secondHeader
+    factory.buildBr(secondHeader, latchBlock);
+    linkBasicBlock(latchBlock, secondHeader);
+
+    // link secondLatch and header
+    // FIXME: cond br here
+    BasicBlock trueBB = latchCmpInst.getOperands().get(1) == header ? header : exitIfBB;
+    BasicBlock falseBB = trueBB == header ? exitIfBB : header;
+    factory.buildBr(newIcmpInst, trueBB, falseBB, secondLatch);
+    linkBasicBlock(secondLatch, header);
+    linkBasicBlock(secondLatch, exitIfBB);
+  }
+
+  private void linkBasicBlock(BasicBlock pred, BasicBlock succ) {
+    var latchIndex = succ.getPredecessor_().indexOf(pred);
+    if (latchIndex != -1) {
+      succ.getPredecessor_().set(latchIndex, pred);
+    } else {
+      succ.getPredecessor_().add(pred);
+    }
+    var headIndex = pred.getSuccessor_().indexOf(succ);
+    if (headIndex != -1) {
+      pred.getSuccessor_().set(headIndex, succ);
+    } else {
+      pred.getSuccessor_().add(succ);
+    }
+  }
+
+  private void updatePhiNewIncoming(BasicBlock bb, int predIndex, Loop loop,
+      HashMap<Value, Value> lastValueMap) {
+    for (var instNode : bb.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+
+      var phi = (Phi) inst;
+      var incomingVal = phi.getIncomingVals().get(predIndex);
+      if (incomingVal instanceof Instruction && (loop.getBlocks()
+          .contains(((Instruction) incomingVal).getBB()))) {
+        incomingVal = lastValueMap.get(incomingVal);
+      }
+      phi.CoReplaceOperandByIndex(predIndex, incomingVal);
+    }
   }
 }

@@ -9,13 +9,23 @@ import util.IList;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class MachineCode {
+public class MachineCode implements Cloneable {
 
     private static int ID = 0;
 
     int slotIndex;
 
     int id;
+
+    public Object clone(){
+        MachineCode mc=null;
+        try{
+            mc=(MachineCode)super.clone();
+        }catch (Exception e){
+
+        }
+        return mc;
+    }
 
     public enum TAG {
         Add,
@@ -103,6 +113,9 @@ public class MachineCode {
         return ArmAddition.CondType.Any;
     }
 
+    public void setCond(ArmAddition.CondType cond) {
+
+    }
 
     public void addUse(MachineOperand r) {
         if (r instanceof VirtualReg || r instanceof PhyReg) {
@@ -208,6 +221,10 @@ public class MachineCode {
 
     public void setNode(IList.INode node) {
         this.node = node;
+    }
+
+    public void genNewNode(){
+        this.node=new IList.INode(this);
     }
 
     public String condString(ArmAddition.CondType t) {

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+echo -e "\033[32m\033[1m[Removing OBJ files...]\033[0m"
+find build/test_results/ -name "*.o" | xargs rm -f
+echo -e "\033[32m\033[1m[Removed.]\033[0m"
+
 echo -e "\033[32m\033[1m[Compressing artifacts...]\033[0m"
 tar cf test_results.tar build/test_results
 echo -e "\033[32m\033[1m[Compressed.]\033[0m"

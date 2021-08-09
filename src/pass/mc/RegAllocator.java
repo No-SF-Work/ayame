@@ -760,6 +760,11 @@ public class RegAllocator implements MCPass {
 
                                                 newMovInstr.setShift(instr.getShift().getType(), instr.getShift().getImm());
                                                 newMovInstr.setCond(instr.getCond());
+
+                                                // attention: fix stack
+                                                if (func.getArgMoves().contains(instr)) {
+                                                    func.getArgMoves().add(newMovInstr);
+                                                }
                                             } else if (instr instanceof MCLoad) {
                                                 var newLoadInstr = new MCLoad();
                                                 newLoadInstr.insertBeforeNode(prevInstr);
