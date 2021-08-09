@@ -400,7 +400,7 @@ public class LoopUnroll implements IRPass {
   public void doubleUnroll(Loop loop) {
     log.info("Run double unroll");
 
-    if (loop.getBlocks().size() > 1) {
+    if (loop.getBlocks().size() > 10) {
       return;
     }
 
