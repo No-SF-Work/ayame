@@ -1059,10 +1059,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
           return null;
         } else {
           Value offset = null;
-          Type ty = load.getType();
+          Type ty = ((PointerType)load.getType()).getContained();
           visit(ctx.exp(0));
           var val = tmp_;
-          var gep = f.buildGEP(load, new ArrayList<>() {{
+          t = f.buildGEP(load, new ArrayList<>() {{
             add(CONST0);
           }}, curBB_);
           offset = f.buildBinary(TAG_.Mul, val,
