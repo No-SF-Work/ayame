@@ -161,7 +161,9 @@ public class MergeMachineBlock implements Pass.MCPass {
                     }
                 }
                 for (var b : predToRemove) {
-                    mb.getPred().remove(b);
+                    if(b.getTrueSucc()!=mb&&b.getFalseSucc()!=mb){
+                        mb.getPred().remove(b);
+                    }
                 }
                 if (mb.getPred().isEmpty() && mb != mf.getmbList().getEntry().getVal()) {
                     mb.getNode().removeSelf();

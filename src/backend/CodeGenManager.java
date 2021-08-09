@@ -70,7 +70,7 @@ public class CodeGenManager {
     private CodeGenManager() {
         logger = Mylogger.getLogger(CodeGenManager.class);
         this.isO2 = true;
-        this.ifPrintIR = false;
+        this.ifPrintIR = true;
     }
 
     public void load(MyModule m) {
@@ -428,6 +428,7 @@ public class CodeGenManager {
             assert (mv instanceof MCMove);
             assert (mv.getRhs().getState() == MachineOperand.state.imm);
             mv.setRhs(new MachineOperand(mv.getRhs().getImm() + mf.getStackSize() + 4 * regs));
+
 
         });
 
@@ -884,7 +885,7 @@ public class CodeGenManager {
     }
 
     //记录了当前函数中出现过的除法,key是当前函数中已经出现过的除数和被除数组成的pair，value是该除法的结果
-    public HashMap<Pair<MachineOperand, MachineOperand>, VirtualReg> divMap = new HashMap<>();
+    public HashMap<Pair<Pair<MachineOperand, MachineOperand>,MachineBlock>, VirtualReg> divMap = new HashMap<>();
 
     private void constDiv(Value divisor, int imm, VirtualReg dst, MachineBlock mb) {
         MachineOperand lhs = analyzeNoImm(divisor, mb);
@@ -971,7 +972,7 @@ public class CodeGenManager {
             rsb.setRhs(new MachineOperand(0));
             rsb.setDst(dst);
         }
-        divMap.put(new Pair<>(lhs, new MachineOperand(imm)), (VirtualReg) dst);
+        divMap.put(new Pair<>(new Pair<>(lhs, new MachineOperand(imm)),mb), (VirtualReg) dst);
     }
 
     private void processBB(BasicBlock bb) {
@@ -995,7 +996,8 @@ public class CodeGenManager {
                         irMap.put(ir, irMap.get(ir.getOperands().get(0)));
                         continue;
                     }
-                    Pair<MachineOperand, MachineOperand> divLookUp = new Pair<>(lhs, new MachineOperand(imm));
+                    Pair<MachineOperand, MachineOperand> div = new Pair<>(lhs, new MachineOperand(imm));
+                    Pair<Pair<MachineOperand,MachineOperand>,MachineBlock> divLookUp=new Pair<>(div,mb);
                     if (!divMap.containsKey(divLookUp)) {
                         MachineOperand dst = analyzeValue(ir, mb, true);
                         constDiv(ir.getOperands().get(0), imm, (VirtualReg) dst, mb);
@@ -1004,7 +1006,8 @@ public class CodeGenManager {
                     }
                 } else {
                     rhs = analyzeNoImm(ir.getOperands().get(1), mb);
-                    Pair<MachineOperand, MachineOperand> divLookUp = new Pair<>(lhs, rhs);
+                    Pair<MachineOperand, MachineOperand> div = new Pair<>(lhs, rhs);
+                    Pair<Pair<MachineOperand,MachineOperand>,MachineBlock> divLookUp=new Pair<>(div,mb);
                     if (!divMap.containsKey(divLookUp)) {
                         MachineOperand dst = analyzeValue(ir, mb, true);
                         MCBinary binary = new MCBinary(MachineCode.TAG.Div, mb);
@@ -1022,7 +1025,8 @@ public class CodeGenManager {
                 boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                 assert (rhsIsConst);
                 int imm = ((Constants.ConstantInt) ir.getOperands().get(1)).getVal();
-                Pair<MachineOperand, MachineOperand> divLookUp = new Pair<>(lhs, new MachineOperand(imm));
+                Pair<MachineOperand, MachineOperand> div = new Pair<>(lhs, new MachineOperand(imm));
+                Pair<Pair<MachineOperand,MachineOperand>,MachineBlock> divLookUp=new Pair<>(div,mb);
                 int abs = imm > 0 ? imm : -imm;
                 assert ((abs & (abs - 1)) == 0);
                 int l = calcCTZ(abs);
