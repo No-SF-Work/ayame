@@ -438,6 +438,7 @@ public class LoopUnroll implements IRPass {
     }
 
     // remove latch br inst
+    var latchBrHeaderIndex = latchBr.getOperands().indexOf(header);
     latchBr.CORemoveAllOperand();
     latchBlock.getSuccessor_().remove(header);
     latchBlock.getSuccessor_().remove(exit);
@@ -535,8 +536,9 @@ public class LoopUnroll implements IRPass {
     var newIcmpInst = factory.buildBinary(latchCmpInst.tag, lhs, rhs, secondLatch);
     // end iter simulation
 
-    // update header phi
-    updatePhiNewIncoming(header, latchPredIndex, loop, lastValueMap);
+    // save lastValueMap
+    HashMap<Value, Value> iterValueMap = new HashMap<>(lastValueMap);
+
     // update exit phi
     // 后面设置 restBBLast 的 incomingVals 时使用这里缓存的原 incomingVals 作为查找 lastValueMap 的索引
     var exitLatchPredIndex = exit.getPredecessor_().indexOf(latchBlock);
@@ -548,7 +550,7 @@ public class LoopUnroll implements IRPass {
       }
       cachedExitIncoming.add(inst.getOperands().get(exitLatchPredIndex));
     }
-//    updatePhiNewIncoming(exit, exitLatchPredIndex, loop, lastValueMap);
+    // updatePhiNewIncoming(exit, exitLatchPredIndex, loop, lastValueMap);
 
     // canonical loop 的 header 只有两个前驱
     var preHeader = header.getPredecessor_().get(1 - header.getPredecessor_().indexOf(latchBlock));
@@ -594,7 +596,7 @@ public class LoopUnroll implements IRPass {
       var copy = copyInstruction(inst);
       copy.node.insertAtEnd(exitIfBB.getList());
       remapInstruction(copy, lastValueMap);
-      lastValueMap.put(inst, copy);
+      lastValueMap.put(iterValueMap.get(inst), copy);
     }
     var copyPhi = copyInstruction(loop.getIndVar());
     var copyIcmp = copyInstruction(latchCmpInst);
@@ -602,11 +604,11 @@ public class LoopUnroll implements IRPass {
     copyIcmp.node.insertAtEnd(exitIfBB.getList());
     copyIcmp.COReplaceOperand(loop.getIndVarCondInst(), copyPhi);
     remapInstruction(copyPhi, lastValueMap);
-    lastValueMap.put(loop.getIndVar(), copyPhi);
+    lastValueMap.put(stepInst, copyPhi);
     lastValueMap.put(latchCmpInst, copyIcmp);
 
     exit.getPredecessor_().set(exit.getPredecessor_().indexOf(latchBlock), exitIfBB);
-    var exitExitIfBBIndex=  exit.getPredecessor_().indexOf(exitIfBB);
+    var exitExitIfBBIndex = exit.getPredecessor_().indexOf(exitIfBB);
     for (var instNode : exit.getList()) {
       var inst = instNode.getVal();
       if (!(inst instanceof Phi)) {
@@ -632,6 +634,10 @@ public class LoopUnroll implements IRPass {
         for (var phi : originPhis) {
           var newPhi = (Phi) valueMap.get(phi);
           var latchIncomingVal = newPhi.getIncomingVals().get(latchPredIndex);
+          if (latchIncomingVal instanceof Instruction &&
+              (loopBlocks.contains(((Instruction) latchIncomingVal).getBB()))) {
+            latchIncomingVal = lastValueMap.get(latchIncomingVal);
+          }
           valueMap.put(phi, latchIncomingVal);
           newPhi.CORemoveAllOperand();
           newPhi.node.removeSelf();
@@ -670,11 +676,18 @@ public class LoopUnroll implements IRPass {
       }
     }
 
+    // update header phi
+    updatePhiNewIncoming(header, latchPredIndex, loop, iterValueMap);
+
     // restBBs 连接到循环中
     factory.buildBr(copyIcmp, restBBHeader, exit, exitIfBB);
     factory.buildBr(exit, restBBLast);
     restBBHeader.getPredecessor_().add(exitIfBB);
     restBBLast.getSuccessor_().add(exit);
+
+    // exitIfBB 维护 successor
+    exitIfBB.getSuccessor_().add(restBBHeader);
+    exitIfBB.getSuccessor_().add(exit);
 
     // 假设 preHeader 只有 header 和 exit 两个后继，修改 exit 为 exitIfBB
     // exit 的前驱中 latchBlock 的位置替换成 exitIfBB
@@ -724,7 +737,7 @@ public class LoopUnroll implements IRPass {
     linkBasicBlock(latchBlock, secondHeader);
 
     // link secondLatch and header
-    BasicBlock trueBB = latchCmpInst.getOperands().get(1) == header ? header : exitIfBB;
+    BasicBlock trueBB = latchBrHeaderIndex == 1 ? header : exitIfBB;
     BasicBlock falseBB = trueBB == header ? exitIfBB : header;
     factory.buildBr(newIcmpInst, trueBB, falseBB, secondLatch);
     linkBasicBlock(secondLatch, header);
