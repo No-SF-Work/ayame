@@ -584,6 +584,7 @@ public class LoopUnroll implements IRPass {
     // the last iteration
     // 循环结束或在 preHeader 不进入循环时跳转到 exitIfBB，判断是否执行剩余一次迭代的计算，跳转到剩余一次迭代的基本块或原 exit
     var exitIfBB = factory.buildBasicBlock("", currFunction);
+    currLoopInfo.addBBToLoop(exitIfBB, loop.getParentLoop());
     // exitIfBB 中的指令：多个 Phi 承接来自循环或 preHeader 的 incomingVals，一条 Phi 表示迭代器，一个 icmp 指令，一个 Br，跳转到 exit 或 restBBHeader
     for (var instNode : header.getList()) {
       var inst = instNode.getVal();
@@ -654,6 +655,7 @@ public class LoopUnroll implements IRPass {
       if (bb == latchBlock) {
         restBBLast = newBB;
       }
+      currLoopInfo.addBBToLoop(newBB, loop.getParentLoop());
       restBBs.add(newBB);
     }
     assert restBBHeader != null && restBBLast != null;

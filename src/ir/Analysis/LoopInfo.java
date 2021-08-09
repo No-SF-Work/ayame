@@ -422,6 +422,10 @@ public class LoopInfo {
   }
 
   public void addBBToLoop(BasicBlock bb, Loop loop) {
+    if (loop == null) {
+      return;
+    }
+
     this.bbLoopMap.put(bb, loop);
     loop.addBlock(bb);
   }
