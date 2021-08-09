@@ -124,20 +124,20 @@ public class LoopUnroll implements IRPass {
     }
     var header = loop.getLoopHeader();
     ArrayList<BasicBlock> tmp = new ArrayList<>();
+    header.setDirty(true);
     rearrangeDFS(header, loop, tmp);
     loop.getBlocks().clear();
     loop.getBlocks().addAll(tmp);
   }
 
   public static void rearrangeDFS(BasicBlock curr, Loop loop, ArrayList<BasicBlock> tmp) {
-    if (curr.isDirty()) {
-      return;
-    }
-    curr.setDirty(true);
     tmp.add(curr);
     for (var bb : curr.getSuccessor_()) {
       if (loop.getBlocks().contains(bb)) {
-        rearrangeDFS(bb, loop, tmp);
+        if (!bb.isDirty()) {
+          bb.setDirty(true);
+          rearrangeDFS(bb, loop, tmp);
+        }
       }
     }
   }
@@ -182,6 +182,10 @@ public class LoopUnroll implements IRPass {
           return;
         }
       }
+    }
+
+    if (loop.getBlocks().size() > 500) {
+      return;
     }
 
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
