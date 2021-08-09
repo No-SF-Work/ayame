@@ -1,5 +1,7 @@
 package backend.machinecodes;
 
+import java.util.Objects;
+
 public class ArmAddition {
 
     public static ArmAddition getAddition() {
@@ -102,6 +104,23 @@ public class ArmAddition {
         public Shift(ShiftType t, int imm) {
             this.t = t;
             this.imm = imm;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Shift shift = (Shift) o;
+            if (imm == shift.imm && t == shift.t) {
+                return true;
+            } else {
+                return imm == 0 && shift.imm == 0;
+            }
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(imm, t, isNone);
         }
     }
 }

@@ -235,6 +235,10 @@ public class BranchOptimization implements IRPass {
         break;
       }
 
+      for (var op : inst.getOperands()) {
+        assert op != null;
+      }
+
       // remove phi
       if (inst.getNumOP() == 1) {
         inst.COReplaceAllUseWith(inst.getOperands().get(0));
@@ -274,10 +278,10 @@ public class BranchOptimization implements IRPass {
         for (var succ : bbNode.getVal().getSuccessor_()) {
           removePredBasicBlock(dead, succ);
         }
-        for (var instNode: bbNode.getVal().getList()) {
+        for (var instNode : bbNode.getVal().getList()) {
           var inst = instNode.getVal();
           inst.CORemoveAllOperand();
-          inst.COReplaceAllUseWith(null);
+//          inst.COReplaceAllUseWith(null);
         }
         bbNode.removeSelf();
         completed = false;

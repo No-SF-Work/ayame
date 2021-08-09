@@ -6,10 +6,7 @@ import ir.MyModule;
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
 import pass.ir.*;
-import pass.mc.CondExec;
-import pass.mc.ListScheduling;
-import pass.mc.PeepholeOptimization;
-import pass.mc.RegAllocator;
+import pass.mc.*;
 import util.Mylogger;
 
 import java.util.ArrayList;
@@ -62,9 +59,9 @@ public class PassManager {
 
     mcPasses.add(new RegAllocator());
     mcPasses.add(new PeepholeOptimization());
-    mcPasses.add(new ListScheduling());
+//        mcPasses.add(new ListScheduling());
     mcPasses.add(new PeepholeOptimization());
-    mcPasses.add(new CondExec());
+    mcPasses.add(new MergeMachineBlock());
   }
 
   public static PassManager getPassManager() {

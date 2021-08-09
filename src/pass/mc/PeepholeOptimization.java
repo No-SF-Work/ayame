@@ -359,9 +359,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                     var lastUser = lastUserMap.get(instr);
                     var isLastDefInstr = instr.getDef().stream().allMatch(def -> lastDefiner.get(def).equals(instr));
                     var defRegInLiveout = instr.getDef().stream().anyMatch(liveout::contains);
+                    var defNotSP = instr.getDef().stream().noneMatch(def -> def.getName().equals("sp"));
 
                     if (!(isLastDefInstr && defRegInLiveout) && hasNoCond) { // is last instr and will be used in the future
-                        if (lastUser == null && hasNoShift) {
+                        if (lastUser == null && hasNoShift && defNotSP) {
                             instrEntryIter.remove();
                             done = false;
                             continue;
@@ -543,7 +544,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                             var nxtInstr = nxtInstrEntry.getVal();
 
                             var rhs = addInstr.getRhs();
-                            if ((nxtInstr instanceof MCLoad || nxtInstr instanceof MCStore) && rhs.getState() == imm && (rhs.getImm() > 4095 || rhs.getImm() < 0)) {
+                            if ((nxtInstr instanceof MCLoad || nxtInstr instanceof MCStore || nxtInstr instanceof MCMove) && rhs.getState() == imm && (rhs.getImm() > 4095 || rhs.getImm() < 0)) {
                                 return true;
                             }
 
