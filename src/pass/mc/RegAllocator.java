@@ -531,7 +531,7 @@ public class RegAllocator implements MCPass {
                 } else {
                     for (var n : spilledNodes) {
                         assert n instanceof VirtualReg;
-                        var storeInStack = ((VirtualReg) n).getCost() > 5;
+                        var storeInStack = ((VirtualReg) n).getCost() > 4;
 
                         for (var blockEntry : func.getmbList()) {
                             var block = blockEntry.getVal();
