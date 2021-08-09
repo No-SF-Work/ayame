@@ -186,7 +186,7 @@ public class LoopUnroll implements IRPass {
       }
     }
 
-    if (loop.getBlocks().size() > 500) {
+    if (loop.getBlocks().size() > 10) {
       return;
     }
 
