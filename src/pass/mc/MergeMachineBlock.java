@@ -24,19 +24,19 @@ public class MergeMachineBlock implements Pass.MCPass {
     @Override
     public void run(CodeGenManager manager) {
         for (var mf : manager.getMachineFunctions()) {
-            var mbEntry=mf.getmbList().getLast();
-            while(mbEntry!=null){
+            var mbEntry = mf.getmbList().getLast();
+            while (mbEntry != null) {
                 var mb = mbEntry.getVal();
-                var currentMbEntry=mbEntry;
-                mbEntry=mbEntry.getPrev();
+                var currentMbEntry = mbEntry;
+                mbEntry = mbEntry.getPrev();
                 if (mb.getmclist().getLast() == null) {
                     continue;
                 }
                 boolean hasCompare = false;
                 boolean hasCond = false;
                 boolean hasCall = false;
-                int branchNum=0;
-                int jumpNum=0;
+                int branchNum = 0;
+                int jumpNum = 0;
                 int mcNum = 0;//非comment数量
                 for (var mcEntry : mb.getmclist()) {
                     var mc = mcEntry.getVal();
@@ -47,14 +47,11 @@ public class MergeMachineBlock implements Pass.MCPass {
                         }
                         if (mc instanceof MCCompare) {
                             hasCompare = true;
-                        }
-                        else if (mc instanceof MCCall) {
+                        } else if (mc instanceof MCCall) {
                             hasCall = true;
-                        }
-                        else if(mc instanceof MCJump){
+                        } else if (mc instanceof MCJump) {
                             jumpNum++;
-                        }
-                        else if(mc instanceof MCBranch){
+                        } else if (mc instanceof MCBranch) {
                             branchNum++;
                         }
                     }
@@ -63,26 +60,23 @@ public class MergeMachineBlock implements Pass.MCPass {
                 //有且只有一个后继
                 if (mb.getFalseSucc() == null && mb.getTrueSucc() != null) {
                     for (var pred : mb.getPred()) {
-                        //如果线性化后pred就是本块的上一个块
-                        if (pred.getNode() == currentMbEntry.getPrev()) {
-                            continue;
-                        }
                         //如果pred只有一个后继，且线性化后本块不是pred的下一个块
                         //或者如果本块是pred的false后继，且线性化后本块不是pred的下一个块
-                        else if (pred.getFalseSucc() == null || pred.getFalseSucc() == mb) {
+                        if ((pred.getFalseSucc() == null || pred.getFalseSucc() == mb )
+                        && pred.getNode() != currentMbEntry.getPrev()) {
                             assert (pred.getmclist().getLast().getVal() instanceof MCJump);
                             var jump = (MCJump) (pred.getmclist().getLast().getVal());
-                            var mcEntry=mb.getmclist().getEntry();
-                            while(mcEntry!=null){
-                                var mc=mcEntry.getVal();
-                                mcEntry=mcEntry.getNext();
+                            var mcEntry = mb.getmclist().getEntry();
+                            while (mcEntry != null) {
+                                var mc = mcEntry.getVal();
+                                mcEntry = mcEntry.getNext();
                                 if (!(mc instanceof MCJump) && !(mc instanceof MCComment)) {
                                     mc.insertBeforeNode(jump);
                                 }
                             }
-                            if(pred.getNode().getNext()!=null &&mb.getTrueSucc()==pred.getNode().getNext().getVal()){
+                            if (pred.getNode().getNext() != null && mb.getTrueSucc() == pred.getNode().getNext().getVal()) {
                                 jump.getNode().removeSelf();
-                            }else{
+                            } else {
                                 jump.setTarget(mb.getTrueSucc());
                             }
                             predToRemove.add(pred);
@@ -95,27 +89,28 @@ public class MergeMachineBlock implements Pass.MCPass {
                         }
                         //如果pred有两个后继，且本块是pred的True后继
                         //此处的合并基本块有可能损失性能
-                        else if (pred.getTrueSucc() == mb) {
-                            if (hasCompare || hasCall || hasCond || (mcNum-branchNum-jumpNum) > 4) {
+//                        else if (false) {
+                        if (pred.getTrueSucc() == mb && pred.getFalseSucc()!=null) {
+                            if (hasCompare || hasCall || hasCond || (mcNum - branchNum - jumpNum) > 4) {
                                 continue;
                             }
                             predToRemove.add(pred);
-                            var lastEntry=pred.getmclist().getLast();
-                            var branch=lastEntry.getVal();
-                            while(lastEntry!=null){
-                                var mc=lastEntry.getVal();
-                                lastEntry=lastEntry.getPrev();
+                            var lastEntry = pred.getmclist().getLast();
+                            var branch = lastEntry.getVal();
+                            while (lastEntry != null) {
+                                var mc = lastEntry.getVal();
+                                lastEntry = lastEntry.getPrev();
                                 if (mc instanceof MCBranch && ((MCBranch) mc).getTarget() == mb) {
                                     branch = mc;
                                 }
                             }
-                            assert(branch instanceof MCBranch);
+                            assert (branch instanceof MCBranch);
                             var mcEntry = mb.getmclist().getEntry();
-                            while(mcEntry!=null){
+                            while (mcEntry != null) {
                                 var mc = mcEntry.getVal();
                                 mcEntry = mcEntry.getNext();
                                 if (!(mc instanceof MCJump) && !(mc instanceof MCComment)) {
-                                    MachineCode m=(MachineCode)(mc.clone());
+                                    MachineCode m = (MachineCode) (mc.clone());
                                     m.genNewNode();
                                     m.setCond(branch.getCond());
                                     m.insertBeforeNode(branch);
@@ -123,8 +118,11 @@ public class MergeMachineBlock implements Pass.MCPass {
                             }
                             ((MCBranch) branch).setTarget(mb.getTrueSucc());
                             pred.setTrueSucc(mb.getTrueSucc());
-                            if(pred.getTrueSucc()==pred.getFalseSucc()){
-                                branch.getNode().removeSelf();
+                            if (pred.getTrueSucc() == pred.getFalseSucc()) {
+                                if (branch == pred.getmclist().getLast().getVal()) {
+                                    branch.getNode().removeSelf();
+                                }
+
                             }
                             mb.getTrueSucc().addPred(pred);
                         }
@@ -132,7 +130,7 @@ public class MergeMachineBlock implements Pass.MCPass {
                 }
                 //如果有两个后继
                 else if (mb.getFalseSucc() != null && mb.getTrueSucc() != null) {
-                    if(!(mb.getmclist().getLast().getVal() instanceof MCJump)){
+                    if (!(mb.getmclist().getLast().getVal() instanceof MCJump)) {
                         continue;
                     }
                     for (var pred : mb.getPred()) {
@@ -145,11 +143,11 @@ public class MergeMachineBlock implements Pass.MCPass {
                         else if (pred.getFalseSucc() == null || pred.getFalseSucc() == mb) {
                             assert (pred.getmclist().getLast().getVal() instanceof MCJump);
                             var jump = (MCJump) (pred.getmclist().getLast().getVal());
-                            var mcEntry=mb.getmclist().getEntry();
-                            while(mcEntry!=null){
+                            var mcEntry = mb.getmclist().getEntry();
+                            while (mcEntry != null) {
                                 var mc = mcEntry.getVal();
-                                mcEntry=mcEntry.getNext();
-                                if ( !(mc instanceof MCComment)) {
+                                mcEntry = mcEntry.getNext();
+                                if (!(mc instanceof MCComment)) {
                                     mc.insertBeforeNode(jump);
                                 }
                             }
@@ -168,7 +166,7 @@ public class MergeMachineBlock implements Pass.MCPass {
                 if (mb.getPred().isEmpty() && mb != mf.getmbList().getEntry().getVal()) {
                     mb.getNode().removeSelf();
                     mb.getTrueSucc().removePred(mb);
-                    if(mb.getFalseSucc()!=null){
+                    if (mb.getFalseSucc() != null) {
                         mb.getFalseSucc().removePred(mb);
                     }
                 }
