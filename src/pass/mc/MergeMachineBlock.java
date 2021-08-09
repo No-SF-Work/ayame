@@ -90,7 +90,7 @@ public class MergeMachineBlock implements Pass.MCPass {
                         //如果pred有两个后继，且本块是pred的True后继
                         //此处的合并基本块有可能损失性能
 //                        else if (false) {
-                        if (pred.getTrueSucc() == mb) {
+                        if (pred.getTrueSucc() == mb && pred.getFalseSucc()!=null) {
                             if (hasCompare || hasCall || hasCond || (mcNum - branchNum - jumpNum) > 4) {
                                 continue;
                             }
