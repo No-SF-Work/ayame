@@ -283,6 +283,9 @@ public class GVNGCM implements IRPass {
   }
 
   public void runGVNOnInstruction(Instruction inst) {
+    if (inst.getUsesList().size() == 0 && inst.tag != TAG_.Store && inst.tag != TAG_.Call) {
+      return;
+    }
     Value v = SimplifyInstruction.simplifyInstruction(inst);
     // 后续通过跑多次 GVN 来找 BinaryInst 的不动点
     // log.info("GVN optimizing instruction: " + inst.toString());
