@@ -5,6 +5,7 @@ import ir.Loop;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.values.BasicBlock;
+import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
@@ -565,7 +566,18 @@ public class LoopUnroll implements IRPass {
     // preHeader 中的 icmp 的 i 设为 i + 1
     assert preHeader.getList().getLast().getVal().getOperands().size() == 3;
     var preIcmpInst = (Instruction) (preHeader.getList().getLast().getVal().getOperands().get(0));
-    var preStepIndex = 1 - preIcmpInst.getOperands().indexOf(loop.getIndVarEnd());
+    int preIndVarEndIndex = 0;
+    var indVarEnd = loop.getIndVarEnd();
+    for (var op : preIcmpInst.getOperands()) {
+      if (op == loop.getIndVarEnd() || (op instanceof ConstantInt
+          && indVarEnd instanceof ConstantInt
+          && ((ConstantInt) op).getVal() == ((ConstantInt) indVarEnd).getVal())) {
+        break;
+      }
+      preIndVarEndIndex++;
+    }
+//    var preStepIndex = 1 - preIcmpInst.getOperands().indexOf(loop.getIndVarEnd());
+    var preStepIndex = 1 - preIndVarEndIndex;
     var preStepInst = preIcmpInst.getOperands().get(preStepIndex);
     switch (stepIndex) {
       case 0 -> {
