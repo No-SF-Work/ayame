@@ -57,21 +57,6 @@ run_perf_1:
     - x86
   timeout: 15m
 
-run_func_1_onpi:
-  when: manual
-  before_script:
-    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-  script:
-    - mv testcases/functional_test/* testcases/
-    - bash scripts/trivial-autotest-ayame.sh
-  tags:
-    - arm
-  timeout: 30m
-
 run_perf_1_comp:
   when: manual
   before_script:
