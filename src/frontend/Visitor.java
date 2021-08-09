@@ -1072,9 +1072,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
             assert ty instanceof ArrayType;
             val = tmp_;
             var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
-            ty = ((ArrayType) ty).getELeType();
             offset = f.buildBinary(TAG_.Mul, add,
                 ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
+            ty = ((ArrayType) ty).getELeType();
             t = f.buildGEP(t, new ArrayList<>() {{
               add(CONST0);
               add(CONST0);
@@ -1111,6 +1111,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }}, curBB_);
         return null;
       } else {
+        t = f.buildGEP(t, new ArrayList<>() {{
+          add(CONST0);
+          add(CONST0);
+        }}, curBB_);
         Type ty = ((PointerType) t.getType()).getContained();
         Value offset = ConstantInt.newOne(i32Type_, 0);
         for (int i = 0; i < ctx.exp().size()-1; i++) {
@@ -1118,9 +1122,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
           visit(ctx.exp(i));
           var val = tmp_;
           var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
-          ty = ((ArrayType) ty).getELeType();
           offset = f.buildBinary(TAG_.Mul, add,
               ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
+          ty = ((ArrayType) ty).getELeType();
           t = f.buildGEP(t, new ArrayList<>() {{
             add(CONST0);
             add(CONST0);
@@ -1173,8 +1177,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
       }
       if (ctx.lVal() != null) {
         if (buildCall) {
-          buildCall = false;
           visit(ctx.lVal());
+          buildCall = false;
           return null;
         } else {
           visit(ctx.lVal());
