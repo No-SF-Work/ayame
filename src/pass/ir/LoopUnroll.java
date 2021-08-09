@@ -398,7 +398,7 @@ public class LoopUnroll implements IRPass {
     log.info("Run double unroll");
 
     // 目前只对 simpleForLoop 做 doubleUnroll
-    if (!loop.isSimpleForLoop()) {
+    if (!loop.isSimpleForLoop() || !canDoubleUnroll(loop)) {
       return;
     }
 
@@ -770,5 +770,10 @@ public class LoopUnroll implements IRPass {
       }
       phi.CoReplaceOperandByIndex(predIndex, incomingVal);
     }
+  }
+
+  // 根据 LoopInfo 分析情况调整
+  private boolean canDoubleUnroll(Loop loop) {
+    return loop.getIndVar() != null && loop.getStepInst() != null;
   }
 }
