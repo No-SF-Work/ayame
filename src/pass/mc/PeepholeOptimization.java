@@ -543,7 +543,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                             var nxtInstr = nxtInstrEntry.getVal();
 
                             var rhs = addInstr.getRhs();
-                            if ((nxtInstr instanceof MCLoad || nxtInstr instanceof MCStore) && rhs.getState() == imm && (rhs.getImm() > 4095 || rhs.getImm() < 0)) {
+                            if ((nxtInstr instanceof MCLoad || nxtInstr instanceof MCStore || nxtInstr instanceof MCMove) && rhs.getState() == imm && (rhs.getImm() > 4095 || rhs.getImm() < 0)) {
                                 return true;
                             }
 
