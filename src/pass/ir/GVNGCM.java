@@ -5,35 +5,27 @@ import ir.Analysis.ArrayAliasAnalysis;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.Use;
-import ir.values.BasicBlock;
-import ir.values.Constant;
+import ir.values.*;
 import ir.values.Constants.ConstantArray;
 import ir.values.Constants.ConstantInt;
-import ir.values.Function;
-import ir.values.GlobalVariable;
-import ir.values.User;
-import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
-import ir.values.instructions.MemInst.GEPInst;
-import ir.values.instructions.MemInst.LoadInst;
-import ir.values.instructions.MemInst.MemPhi;
-import ir.values.instructions.MemInst.Phi;
-import ir.values.instructions.MemInst.StoreInst;
+import ir.values.instructions.MemInst.*;
 import ir.values.instructions.SimplifyInstruction;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Stack;
-import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.IList;
 import util.IList.INode;
 import util.Mylogger;
 import util.Pair;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Stack;
+import java.util.logging.Logger;
 
 // TODO: 高级一点：对未修改的全局变量和数组的 Load 直接取值
 
@@ -319,11 +311,16 @@ public class GVNGCM implements IRPass {
             ConstantInt c = ConstantInt.newOne(factory.getI32Ty(), 0);
             replace(inst, c);
             return;
-          } else if (globalArray.fixedInit instanceof ConstantArray) {
+          } else if (globalArray.fixedInit instanceof ConstantArray
+              && ((GEPInst) pointer).getNumOP() > 2) {
             ConstantArray constantArray = (ConstantArray) globalArray.fixedInit;
             Stack<Integer> indexList = new Stack<>();
             Value tmpPtr = pointer;
             while (tmpPtr instanceof GEPInst) {
+              if (((GEPInst) tmpPtr).getNumOP() <= 2) {
+                constIndex = false;
+                break;
+              }
               Value index = ((Instruction) tmpPtr).getOperands().get(2);
               if (!(index instanceof ConstantInt)) {
                 constIndex = false;

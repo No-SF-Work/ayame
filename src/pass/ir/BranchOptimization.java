@@ -235,12 +235,13 @@ public class BranchOptimization implements IRPass {
         break;
       }
 
-      inst.CORemoveNOperand(predIndexArr);
       // remove phi
       if (inst.getNumOP() == 1) {
         inst.COReplaceAllUseWith(inst.getOperands().get(0));
         instNode.removeSelf();
         inst.CORemoveAllOperand();
+      } else {
+        inst.CORemoveNOperand(predIndexArr);
       }
       instNode = tmp;
     }
