@@ -9,6 +9,7 @@ import ir.values.Function;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
+import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.Phi;
@@ -778,6 +779,7 @@ public class LoopUnroll implements IRPass {
 
   // 根据 LoopInfo 分析情况调整
   private boolean canDoubleUnroll(Loop loop) {
-    return loop.getIndVar() != null && loop.getStepInst() instanceof BinaryInst;
+    return loop.getIndVar() != null && (loop.getStepInst().tag == TAG_.Sub
+        || loop.getStepInst().tag == TAG_.Add);
   }
 }
