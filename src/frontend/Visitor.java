@@ -4,6 +4,7 @@ package frontend;
 import driver.Config;
 import frontend.SysYParser.*;
 import ir.MyFactoryBuilder;
+import ir.types.ArrayType;
 import ir.types.FunctionType;
 import ir.types.IntegerType;
 import ir.types.PointerType;
@@ -634,13 +635,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
         var argList = curFunc_.getArgList();
         for (int i = 0; i < ctx.funcFParam().size(); i++) {
           var p = ctx.funcFParam(i);
-          if (!p.L_BRACKT().isEmpty()) { //which means this param is  arr
+          if (!p.L_BRACKT().isEmpty()) {
+            //which means this param is  arr
             var dimList = new ArrayList<Value>();
             var type = i32Type_;
             dimList.add(CONST0);//第一个置空
             for (int j = 0; j < p.exp().size(); j++) {
               usingInt_ = true;
-              visit(p.exp(j));
+              visit(p.exp(p.exp().size() - (j + 1)));
               usingInt_ = false;
               dimList.add(tmp_);
               type = f.getArrayTy(type, tmpInt_);
@@ -677,7 +679,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
       var ty = i32Type_;
       for (var i = 0; i < ctx.exp().size(); i++) {
         usingInt_ = true;
-        visit(ctx.exp(i));
+        visit(ctx.exp(ctx.exp().size() - (i + 1)));
         usingInt_ = false;
         ty = f.getArrayTy(ty, tmpInt_);
       }
@@ -1085,14 +1087,32 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }}, curBB_);
         return null;
       } else {
-        for (ExpContext expContext : ctx.exp()) {
-          visit(expContext);
+        Type ty = ((PointerType) t.getType()).getContained();
+        Value offset = ConstantInt.newOne(i32Type_, 0);
+        t = f.buildGEP(t, new ArrayList<>() {{
+          add(CONST0);
+          add(CONST0);
+        }}, curBB_);
+        for (int i = 0; i < ctx.exp().size() - 1; i++) {
+          visit(ctx.exp(i));
+          assert ty instanceof ArrayType;
           var val = tmp_;
+          var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
+          offset = f.buildBinary(TAG_.Mul, add,
+              ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
+          ty = ((ArrayType) ty).getELeType();
           t = f.buildGEP(t, new ArrayList<>() {{
             add(CONST0);
-            add(val);
+            add(CONST0);
           }}, curBB_);
         }
+        visit(ctx.exp(ctx.exp().size() - 1));
+        var val = tmp_;
+        offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
+        Value finalOffset = offset;
+        t = f.buildGEP(t, new ArrayList<>() {{
+          add(finalOffset);
+        }}, curBB_);
         tmp_ = t;
         return null;
       }
