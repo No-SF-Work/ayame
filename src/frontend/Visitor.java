@@ -1059,7 +1059,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           return null;
         } else {
           Value offset = null;
-          Type ty = ((PointerType)load.getType()).getContained();
+          Type ty = containedType.getContained();
           visit(ctx.exp(0));
           var val = tmp_;
           t = f.buildGEP(load, new ArrayList<>() {{
@@ -1067,21 +1067,21 @@ public class Visitor extends SysYBaseVisitor<Void> {
           }}, curBB_);
           offset = f.buildBinary(TAG_.Mul, val,
               ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
-          for (var i = 1; i < ctx.exp().size() - 1; i++) {
+          for (var i = 1; i < ctx.exp().size()-1; i++) {
             visit(ctx.exp(i));
             assert ty instanceof ArrayType;
             val = tmp_;
             var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
+            ty = ((ArrayType) ty).getELeType();
             offset = f.buildBinary(TAG_.Mul, add,
                 ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
-            ty = ((ArrayType) ty).getELeType();
             t = f.buildGEP(t, new ArrayList<>() {{
               add(CONST0);
               add(CONST0);
             }}, curBB_);
           }
           visit(ctx.exp(ctx.exp().size() - 1));
-           val = tmp_;
+          val = tmp_;
           offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
           Value finalOffset = offset;
           if (ty instanceof IntegerType) {
@@ -1113,15 +1113,14 @@ public class Visitor extends SysYBaseVisitor<Void> {
       } else {
         Type ty = ((PointerType) t.getType()).getContained();
         Value offset = ConstantInt.newOne(i32Type_, 0);
-
-        for (int i = 0; i < ctx.exp().size(); i++) {
-          visit(ctx.exp(i));
+        for (int i = 0; i < ctx.exp().size()-1; i++) {
           assert ty instanceof ArrayType;
+          visit(ctx.exp(i));
           var val = tmp_;
           var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
+          ty = ((ArrayType) ty).getELeType();
           offset = f.buildBinary(TAG_.Mul, add,
               ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
-          ty = ((ArrayType) ty).getELeType();
           t = f.buildGEP(t, new ArrayList<>() {{
             add(CONST0);
             add(CONST0);
