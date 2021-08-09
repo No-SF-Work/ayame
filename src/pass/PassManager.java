@@ -27,14 +27,9 @@ public class PassManager {
     irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new GlobalVariableLocalize());
     irPasses.add(new Mem2reg());
-    irPasses.add(new BranchOptimization());
-    irPasses.add(new GVNGCM());
-
-    irPasses.add(new FunctionInline());
     irPasses.add(new MarkConstantArray());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
-    irPasses.add(new DeadCodeEmit());
 
     irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new LCSSA());
@@ -43,6 +38,12 @@ public class PassManager {
     irPasses.add(new EmitLLVM("afterUnroll.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
+
+    irPasses.add(new FunctionInline());
+    irPasses.add(new BranchOptimization());
+    irPasses.add(new GVNGCM());
+    irPasses.add(new DeadCodeEmit());
+
 //    irPasses.add(new GVNGCM());
 
 //    irPasses.add(new LoopInfoFullAnalysis());
