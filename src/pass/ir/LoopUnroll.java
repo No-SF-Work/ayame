@@ -186,9 +186,6 @@ public class LoopUnroll implements IRPass {
       }
     }
 
-    if (loop.getBlocks().size() > 1) {
-      return;
-    }
 
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
     rearrangeBBOrder(loop);
@@ -402,6 +399,10 @@ public class LoopUnroll implements IRPass {
 
   public void doubleUnroll(Loop loop) {
     log.info("Run double unroll");
+
+    if (loop.getBlocks().size() > 0) {
+      return;
+    }
 
     // 目前只对 simpleForLoop 做 doubleUnroll
     if (!loop.isSimpleForLoop() || !canDoubleUnroll(loop)) {
