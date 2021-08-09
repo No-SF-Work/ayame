@@ -319,11 +319,16 @@ public class GVNGCM implements IRPass {
             ConstantInt c = ConstantInt.newOne(factory.getI32Ty(), 0);
             replace(inst, c);
             return;
-          } else if (globalArray.fixedInit instanceof ConstantArray) {
+          } else if (globalArray.fixedInit instanceof ConstantArray && ((GEPInst) pointer).getNumOP() > 2) {
             ConstantArray constantArray = (ConstantArray) globalArray.fixedInit;
             Stack<Integer> indexList = new Stack<>();
             Value tmpPtr = pointer;
             while (tmpPtr instanceof GEPInst) {
+              // 不考虑基址+偏移的GEP
+              if (((GEPInst) tmpPtr).getNumOP() <= 2) {
+                constIndex = false;
+                break;
+              }
               Value index = ((Instruction) tmpPtr).getOperands().get(2);
               if (!(index instanceof ConstantInt)) {
                 constIndex = false;
