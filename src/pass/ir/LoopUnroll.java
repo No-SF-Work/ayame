@@ -290,16 +290,17 @@ public class LoopUnroll implements IRPass {
     var copyPhi = UnrollUtils.copyInstruction(loop.getIndVar());
     var copyIcmp = UnrollUtils.copyInstruction(latchCmpInst);
     copyPhi.node.insertAtEnd(exitIfBB.getList());
-    copyIcmp.node.insertAtEnd(exitIfBB.getList());
-//    copyIcmp.COReplaceOperand(loop.getIndVarCondInst(), copyPhi);
     UnrollUtils.remapInstruction(copyPhi, lastValueMap);
-    lastValueMap.put(stepInst, copyPhi);
-    lastValueMap.put(latchCmpInst, copyIcmp);
 
     var copyIndVarCondInst = UnrollUtils.copyInstruction(loop.getIndVar());
     UnrollUtils.remapInstruction(copyIndVarCondInst, lastValueMap);
+    copyIndVarCondInst.CoReplaceOperandByIndex(latchPredIndex, lastValueMap.get(loop.getIndVarCondInst()));
     copyIndVarCondInst.node.insertAtEnd(exitIfBB.getList());
     copyIcmp.COReplaceOperand(loop.getIndVarCondInst(), copyIndVarCondInst);
+    copyIcmp.node.insertAtEnd(exitIfBB.getList());
+
+    lastValueMap.put(stepInst, copyPhi);
+    lastValueMap.put(latchCmpInst, copyIcmp);
 
     exit.getPredecessor_().set(exit.getPredecessor_().indexOf(latchBlock), exitIfBB);
     var exitExitIfBBIndex = exit.getPredecessor_().indexOf(exitIfBB);
