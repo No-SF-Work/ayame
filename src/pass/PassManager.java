@@ -63,7 +63,7 @@ public class PassManager {
     mcPasses.add(new PeepholeOptimization());
 //        mcPasses.add(new ListScheduling());
     mcPasses.add(new PeepholeOptimization());
-//    mcPasses.add(new MergeMachineBlock());
+    mcPasses.add(new MergeMachineBlock());
   }
 
   public static PassManager getPassManager() {
