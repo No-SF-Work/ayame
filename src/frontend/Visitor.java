@@ -1145,7 +1145,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           val = tmp_;
           offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
           Value finalOffset = offset;
-          if (((PointerType)t.getType()).getContained() instanceof IntegerType) {
+          if (((PointerType) t.getType()).getContained() instanceof IntegerType) {
             t = f.buildGEP(t, new ArrayList<>() {{
               add(finalOffset);
             }}, curBB_);
@@ -1169,7 +1169,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }}, curBB_);
         return null;
       } else {
-
+        t = f.buildGEP(t, new ArrayList<>() {{
+          add(CONST0);
+          add(CONST0);
+        }}, curBB_);
         Type ty = ((PointerType) t.getType()).getContained();
         Value offset = ConstantInt.newOne(i32Type_, 0);
         for (int i = 0; i < ctx.exp().size() - 1; i++) {
@@ -1189,7 +1192,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         var val = tmp_;
         offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
         Value finalOffset = offset;
-        if (((PointerType)t.getType()).getContained() instanceof IntegerType) {
+        if (((PointerType) t.getType()).getContained() instanceof IntegerType) {
           t = f.buildGEP(t, new ArrayList<>() {{
             add(finalOffset);
           }}, curBB_);
