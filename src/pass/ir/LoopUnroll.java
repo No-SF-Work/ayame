@@ -186,7 +186,6 @@ public class LoopUnroll implements IRPass {
       }
     }
 
-
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
     rearrangeBBOrder(loop);
 
@@ -400,7 +399,8 @@ public class LoopUnroll implements IRPass {
   public void doubleUnroll(Loop loop) {
     log.info("Run double unroll");
 
-    if (loop.getBlocks().size() > 10) {
+    // 可以循环展开的情况：是 simpleForLoop，满足 canDoubleUnroll 的情况（可以拿到 indVar，stepInst 是 Add/Sub），循环体基本块不超过 5 个
+    if (loop.getBlocks().size() > 5) {
       return;
     }
 
@@ -409,13 +409,18 @@ public class LoopUnroll implements IRPass {
       return;
     }
 
-    // 跳转到循环头和循环外的基本块，目前只考虑 latchBlock 和 exitingBlock 只有一个且相同的情况
+    // 目前只考虑 latchBlock 和 exitingBlock 只有一个且相同的情况
+    if (loop.getExitingBlocks().size() != 1 || loop.getLatchBlocks().size() != 1) {
+      return;
+    }
+
+    BasicBlock header = loop.getLoopHeader();
     var latchBlock = loop.getSingleLatchBlock();
     var latchBr = latchBlock.getList().getLast().getVal();
     var latchCmpInst = loop.getLatchCmpInst();
+    var latchPredIndex = header.getPredecessor_().indexOf(latchBlock);
     var stepInst = loop.getStepInst();
     ArrayList<BasicBlock> loopBlocks = new ArrayList<>(loop.getBlocks());
-    BasicBlock header = loop.getLoopHeader();
     BasicBlock exit = null;
     if (loopBlocks.contains((BasicBlock) (latchBr.getOperands().get(1)))) {
       exit = (BasicBlock) (latchBr.getOperands().get(2));
@@ -423,12 +428,10 @@ public class LoopUnroll implements IRPass {
       exit = (BasicBlock) (latchBr.getOperands().get(1));
     }
 
-    // start double unroll
     HashMap<Value, Value> lastValueMap = new HashMap<>();
     ArrayList<Phi> originPhis = new ArrayList<>();
-    var latchPredIndex = header.getPredecessor_().indexOf(latchBlock);
 
-    // collect origin phi
+    // 准备工作：获取原循环头的 phi
     for (var instNode : header.getList()) {
       var inst = instNode.getVal();
       if (!(inst instanceof Phi)) {
@@ -444,7 +447,7 @@ public class LoopUnroll implements IRPass {
       }
     }
 
-    // remove latch br inst
+    // 清除 latchBlock 的前驱后继信息
     var latchBrHeaderIndex = latchBr.getOperands().indexOf(header);
     latchBr.CORemoveAllOperand();
     latchBlock.getSuccessor_().remove(header);
@@ -453,13 +456,15 @@ public class LoopUnroll implements IRPass {
 
     BasicBlock secondHeader = null, secondLatch = null;
 
-    // iter only once
-    // start iter simulation
+    // 构建增量循环体 start
     ArrayList<BasicBlock> newBlocks = new ArrayList<>();
+
+    // 构建基本块，复制指令，删去 phi，更新 map，基本块加入循环
     for (var bb : loopBlocks) {
       HashMap<Value, Value> valueMap = new HashMap<>();
       BasicBlock newBB = getLoopBasicBlockCopy(bb, valueMap);
 
+      // 循环头中的 phi 直接用 incomingVal 替换
       if (bb == header) {
         for (var phi : originPhis) {
           var newPhi = (Phi) valueMap.get(phi);
@@ -489,7 +494,7 @@ public class LoopUnroll implements IRPass {
     assert secondHeader != null;
     assert secondLatch != null;
 
-    // remap instruction and link new bb in the loop
+    // 更新新基本块中的指令操作数，顺便维护新基本块之间的前驱后继关系
     for (var newBB : newBlocks) {
       newBB.getList().forEach(instNode -> {
         remapInstruction(instNode.getVal(), lastValueMap);
@@ -509,44 +514,27 @@ public class LoopUnroll implements IRPass {
       }
     }
 
-    // build new icmp in loop
+    // 在新 latchBlock 的末尾插入新的 icmp
     // while (i < n) { i = i + 1; } => while (i + 1 < n) { i = i + 1; i = i + 1; }
     BinaryInst secondStepInst = (BinaryInst) lastValueMap.get(stepInst);
     int stepIndex = secondStepInst.getOperands().indexOf(loop.getStep());
     assert stepIndex != -1;
     Value lhs = null, rhs = null;
-    switch (stepIndex) {
-      case 0 -> {
-        lhs = loop.getStep();
-        rhs = secondStepInst;
-      }
-      case 1 -> {
-        lhs = secondStepInst;
-        rhs = loop.getStep();
-      }
-    }
-    var newStepInst = factory.buildBinary(secondStepInst.tag, lhs, rhs, secondLatch);
+    lhs = stepIndex == 0 ? loop.getStep() : secondStepInst;
+    rhs = stepIndex == 0 ? secondStepInst : loop.getStep();
+    var secondIndVarCondInst = factory.buildBinary(secondStepInst.tag, lhs, rhs, secondLatch);
 
     int indVarEndIndex = latchCmpInst.getOperands().indexOf(loop.getIndVarEnd());
-    lhs = null;
-    rhs = null;
-    switch (indVarEndIndex) {
-      case 0 -> {
-        lhs = loop.getIndVarEnd();
-        rhs = newStepInst;
-      }
-      case 1 -> {
-        lhs = newStepInst;
-        rhs = loop.getIndVarEnd();
-      }
-    }
+    assert indVarEndIndex != -1;
+    lhs = indVarEndIndex == 0 ? loop.getIndVarEnd() : secondIndVarCondInst;
+    rhs = indVarEndIndex == 0 ? secondIndVarCondInst : loop.getIndVarEnd();
     var newIcmpInst = factory.buildBinary(latchCmpInst.tag, lhs, rhs, secondLatch);
-    // end iter simulation
+    // 构建增量循环体 end
 
-    // save lastValueMap
+    // 保存 lastValueMap
     HashMap<Value, Value> iterValueMap = new HashMap<>(lastValueMap);
 
-    // update exit phi
+    // 保存 exit 中 phi 对应来自 latchBlock 的前驱
     // 后面设置 restBBLast 的 incomingVals 时使用这里缓存的原 incomingVals 作为查找 lastValueMap 的索引
     var exitLatchPredIndex = exit.getPredecessor_().indexOf(latchBlock);
     ArrayList<Value> cachedExitIncoming = new ArrayList<>();
@@ -559,6 +547,7 @@ public class LoopUnroll implements IRPass {
     }
     // updatePhiNewIncoming(exit, exitLatchPredIndex, loop, lastValueMap);
 
+    // preHeader 维护跳转：跳转条件中迭代器加 1；对后继的维护在后面做
     // canonical loop 的 header 只有两个前驱
     var preHeader = header.getPredecessor_().get(1 - header.getPredecessor_().indexOf(latchBlock));
 
@@ -577,20 +566,10 @@ public class LoopUnroll implements IRPass {
       }
       preIndVarEndIndex++;
     }
-//    var preStepIndex = 1 - preIcmpInst.getOperands().indexOf(loop.getIndVarEnd());
     var preStepIndex = 1 - preIndVarEndIndex;
     var preStepInst = preIcmpInst.getOperands().get(preStepIndex);
-    switch (stepIndex) {
-      case 0 -> {
-        lhs = loop.getStep();
-        rhs = preStepInst;
-      }
-      case 1 -> {
-        lhs = preStepInst;
-        rhs = loop.getStep();
-      }
-    }
-    assert lhs != null && rhs != null;
+    lhs = stepIndex == 0 ? loop.getStep() : preStepInst;
+    rhs = stepIndex == 0 ? preStepInst : loop.getStep();
     var preStepIterOnce = factory.buildBinaryBefore(preIcmpInst, stepInst.tag, lhs, rhs);
     preIcmpInst.CoReplaceOperandByIndex(preStepIndex, preStepIterOnce);
 
@@ -599,7 +578,7 @@ public class LoopUnroll implements IRPass {
     // unroll code : secondLatch/preHeader -> exitIfBB, exitIfBB -> restBBHeader/exit, restBBLast -> exit
     // WARNING: this makes exitIfBB have a pred(preHeader) out of the loop
 
-    // the last iteration
+    // 构建 exitIfBB
     // 循环结束或在 preHeader 不进入循环时跳转到 exitIfBB，判断是否执行剩余一次迭代的计算，跳转到剩余一次迭代的基本块或原 exit
     var exitIfBB = factory.buildBasicBlock("", currFunction);
     currLoopInfo.addBBToLoop(exitIfBB, loop.getParentLoop());
@@ -628,20 +607,7 @@ public class LoopUnroll implements IRPass {
 
     exit.getPredecessor_().set(exit.getPredecessor_().indexOf(latchBlock), exitIfBB);
     var exitExitIfBBIndex = exit.getPredecessor_().indexOf(exitIfBB);
-    for (var instNode : exit.getList()) {
-      var inst = instNode.getVal();
-      if (!(inst instanceof Phi)) {
-        break;
-      }
-
-      var phi = (Phi) inst;
-      var incomingVal = phi.getIncomingVals().get(exitExitIfBBIndex);
-      if (incomingVal instanceof Instruction && (loop.getBlocks()
-          .contains(((Instruction) incomingVal).getBB()))) {
-        incomingVal = lastValueMap.get(incomingVal);
-      }
-      phi.CoReplaceOperandByIndex(exitExitIfBBIndex, incomingVal);
-    }
+    updatePhiNewIncoming(exit, exitExitIfBBIndex, loop, lastValueMap);
 
     // 复制多余的一次迭代
     ArrayList<BasicBlock> restBBs = new ArrayList<>();
@@ -696,7 +662,7 @@ public class LoopUnroll implements IRPass {
       }
     }
 
-    // update header phi
+    // 在复制完成多余的一次迭代后，header 才能更新 phi
     updatePhiNewIncoming(header, latchPredIndex, loop, iterValueMap);
 
     // restBBs 连接到循环中
@@ -729,8 +695,9 @@ public class LoopUnroll implements IRPass {
     // exit 的 predecessor 中，latchblock 的位置换成 exitIfBB（前面构造 exitIfBB 做了），加入 restBBLast 前驱，删去 preHeader
     // 维护 phi：exitIfBB 来源的 incomingVals 替换 latchBlock (前面构造 exitIfBB 时做的，防止 lastValueMap 被更新) ，restBBLast 来源的 incomingVals 通过 lastValueMap 查询 cachedExitIncoming，preHeader 来源的 incomingVals 删去
     var exitPreHeaderIndex = exit.getPredecessor_().indexOf(preHeader);
-    exit.getPredecessor_().remove(preHeader);
-    exit.getPredecessor_().add(restBBLast);
+//    exit.getPredecessor_().remove(preHeader);
+//    exit.getPredecessor_().add(restBBLast);
+    exit.getPredecessor_().set(exitPreHeaderIndex, restBBLast);
 
     int cacheIndex = 0;
     int[] exitPreHeaderIndexArr = new int[]{exitPreHeaderIndex};
@@ -742,12 +709,13 @@ public class LoopUnroll implements IRPass {
 
       var phi = (Phi) inst;
       var incomingVal = cachedExitIncoming.get(cacheIndex);
-      phi.CORemoveNOperand(exitPreHeaderIndexArr);
+//      phi.CORemoveNOperand(exitPreHeaderIndexArr);
       if (incomingVal instanceof Instruction &&
           (loopBlocks.contains(((Instruction) incomingVal).getBB()))) {
         incomingVal = lastValueMap.get(incomingVal);
       }
-      phi.COaddOperand(incomingVal);
+//      phi.COaddOperand(incomingVal);
+      phi.CoReplaceOperandByIndex(exitPreHeaderIndex, incomingVal);
       cacheIndex++;
     }
 
