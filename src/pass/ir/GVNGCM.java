@@ -289,6 +289,10 @@ public class GVNGCM implements IRPass {
     Instruction simpInst = (Instruction) v;
 
     if (inst.isBinary()) {
+      // 循环展开时发现可能有多个 br 共用一个 icmp 的情况，而循环展开时会更改 icmp，所以不替换 icmp
+      if (inst.isRelBinary()) {
+        return;
+      }
       Value val = lookupOrAdd(simpInst);
       if (inst != val) {
         replace(inst, val);
