@@ -291,10 +291,15 @@ public class LoopUnroll implements IRPass {
     var copyIcmp = UnrollUtils.copyInstruction(latchCmpInst);
     copyPhi.node.insertAtEnd(exitIfBB.getList());
     copyIcmp.node.insertAtEnd(exitIfBB.getList());
-    copyIcmp.COReplaceOperand(loop.getIndVarCondInst(), copyPhi);
+//    copyIcmp.COReplaceOperand(loop.getIndVarCondInst(), copyPhi);
     UnrollUtils.remapInstruction(copyPhi, lastValueMap);
     lastValueMap.put(stepInst, copyPhi);
     lastValueMap.put(latchCmpInst, copyIcmp);
+
+    var copyIndVarCondInst = UnrollUtils.copyInstruction(loop.getIndVar());
+    UnrollUtils.remapInstruction(copyIndVarCondInst, lastValueMap);
+    copyIndVarCondInst.node.insertAtEnd(exitIfBB.getList());
+    copyIcmp.COReplaceOperand(loop.getIndVarCondInst(), copyIndVarCondInst);
 
     exit.getPredecessor_().set(exit.getPredecessor_().indexOf(latchBlock), exitIfBB);
     var exitExitIfBBIndex = exit.getPredecessor_().indexOf(exitIfBB);
@@ -386,8 +391,7 @@ public class LoopUnroll implements IRPass {
     // exit 的 predecessor 中，latchblock 的位置换成 exitIfBB（前面构造 exitIfBB 做了），加入 restBBLast 前驱，删去 preHeader
     // 维护 phi：exitIfBB 来源的 incomingVals 替换 latchBlock (前面构造 exitIfBB 时做的，防止 lastValueMap 被更新) ，restBBLast 来源的 incomingVals 通过 lastValueMap 查询 cachedExitIncoming，preHeader 来源的 incomingVals 删去
     var exitPreHeaderIndex = exit.getPredecessor_().indexOf(preHeader);
-//    exit.getPredecessor_().remove(preHeader);
-//    exit.getPredecessor_().add(restBBLast);
+    copyIndVarCondInst.CoReplaceOperandByIndex(exitPreHeaderIndex, preStepInst);
     exit.getPredecessor_().set(exitPreHeaderIndex, restBBLast);
 
     int cacheIndex = 0;
