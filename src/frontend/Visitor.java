@@ -1067,14 +1067,15 @@ public class Visitor extends SysYBaseVisitor<Void> {
           }}, curBB_);
           offset = f.buildBinary(TAG_.Mul, val,
               ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
-          for (var i = 1; i < ctx.exp().size()-1; i++) {
+          ty = ((ArrayType) ty).getELeType();
+          for (var i = 1; i < ctx.exp().size() - 1; i++) {
             visit(ctx.exp(i));
             assert ty instanceof ArrayType;
             val = tmp_;
             var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
-            ty = ((ArrayType) ty).getELeType();
             offset = f.buildBinary(TAG_.Mul, add,
                 ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
+            ty = ((ArrayType) ty).getELeType();
             t = f.buildGEP(t, new ArrayList<>() {{
               add(CONST0);
               add(CONST0);
@@ -1092,6 +1093,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             }}, curBB_);
           } else {
             t = f.buildGEP(t, new ArrayList<>() {{
+              add(CONST0);
               add(finalOffset);
             }}, curBB_);
           }
@@ -1118,7 +1120,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }}, curBB_);
         Type ty = ((PointerType) t.getType()).getContained();
         Value offset = ConstantInt.newOne(i32Type_, 0);
-        for (int i = 0; i < ctx.exp().size()-1; i++) {
+        for (int i = 0; i < ctx.exp().size() - 1; i++) {
           assert ty instanceof ArrayType;
           visit(ctx.exp(i));
           var val = tmp_;
@@ -1137,6 +1139,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         Value finalOffset = offset;
         if (ty instanceof IntegerType) {
           t = f.buildGEP(t, new ArrayList<>() {{
+            add(CONST0);
             add(finalOffset);
           }}, curBB_);
         } else {
@@ -1178,8 +1181,8 @@ public class Visitor extends SysYBaseVisitor<Void> {
       }
       if (ctx.lVal() != null) {
         if (buildCall) {
-          visit(ctx.lVal());
           buildCall = false;
+          visit(ctx.lVal());
           return null;
         } else {
           visit(ctx.lVal());
