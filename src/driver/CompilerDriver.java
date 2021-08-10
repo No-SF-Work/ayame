@@ -91,6 +91,7 @@ public class CompilerDriver {
 
       //Driver只用来自测,强制开了
       config.isO2 = true;
+      config.isO3 = false;
       pm.openedPasses_.add("bbPredSucc");
       pm.openedPasses_.add("interproceduralAnalysis");
       pm.openedPasses_.add("Mem2reg");
