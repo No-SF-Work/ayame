@@ -1040,7 +1040,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         return null;
       }
     }
-    if (PTR) {
+ /*   if (PTR) {
       if (ctx.exp().isEmpty()) {
         tmp_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         return null;
@@ -1061,7 +1061,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           }}, curBB_);
         }
         tmp_ = gep;
-        /*  var arrayParams = scope_.params_.get(ctx.IDENT().getText());
+        *//*  var arrayParams = scope_.params_.get(ctx.IDENT().getText());
         tmpPtr_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         for (int i = 0; i < ctx.exp().size(); i++) {
           visit(ctx.exp().get(i));
@@ -1073,7 +1073,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           tmpPtr_ = f.buildGEP(tmpPtr_, new ArrayList<>() {{
             add(finalVal);
           }}, curBB_);
-        }*/
+        }*//*
         return null;
       }
     }
@@ -1097,9 +1097,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
         tmp_ = t;
         return null;
       }
-    }
+    }*/
 
-  /*  if (PTR) {
+    if (PTR) {
       if (ctx.exp().isEmpty()) {
         tmp_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         return null;
@@ -1202,7 +1202,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         tmp_ = t;
         return null;
       }
-    }*/
+    }
     throw new SyntaxException("unreachable");
   }
 
