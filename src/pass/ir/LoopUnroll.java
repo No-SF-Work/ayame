@@ -24,7 +24,7 @@ import util.UnrollUtils;
 
 public class LoopUnroll implements IRPass {
 
-  private static final int threshold = 800;
+  private static final int maxBBinLoop = 3;
   private static final Logger log = Mylogger.getLogger(IRPass.class);
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
   private LoopInfo currLoopInfo;
@@ -86,7 +86,7 @@ public class LoopUnroll implements IRPass {
     log.info("Run double unroll");
 
     // 可以循环展开的情况：是 simpleForLoop，满足 canDoubleUnroll 的情况（可以拿到 indVar，stepInst 是 Add/Sub），循环体基本块不超过 5 个
-    if (loop.getBlocks().size() > 5) {
+    if (loop.getBlocks().size() > maxBBinLoop) {
       return;
     }
 
