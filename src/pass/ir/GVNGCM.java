@@ -40,9 +40,21 @@ public class GVNGCM implements IRPass {
   private ArrayList<Pair<Value, Value>> valueTable = new ArrayList<>();
   private HashSet<Instruction> instructionsVis = new HashSet<>();
 
+  private boolean finalOpt = false;
+
   @Override
   public String getName() {
     return "gvngcm";
+  }
+
+  public GVNGCM() {
+    this.finalOpt = false;
+  }
+
+  public GVNGCM(boolean T) {
+    if (T) {
+      this.finalOpt = true;
+    }
   }
 
   public void run(MyModule m) {
@@ -290,7 +302,7 @@ public class GVNGCM implements IRPass {
 
     if (inst.isBinary()) {
       // 循环展开时发现可能有多个 br 共用一个 icmp 的情况，而循环展开时会更改 icmp，所以不替换 icmp
-      if (inst.isRelBinary()) {
+      if (inst.isRelBinary() && !finalOpt) {
         return;
       }
       Value val = lookupOrAdd(simpInst);

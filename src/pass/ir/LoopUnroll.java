@@ -202,18 +202,19 @@ public class LoopUnroll implements IRPass {
 
     // 在新 latchBlock 的末尾插入新的 icmp
     // while (i < n) { i = i + 1; } => while (i + 1 < n) { i = i + 1; i = i + 1; }
+    BinaryInst secondIndVarCondInst = (BinaryInst) lastValueMap.get(loop.getIndVarCondInst());
     BinaryInst secondStepInst = (BinaryInst) lastValueMap.get(stepInst);
     int stepIndex = secondStepInst.getOperands().indexOf(loop.getStep());
     assert stepIndex != -1;
-    Value lhs = null, rhs = null;
-    lhs = stepIndex == 0 ? loop.getStep() : secondStepInst;
-    rhs = stepIndex == 0 ? secondStepInst : loop.getStep();
-    var secondIndVarCondInst = factory.buildBinary(secondStepInst.tag, lhs, rhs, secondLatch);
+    Value lhs, rhs;
+    lhs = stepIndex == 0 ? loop.getStep() : secondIndVarCondInst;
+    rhs = stepIndex == 0 ? secondIndVarCondInst : loop.getStep();
+    var secondStepIndVarCondInst = factory.buildBinary(secondIndVarCondInst.tag, lhs, rhs, secondLatch);
 
     int indVarEndIndex = latchCmpInst.getOperands().indexOf(loop.getIndVarEnd());
     assert indVarEndIndex != -1;
-    lhs = indVarEndIndex == 0 ? loop.getIndVarEnd() : secondIndVarCondInst;
-    rhs = indVarEndIndex == 0 ? secondIndVarCondInst : loop.getIndVarEnd();
+    lhs = indVarEndIndex == 0 ? loop.getIndVarEnd() : secondStepIndVarCondInst;
+    rhs = indVarEndIndex == 0 ? secondStepIndVarCondInst : loop.getIndVarEnd();
     var newIcmpInst = factory.buildBinary(latchCmpInst.tag, lhs, rhs, secondLatch);
     // 构建增量循环体 end
 
