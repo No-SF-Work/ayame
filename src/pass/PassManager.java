@@ -27,7 +27,7 @@ public class PassManager {
         irPasses.add(new GlobalVariableLocalize());
         irPasses.add(new Mem2reg());
         irPasses.add(new GVNGCM());
-/*        irPasses.add(new BranchOptimization());
+        irPasses.add(new BranchOptimization());
 
 
         irPasses.add(new FunctionInline());
@@ -54,13 +54,12 @@ public class PassManager {
 
         irPasses.add(new DeadCodeEmit());
         irPasses.add(new LoopInfoFullAnalysis());
-        irPasses.add(new EmitLLVM());*/
-
+        irPasses.add(new EmitLLVM());
         mcPasses.add(new RegAllocator());
-//        mcPasses.add(new PeepholeOptimization());
-//        mcPasses.add(new ListScheduling());
-//        mcPasses.add(new PeepholeOptimization());
-//        mcPasses.add(new MergeMachineBlock());
+        mcPasses.add(new PeepholeOptimization());
+        mcPasses.add(new ListScheduling());
+        mcPasses.add(new PeepholeOptimization());
+        mcPasses.add(new MergeMachineBlock());
     }
 
     public static PassManager getPassManager() {
