@@ -25,8 +25,8 @@ public class PassManager {
         irPasses.add(new EmitLLVM("tt.ll"));
         irPasses.add(new InterproceduralAnalysis());
 //        irPasses.add(new GlobalVariableLocalize());
-//        irPasses.add(new Mem2reg());
-//        irPasses.add(new GVNGCM());
+        irPasses.add(new Mem2reg());
+        irPasses.add(new GVNGCM());
 //        irPasses.add(new BranchOptimization());
 //
 //
