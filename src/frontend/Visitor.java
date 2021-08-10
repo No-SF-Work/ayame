@@ -1040,8 +1040,66 @@ public class Visitor extends SysYBaseVisitor<Void> {
         return null;
       }
     }
-
     if (PTR) {
+      if (ctx.exp().isEmpty()) {
+        tmp_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
+        return null;
+      } else {
+        PointerType allocatedType = (PointerType) t.getType();
+        var containedType = (PointerType) allocatedType.getContained();
+        var load = f.buildLoad(containedType, t, curBB_);
+        visit(ctx.exp(0));
+        var gep = f.buildGEP(load, new ArrayList<>() {{
+          add(tmp_);
+        }}, curBB_);
+        for (var i = 1; i < ctx.exp().size(); i++) {
+          visit(ctx.exp(i));
+          var val = tmp_;
+          gep = f.buildGEP(gep, new ArrayList<>() {{
+            add(CONST0);
+            add(val);
+          }}, curBB_);
+        }
+        tmp_ = gep;
+        /*  var arrayParams = scope_.params_.get(ctx.IDENT().getText());
+        tmpPtr_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
+        for (int i = 0; i < ctx.exp().size(); i++) {
+          visit(ctx.exp().get(i));
+          var val = tmp_;
+          for (int j = i + 1; j < arrayParams.size(); j++) {
+            val = f.buildBinary(TAG_.Mul, val, arrayParams.get(j), curBB_);
+          }
+          Value finalVal = val;
+          tmpPtr_ = f.buildGEP(tmpPtr_, new ArrayList<>() {{
+            add(finalVal);
+          }}, curBB_);
+        }*/
+        return null;
+      }
+    }
+
+    if (ARR) {
+      if (ctx.exp().isEmpty()) {
+        tmp_ = f.buildGEP(t, new ArrayList<>() {{
+          add(CONST0);
+          add(CONST0);
+        }}, curBB_);
+        return null;
+      } else {
+        for (ExpContext expContext : ctx.exp()) {
+          visit(expContext);
+          var val = tmp_;
+          t = f.buildGEP(t, new ArrayList<>() {{
+            add(CONST0);
+            add(val);
+          }}, curBB_);
+        }
+        tmp_ = t;
+        return null;
+      }
+    }
+
+  /*  if (PTR) {
       if (ctx.exp().isEmpty()) {
         tmp_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         return null;
@@ -1111,10 +1169,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }}, curBB_);
         return null;
       } else {
-        t = f.buildGEP(t, new ArrayList<>() {{
-          add(CONST0);
-          add(CONST0);
-        }}, curBB_);
+
         Type ty = ((PointerType) t.getType()).getContained();
         Value offset = ConstantInt.newOne(i32Type_, 0);
         for (int i = 0; i < ctx.exp().size() - 1; i++) {
@@ -1147,7 +1202,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         tmp_ = t;
         return null;
       }
-    }
+    }*/
     throw new SyntaxException("unreachable");
   }
 
