@@ -33,6 +33,12 @@ public class PassManager {
 
     irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new LCSSA());
+    irPasses.add(new ConstantLoopUnroll());
+    irPasses.add(new BranchOptimization());
+    irPasses.add(new GVNGCM());
+
+    irPasses.add(new LoopInfoFullAnalysis());
+    irPasses.add(new LCSSA());
     irPasses.add(new EmitLLVM("beforeUnroll.ll"));
     irPasses.add(new LoopUnroll());
     irPasses.add(new EmitLLVM("afterUnroll.ll"));
@@ -41,9 +47,7 @@ public class PassManager {
 
     irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new LCSSA());
-    irPasses.add(new EmitLLVM("beforeSecondUnroll.ll"));
     irPasses.add(new LoopUnroll());
-    irPasses.add(new EmitLLVM("afterSecondUnroll.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
