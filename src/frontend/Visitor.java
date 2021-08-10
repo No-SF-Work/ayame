@@ -1098,10 +1098,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
             }}, curBB_);
           }
           tmp_ = t;
-
-
         }
-
         return null;
       }
     }
@@ -1139,7 +1136,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
         Value finalOffset = offset;
         if (ty instanceof IntegerType) {
           t = f.buildGEP(t, new ArrayList<>() {{
-            add(CONST0);
             add(finalOffset);
           }}, curBB_);
         } else {
