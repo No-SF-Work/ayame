@@ -18,7 +18,7 @@ import java.util.stream.IntStream;
 
 import pass.Pass.MCPass;
 
-// Graph-Coloring
+// Graph-Coloring: from [Modern Compiler Implementation in C: register allocation]
 public class RegAllocator implements MCPass {
     private final int INF = 0x3f3f3f3f;
     private final int K = 14;
