@@ -475,6 +475,12 @@ public class Visitor extends SysYBaseVisitor<Void> {
             add(CONST0);
             add(CONST0);
           }}, curBB_);
+          for (var i = 1; i < dims.size(); i++) {
+            pointer = f.buildGEP(pointer, new ArrayList<>() {{
+              add(CONST0);
+              add(CONST0);
+            }}, curBB_);
+          }
           f.buildFuncCall((Function) scope_.find("memset"), new ArrayList<>(
                   Arrays.asList(pointer, CONST0, ConstantInt.newOne(i32Type_, size * 4))),
               curBB_);
@@ -1145,7 +1151,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           val = tmp_;
           offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
           Value finalOffset = offset;
-          if (((PointerType) t.getType()).getContained() instanceof IntegerType) {
+          if (((PointerType)t.getType()).getContained() instanceof IntegerType) {
             t = f.buildGEP(t, new ArrayList<>() {{
               add(finalOffset);
             }}, curBB_);
@@ -1169,7 +1175,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }}, curBB_);
         return null;
       } else {
-        t = f.buildGEP(t, new ArrayList<>() {{
+t = f.buildGEP(t, new ArrayList<>() {{
           add(CONST0);
           add(CONST0);
         }}, curBB_);
@@ -1192,14 +1198,18 @@ public class Visitor extends SysYBaseVisitor<Void> {
         var val = tmp_;
         offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
         Value finalOffset = offset;
-        if (((PointerType) t.getType()).getContained() instanceof IntegerType) {
+        if (((PointerType)t.getType()).getContained() instanceof IntegerType) {
+          Value finalOffset1 = finalOffset;
           t = f.buildGEP(t, new ArrayList<>() {{
-            add(finalOffset);
+            add(finalOffset1);
           }}, curBB_);
         } else {
+          finalOffset = f.buildBinary(TAG_.Mul, finalOffset,
+              ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
+          Value finalOffset2 = finalOffset;
           t = f.buildGEP(t, new ArrayList<>() {{
             add(CONST0);
-            add(finalOffset);
+            add(finalOffset2);
           }}, curBB_);
         }
         tmp_ = t;
