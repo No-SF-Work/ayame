@@ -20,29 +20,27 @@ public class PassManager {
     private ArrayList<MCPass> mcPasses = new ArrayList<>();
 
     private PassManager() {
-        //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
         irPasses.add(new BBPredSucc());
-        irPasses.add(new EmitLLVM("tt.ll"));
+//        irPasses.add(new EmitLLVM("tt.ll"));
         irPasses.add(new InterproceduralAnalysis());
-//        irPasses.add(new GlobalVariableLocalize());
+        irPasses.add(new GlobalVariableLocalize());
         irPasses.add(new Mem2reg());
+        irPasses.add(new BranchOptimization());
         irPasses.add(new GVNGCM());
-//        irPasses.add(new BranchOptimization());
-//
-//
-//        irPasses.add(new FunctionInline());
-//        irPasses.add(new MarkConstantArray());
-//        irPasses.add(new BranchOptimization());
-//        irPasses.add(new GVNGCM());
-//        irPasses.add(new DeadCodeEmit());
-//
-//        irPasses.add(new LoopInfoFullAnalysis());
-//        irPasses.add(new LCSSA());
-//        irPasses.add(new EmitLLVM("beforeUnroll.ll"));
-//        irPasses.add(new LoopUnroll());
-//        irPasses.add(new EmitLLVM("afterUnroll.ll"));
-//        irPasses.add(new BranchOptimization());
-//        irPasses.add(new GVNGCM());
+
+        irPasses.add(new FunctionInline());
+        irPasses.add(new MarkConstantArray());
+        irPasses.add(new BranchOptimization());
+        irPasses.add(new GVNGCM());
+        irPasses.add(new DeadCodeEmit());
+
+        irPasses.add(new LoopInfoFullAnalysis());
+        irPasses.add(new LCSSA());
+        irPasses.add(new EmitLLVM("beforeUnroll.ll"));
+        irPasses.add(new LoopUnroll());
+        irPasses.add(new EmitLLVM("afterUnroll.ll"));
+        irPasses.add(new BranchOptimization());
+        irPasses.add(new GVNGCM());
 
 //    irPasses.add(new LoopInfoFullAnalysis());
 //    irPasses.add(new LCSSA());
@@ -52,14 +50,15 @@ public class PassManager {
 //    irPasses.add(new BranchOptimization());
 //    irPasses.add(new GVNGCM());
 
-//        irPasses.add(new DeadCodeEmit());
-//        irPasses.add(new LoopInfoFullAnalysis());
+        irPasses.add(new DeadCodeEmit());
+        irPasses.add(new LoopInfoFullAnalysis());
         irPasses.add(new EmitLLVM());
+
         mcPasses.add(new RegAllocator());
-//        mcPasses.add(new PeepholeOptimization());
+        mcPasses.add(new PeepholeOptimization());
 //        mcPasses.add(new ListScheduling());
-//        mcPasses.add(new PeepholeOptimization());
-//        mcPasses.add(new MergeMachineBlock());
+        mcPasses.add(new PeepholeOptimization());
+        mcPasses.add(new MergeMachineBlock());
     }
 
     public static PassManager getPassManager() {
