@@ -1009,7 +1009,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
     if (t == null) {
       throw new SyntaxException("undefined value name" + name);
     }
-    //const value
+
     if (t.getType().isIntegerTy()) {
       tmp_ = t;
       return null;
@@ -1024,11 +1024,11 @@ public class Visitor extends SysYBaseVisitor<Void> {
       ARR = ((PointerType) t.getType()).getContained().isArrayTy();
     }
     //function call
-    if (INT) {
+    if (INT) {//alloca i32
       if (ctx.exp().isEmpty()) {
-        tmp_ = t;
+        tmp_ = t;//tmp_ = alloca(i32)
         return null;
-      } else {
+      } else {//?
         for (ExpContext expContext : ctx.exp()) {
           visit(expContext);
           var fromExp = tmp_;
@@ -1046,9 +1046,9 @@ public class Visitor extends SysYBaseVisitor<Void> {
         tmp_ = f.buildLoad(((PointerType) t.getType()).getContained(), t, curBB_);
         return null;
       } else {
-        PointerType allocatedType = (PointerType) t.getType();
+        PointerType allocatedType = (PointerType) t.getType();//[arr]**
         var containedType = (PointerType) allocatedType.getContained();
-        var load = f.buildLoad(containedType, t, curBB_);
+        var load = f.buildLoad(containedType, t, curBB_);// [arr]*
 
         if (ctx.exp().size() == 1) {
           visit(ctx.exp(0));
@@ -1059,7 +1059,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           return null;
         } else {
           Value offset = null;
-          Type ty = containedType.getContained();
+          Type ty = containedType.getContained();//[arr]
           visit(ctx.exp(0));
           var val = tmp_;
           t = f.buildGEP(load, new ArrayList<>() {{
@@ -1072,14 +1072,16 @@ public class Visitor extends SysYBaseVisitor<Void> {
             assert ty instanceof ArrayType;
             val = tmp_;
             var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
+            ty = ((ArrayType) ty).getELeType();
             offset = f.buildBinary(TAG_.Mul, add,
                 ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
-            ty = ((ArrayType) ty).getELeType();
             t = f.buildGEP(t, new ArrayList<>() {{
               add(CONST0);
               add(CONST0);
             }}, curBB_);
+
           }
+
           visit(ctx.exp(ctx.exp().size() - 1));
           val = tmp_;
           offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
@@ -1090,7 +1092,6 @@ public class Visitor extends SysYBaseVisitor<Void> {
             }}, curBB_);
           } else {
             t = f.buildGEP(t, new ArrayList<>() {{
-              add(CONST0);
               add(finalOffset);
             }}, curBB_);
           }
