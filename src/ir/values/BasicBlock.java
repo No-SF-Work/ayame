@@ -124,4 +124,8 @@ public class BasicBlock extends Value {
   public void setDomLevel(Integer domLevel) {
     this.domLevel = domLevel;
   }
+
+  public int getLoopDepth() {
+    return this.node_.getParent().getVal().getLoopInfo().getLoopDepthForBB(this);
+  }
 }

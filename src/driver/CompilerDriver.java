@@ -111,6 +111,7 @@ public class CompilerDriver {
         pm.openedPasses_.add("loopUnroll");
         pm.openedPasses_.add("constantLoopUnroll");
         pm.openedPasses_.add("MergeMachineBlock");
+        pm.openedPasses_.add("redundantLoop");
       }
 
       logger.info("running MIR passes");
