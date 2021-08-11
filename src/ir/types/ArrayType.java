@@ -21,6 +21,13 @@ public class ArrayType extends Type {
     assert num_elements >= 0;
     this.contained = contained;
     this.num_elements = num_elements;
+    if (contained.isIntegerTy()) {
+      intContains = 1;
+    } else {
+      intContains =
+          ((ArrayType) contained).intContains *
+              ((ArrayType) contained).num_elements;
+    }
   }
 
   /**
@@ -56,6 +63,11 @@ public class ArrayType extends Type {
     return null;
   }
 
+  public int getIntContains() {
+    return intContains;
+  }
+
+  private int intContains;
   private Type contained;
   private int num_elements;
 }

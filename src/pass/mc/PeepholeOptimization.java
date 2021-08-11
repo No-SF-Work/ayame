@@ -359,9 +359,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                     var lastUser = lastUserMap.get(instr);
                     var isLastDefInstr = instr.getDef().stream().allMatch(def -> lastDefiner.get(def).equals(instr));
                     var defRegInLiveout = instr.getDef().stream().anyMatch(liveout::contains);
+                    var defNotSP = instr.getDef().stream().noneMatch(def -> def.getName().equals("sp"));
 
                     if (!(isLastDefInstr && defRegInLiveout) && hasNoCond) { // is last instr and will be used in the future
-                        if (lastUser == null && hasNoShift) {
+                        if (lastUser == null && hasNoShift && defNotSP) {
                             instrEntryIter.remove();
                             done = false;
                             continue;
@@ -543,7 +544,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                             var nxtInstr = nxtInstrEntry.getVal();
 
                             var rhs = addInstr.getRhs();
-                            if ((nxtInstr instanceof MCLoad || nxtInstr instanceof MCStore) && rhs.getState() == imm && (rhs.getImm() > 4095 || rhs.getImm() < 0)) {
+                            if ((nxtInstr instanceof MCLoad || nxtInstr instanceof MCStore || nxtInstr instanceof MCMove) && rhs.getState() == imm && (rhs.getImm() > 4095 || rhs.getImm() < 0)) {
                                 return true;
                             }
 
@@ -716,35 +717,40 @@ public class PeepholeOptimization implements Pass.MCPass {
                             }
 
                             assert nxtInstr instanceof MCBinary;
-                            var binInstr = (MCBinary) nxtInstr;
+                            var addSubInstr = (MCBinary) nxtInstr;
 
                             var fmaInstr = new MCFma();
-                            fmaInstr.setCond(binInstr.getCond());
-                            fmaInstr.setDst(binInstr.getDst());
+                            fmaInstr.setCond(addSubInstr.getCond());
+                            fmaInstr.setDst(addSubInstr.getDst());
                             fmaInstr.setLhs(mulInstr.getLhs());
                             fmaInstr.setRhs(mulInstr.getRhs());
                             fmaInstr.setSign(false);
 
-                            if (binInstr.getTag() == MachineCode.TAG.Add) {
+                            if (addSubInstr.getTag() == MachineCode.TAG.Add) {
                                 fmaInstr.setAdd(true);
-                                if (binInstr.getRhs().equals(mulInstr.getDst())) {
-                                    fmaInstr.setAcc(binInstr.getLhs());
-                                    if (binInstr.getLhs().equals(mulInstr.getDst())) {
+                                if (addSubInstr.getRhs().equals(mulInstr.getDst())) {
+                                    fmaInstr.setAcc(addSubInstr.getLhs());
+                                    if (addSubInstr.getLhs().equals(mulInstr.getDst())) {
                                         return true;
                                     }
-                                } else if (binInstr.getLhs().equals(mulInstr.getDst())) {
-                                    fmaInstr.setAcc(binInstr.getRhs());
-                                    if (binInstr.getRhs().equals(mulInstr.getDst())) {
+                                } else if (addSubInstr.getLhs().equals(mulInstr.getDst())) {
+                                    if (addSubInstr.getRhs().equals(mulInstr.getDst())) {
                                         return true;
                                     }
+
+                                    if (addSubInstr.getRhs().getState() == imm) {
+                                        return true;
+                                    }
+
+                                    fmaInstr.setAcc(addSubInstr.getRhs());
                                 } else {
                                     return true;
                                 }
-                            } else if (binInstr.getTag() == MachineCode.TAG.Sub) {
-                                if (binInstr.getRhs().equals(mulInstr.getDst())) {
+                            } else if (addSubInstr.getTag() == MachineCode.TAG.Sub) {
+                                if (addSubInstr.getRhs().equals(mulInstr.getDst())) {
                                     fmaInstr.setAdd(false);
-                                    fmaInstr.setAcc(binInstr.getLhs());
-                                    if (binInstr.getLhs().equals(mulInstr.getDst())) {
+                                    fmaInstr.setAcc(addSubInstr.getLhs());
+                                    if (addSubInstr.getLhs().equals(mulInstr.getDst())) {
                                         return true;
                                     }
                                 } else {

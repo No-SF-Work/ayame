@@ -80,7 +80,7 @@ public class MCBinary extends MachineCode{
         else{
             assert(false);
         }
-        String res="\t"+op+"\t"+dst.getName()+",\t"+lhs.getName()+",\t"+rhs.getName()+getShift().toString()+"\n";
+        String res="\t"+op+condString(cond)+"\t"+dst.getName()+",\t"+lhs.getName()+",\t"+rhs.getName()+getShift().toString()+"\n";
         CodeGenManager.getInstance().addOffset(1,res.length());
         return res;
     }
