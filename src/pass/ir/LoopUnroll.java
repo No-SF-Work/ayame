@@ -105,10 +105,13 @@ public class LoopUnroll implements IRPass {
     BasicBlock header = loop.getLoopHeader();
 
     // check gep (base, load)
-    for (var instNode: header.getList()) {
+    for (var instNode : header.getList()) {
       if (instNode.getVal() instanceof MemInst.GEPInst) {
-        if (instNode.getVal().getOperands().get(1) instanceof MemInst.LoadInst) {
-          return;
+        var gepInst = instNode.getVal();
+        for (int i = 1; i < gepInst.getNumOP(); i++) {
+          if (gepInst.getOperands().get(i) instanceof MemInst.LoadInst) {
+            return;
+          }
         }
       }
     }
@@ -221,7 +224,8 @@ public class LoopUnroll implements IRPass {
     Value lhs, rhs;
     lhs = stepIndex == 0 ? loop.getStep() : secondIndVarCondInst;
     rhs = stepIndex == 0 ? secondIndVarCondInst : loop.getStep();
-    var secondStepIndVarCondInst = factory.buildBinary(secondIndVarCondInst.tag, lhs, rhs, secondLatch);
+    var secondStepIndVarCondInst = factory
+        .buildBinary(secondIndVarCondInst.tag, lhs, rhs, secondLatch);
 
     int indVarEndIndex = latchCmpInst.getOperands().indexOf(loop.getIndVarEnd());
     assert indVarEndIndex != -1;
@@ -307,7 +311,8 @@ public class LoopUnroll implements IRPass {
 
     var copyIndVarCondInst = UnrollUtils.copyInstruction(loop.getIndVar());
     UnrollUtils.remapInstruction(copyIndVarCondInst, lastValueMap);
-    copyIndVarCondInst.CoReplaceOperandByIndex(latchPredIndex, lastValueMap.get(loop.getIndVarCondInst()));
+    copyIndVarCondInst
+        .CoReplaceOperandByIndex(latchPredIndex, lastValueMap.get(loop.getIndVarCondInst()));
     copyIndVarCondInst.node.insertAtEnd(exitIfBB.getList());
     copyIcmp.COReplaceOperand(loop.getIndVarCondInst(), copyIndVarCondInst);
     copyIcmp.node.insertAtEnd(exitIfBB.getList());
