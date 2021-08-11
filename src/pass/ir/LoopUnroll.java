@@ -102,6 +102,14 @@ public class LoopUnroll implements IRPass {
       return;
     }
 
+    // step too big
+    if (loop.getStep() instanceof ConstantInt) {
+      var s = ((ConstantInt) loop.getStep()).getVal();
+      if (Math.abs(s) > 100000000) {
+        return;
+      }
+    }
+
     BasicBlock header = loop.getLoopHeader();
 
     // check gep (base, load)
