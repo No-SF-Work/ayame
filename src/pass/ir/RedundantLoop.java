@@ -9,6 +9,7 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst.CallInst;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -92,7 +93,18 @@ public class RedundantLoop implements IRPass {
       }
     }
 
+    // 出口限制：phi 指令中来自循环和 preHeader 的 incomingVals 相同
     // 出口限制：循环内指令不被出口处 LCSSA Phi 使用
+    ArrayList<Integer> predIndexList = new ArrayList<>();
+    int index = 0;
+    for (var pred: exit.getPredecessor_()) {
+      if (loop.getExitingBlocks().contains(pred)) {
+        predIndexList.add(index);
+      }
+      index++;
+    }
+    int preHeaderIndex = exit.getPredecessor_().indexOf(preHeader);
+
     for (var instNode : exit.getList()) {
       var inst = instNode.getVal();
       if (!(inst instanceof Phi)) {
@@ -101,6 +113,12 @@ public class RedundantLoop implements IRPass {
 
       for (var op : inst.getOperands()) {
         if (loopInsts.contains(op)) {
+          return;
+        }
+      }
+
+      for (var i: predIndexList) {
+        if (inst.getOperands().get(i) != inst.getOperands().get(preHeaderIndex)) {
           return;
         }
       }
@@ -114,19 +132,38 @@ public class RedundantLoop implements IRPass {
     preBrInst.CORemoveNOperand(new int[]{0, headerOpIndex});
 
     HashSet<BasicBlock> predSet = new HashSet<>();
+    ArrayList<Integer> phiPredList = new ArrayList<>();
+    index = 0;
     for (var pred : exit.getPredecessor_()) {
       if (loop.getBlocks().contains(pred)) {
         predSet.add(pred);
+        phiPredList.add(index);
       }
+      index++;
     }
     for (var pred : predSet) {
       exit.getPredecessor_().remove(pred);
     }
 
+    int[] predArr = new int[phiPredList.size()];
+    for (int i = 0; i < phiPredList.size(); i++) {
+      predArr[i] = phiPredList.get(i);
+    }
+    for (var instNode: exit.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+      inst.CORemoveNOperand(predArr);
+    }
+
     for (var bb : loop.getBlocks()) {
-      for (var instNode : bb.getList()) {
+      for (var instNode = bb.getList().getEntry(); instNode != null ; ) {
+        var tmp = instNode.getNext();
         var inst = instNode.getVal();
         inst.CORemoveAllOperand();
+        instNode.removeSelf();
+        instNode = tmp;
       }
       bb.node_.removeSelf();
     }
