@@ -60,7 +60,7 @@ public class PassManager {
     irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new LCSSA());
 //    irPasses.add(new EmitLLVM("beforeRedundant.ll"));
-    irPasses.add(new RedundantLoop());
+//    irPasses.add(new RedundantLoop());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
