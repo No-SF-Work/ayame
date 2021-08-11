@@ -11,16 +11,18 @@ import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst.CallInst;
+import pass.Pass.IRPass;
+import util.Mylogger;
+import util.UnrollUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
-import pass.Pass.IRPass;
-import util.Mylogger;
-import util.UnrollUtils;
 
 public class LoopUnroll implements IRPass {
 
@@ -101,6 +103,16 @@ public class LoopUnroll implements IRPass {
     }
 
     BasicBlock header = loop.getLoopHeader();
+
+    // check gep (base, load)
+    for (var instNode: header.getList()) {
+      if (instNode.getVal() instanceof MemInst.GEPInst) {
+        if (instNode.getVal().getOperands().get(1) instanceof MemInst.LoadInst) {
+          return;
+        }
+      }
+    }
+
     var latchBlock = loop.getSingleLatchBlock();
     var latchBr = latchBlock.getList().getLast().getVal();
     var latchCmpInst = loop.getLatchCmpInst();
