@@ -611,9 +611,9 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     var isSameDstAddr = storeInstr.getAddr().equals(addInstr.getDst());
                                     var notSameLhsData = !addInstr.getLhs().equals(storeInstr.getData()); // attention
                                     var notSameRhsData = !addInstr.getRhs().equals(storeInstr.getData()); // attention
-                                    var isOffsetImm = storeInstr.getOffset().getState() == MachineOperand.state.imm;
+                                    var isOffsetZero = storeInstr.getOffset().getState() == imm && storeInstr.getOffset().getImm() == 0;
 
-                                    if (isSameData && isSameDstAddr && isOffsetImm &&
+                                    if (isSameData && isSameDstAddr && isOffsetZero &&
                                         notSameLhsData && notSameRhsData) {
                                         storeInstr.setAddr(addInstr.getLhs());
                                         storeInstr.setOffset(addInstr.getRhs());
@@ -946,10 +946,6 @@ public class PeepholeOptimization implements Pass.MCPass {
                         done &= addLdrStrShift.get();
                         done &= mulAddSub.get();
                         done &= subSub.get();
-
-                        if (instr instanceof MCMove && func.getArgMoves().contains(instr)) {
-                            continue;
-                        }
 
                         done &= movReplace.get();
                         done &= movCmp.get();
