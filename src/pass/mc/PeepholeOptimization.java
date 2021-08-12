@@ -1054,10 +1054,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                             continue;
                         }
 
-                        if (!reluctantMove.get()) {
-                            done = false;
-                            continue;
-                        }
+//                        if (!reluctantMove.get()) {
+//                            done = false;
+//                            continue;
+//                        }
 
                         if (!movCmp.get()) {
                             done = false;
