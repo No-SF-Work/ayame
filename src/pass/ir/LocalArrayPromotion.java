@@ -65,7 +65,7 @@ public class LocalArrayPromotion implements IRPass {
     if (!(alloca.getAllocatedType() instanceof ArrayType)) {
       return;
     }
-    buffer = new Constant[((ArrayType) alloca.getAllocatedType()).getIntContains()+1];
+    buffer = new Constant[((ArrayType) alloca.getAllocatedType()).getIntContains()];
     for (int i = 0; i < buffer.length; i++) {
       buffer[i] = ConstantInt.CONST0();
     }

@@ -26,7 +26,7 @@ public class ArrayType extends Type {
     } else {
       intContains =
           ((ArrayType) contained).intContains *
-              ((ArrayType) contained).num_elements;
+              num_elements;
     }
   }
 
