@@ -278,7 +278,7 @@ public class PeepholeOptimization implements Pass.MCPass {
 
     private void replaceUseReg(MachineCode instr, MachineOperand origin, MachineOperand target) {
         if (instr.getShift().isReg && instr.getShift().getReg().equals(origin)) {
-            instr.getShift().setReg((Reg) target);
+            instr.setShiftReg((Reg) target);
         }
 
         if (instr instanceof MCBinary) {

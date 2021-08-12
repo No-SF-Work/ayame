@@ -978,7 +978,7 @@ public class CodeGenManager {
 
     private void processBB(BasicBlock bb) {
         MachineBlock mb = bMap.get(bb);
-        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
+//        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
         for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
             Instruction ir = iIt.next().getVal();
             if (ifPrintIR) {
