@@ -90,6 +90,10 @@ public class LoopIdiom implements IRPass {
       }
     }
 
+    if (sumInst == null || calcInst == null) {
+      return;
+    }
+
     // sumInst = [ baseSum , %preHeader ], [ calcInst , %latch ]
     // calcInst = OP sumInst num
     // => %1 = OP2 tripCount num
