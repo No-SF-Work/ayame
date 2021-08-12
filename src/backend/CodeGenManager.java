@@ -978,7 +978,7 @@ public class CodeGenManager {
 
     private void processBB(BasicBlock bb) {
         MachineBlock mb = bMap.get(bb);
-//        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
+        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
         for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
             Instruction ir = iIt.next().getVal();
             if (ifPrintIR) {
@@ -1233,7 +1233,7 @@ public class CodeGenManager {
                     int imm=((Constants.ConstantInt) (ir.getOperands().get(1))).getVal();
                     mv.setShift(ArmAddition.ShiftType.Lsl,imm);
                 }else{
-                    Reg r=(Reg)(analyzeValue(ir,mb,false));
+                    Reg r=(Reg)(analyzeValue(ir.getOperands().get(1),mb,false));
                     mv.setShift(ArmAddition.ShiftType.Lsl,r);
                 }
             }else if(ir instanceof BinaryInst && ir.tag== Instruction.TAG_.Shr){
@@ -1243,7 +1243,7 @@ public class CodeGenManager {
                     MCMove mv=new MCMove(mb);
                     mv.setDst(dst);
                     mv.setRhs(rhs);
-                    Reg r=(Reg)(analyzeValue(ir,mb,false));
+                    Reg r=(Reg)(analyzeValue(ir.getOperands().get(1),mb,false));
                     mv.setShift(ArmAddition.ShiftType.Asr,r);
                 }else{
                     int imm=((Constants.ConstantInt) (ir.getOperands().get(1))).getVal();
