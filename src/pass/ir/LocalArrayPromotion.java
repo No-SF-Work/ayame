@@ -123,7 +123,7 @@ public class LocalArrayPromotion implements IRPass {
                   } else if (pointer.getOperands().size() == 2) {
                     var loc = ((ConstantInt) pointer.getOperands()
                         .get(1)).getVal();
-                    buffer[loc] = (Constant) store.getVal();
+                    buffer[loc-1] = (Constant) store.getVal();
                     stores.add(store);
                   } else {
                     canBePromote = false;
