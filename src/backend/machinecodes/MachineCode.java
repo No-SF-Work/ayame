@@ -110,6 +110,7 @@ public class MachineCode implements Cloneable {
     }
 
     public void setShiftReg(Reg r){
+        dealReg(this.getShift().getReg(),r,true);
         this.shift.setReg(r);
     }
 
