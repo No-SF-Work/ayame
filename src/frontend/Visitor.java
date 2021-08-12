@@ -166,10 +166,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
         f.buildFunction("putarray", f.getFuncTy(voidType, params_int_and_array), true));
     scope_.put("putf", f.buildFunction("putf", f.getFuncTy(voidType, params_putf), true));
     scope_.put("starttime",
-        f.buildFunction("_sysy_starttime", f.getFuncTy(voidType, params_empty), true));
+        f.buildFunction("_sysy_starttime", f.getFuncTy(voidType, params_int), true));
     scope_
         .put("stoptime",
-            f.buildFunction("_sysy_stoptime", f.getFuncTy(voidType, params_empty), true));
+            f.buildFunction("_sysy_stoptime", f.getFuncTy(voidType, params_int), true));
 
     return super.visitProgram(ctx);
   }
@@ -1388,7 +1388,11 @@ t = f.buildGEP(t, new ArrayList<>() {{
         args.add(tmp_);
       }
     }
-    tmp_ = f.buildFuncCall((Function) func, args, curBB_);
+    if (func.getName().equals("_sysy_starttime")||func.getName().equals("_sysy_stoptime")){
+      tmp_=f.buildFuncCall((Function) func,new ArrayList<>(){{add(CONST0);}},curBB_);
+    }else {
+      tmp_ = f.buildFuncCall((Function) func, args, curBB_);
+    }
     return null;
   }
 
