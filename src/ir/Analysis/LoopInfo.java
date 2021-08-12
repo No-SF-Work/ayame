@@ -6,6 +6,7 @@ import ir.values.Constant;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Value;
+import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
@@ -286,7 +287,7 @@ public class LoopInfo {
         }
       }
 
-      if (loop.getIndVarCondInst() == null) {
+      if (loop.getIndVarCondInst() == null || (!(loop.getIndVarCondInst() instanceof BinaryInst))) {
         return;
       }
 
@@ -307,7 +308,7 @@ public class LoopInfo {
         return;
       }
 
-      // indVarInit
+      // indVarInit, stepInst
       var indVar = loop.getIndVar();
       int indVarDepth = this.getLoopDepthForBB(indVar.getBB());
       for (var incomingVal : indVar.getIncomingVals()) {
@@ -422,6 +423,10 @@ public class LoopInfo {
   }
 
   public void addBBToLoop(BasicBlock bb, Loop loop) {
+    if (loop == null) {
+      return;
+    }
+
     this.bbLoopMap.put(bb, loop);
     loop.addBlock(bb);
   }

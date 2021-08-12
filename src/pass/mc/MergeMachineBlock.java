@@ -104,6 +104,9 @@ public class MergeMachineBlock implements Pass.MCPass {
                                     branch = mc;
                                 }
                             }
+                            if(!(branch instanceof MCBranch) && pred.getFalseSucc()==pred.getTrueSucc()){
+                                continue;
+                            }
                             assert (branch instanceof MCBranch);
                             var mcEntry = mb.getmclist().getEntry();
                             while (mcEntry != null) {

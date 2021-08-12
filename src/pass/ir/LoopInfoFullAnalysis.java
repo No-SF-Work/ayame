@@ -1,6 +1,7 @@
 package pass.ir;
 
 import ir.MyModule;
+import ir.values.Function;
 import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.Mylogger;
@@ -22,9 +23,13 @@ public class LoopInfoFullAnalysis implements IRPass {
     for (var funcNode: m.__functions) {
       var func = funcNode.getVal();
       if (!func.isBuiltin_()) {
-        func.getLoopInfo().computeLoopInfo(func);
-        func.getLoopInfo().computeAdditionalLoopInfo();
+        runOnFunction(func);
       }
     }
+  }
+
+  public void runOnFunction(Function func) {
+    func.getLoopInfo().computeLoopInfo(func);
+    func.getLoopInfo().computeAdditionalLoopInfo();
   }
 }
