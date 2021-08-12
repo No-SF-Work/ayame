@@ -104,6 +104,10 @@ public class LoopIdiom implements IRPass {
       return;
     }
     var num = calcInst.getOperands().get(1 - sumInstOpIndex);
+    if (num instanceof Instruction &&
+        (((Instruction) num).getBB().getLoopDepth() == loop.getLoopDepth())) {
+      return;
+    }
 
     BasicBlock exit = null;
     if (loop.getBlocks().contains((BasicBlock) (latchBrInst.getOperands().get(1)))) {
