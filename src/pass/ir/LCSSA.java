@@ -49,6 +49,8 @@ public class LCSSA implements IRPass {
 
   public void runOnFunction(Function func) {
     DomInfo.computeDominanceInfo(func);
+    var loopInfoFullAnalysis = new LoopInfoFullAnalysis();
+    loopInfoFullAnalysis.runOnFunction(func);
 
     currLoopInfo = func.getLoopInfo();
     for (var topLoop : currLoopInfo.getTopLevelLoops()) {

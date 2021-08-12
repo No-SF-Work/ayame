@@ -2,15 +2,29 @@ package pass;
 
 import backend.CodeGenManager;
 import ir.MyModule;
-
-import pass.Pass.IRPass;
-import pass.Pass.MCPass;
-import pass.ir.*;
-import pass.mc.*;
-import util.Mylogger;
-
 import java.util.ArrayList;
 import java.util.logging.Logger;
+import pass.Pass.IRPass;
+import pass.Pass.MCPass;
+import pass.ir.BBPredSucc;
+import pass.ir.BranchOptimization;
+import pass.ir.ConstantLoopUnroll;
+import pass.ir.EmitLLVM;
+import pass.ir.FunctionInline;
+import pass.ir.GVNGCM;
+import pass.ir.GlobalVariableLocalize;
+import pass.ir.InterproceduralAnalysis;
+import pass.ir.LCSSA;
+import pass.ir.LoopIdiom;
+import pass.ir.LoopInfoFullAnalysis;
+import pass.ir.LoopUnroll;
+import pass.ir.MarkConstantArray;
+import pass.ir.Mem2reg;
+import pass.ir.RedundantLoop;
+import pass.mc.MergeMachineBlock;
+import pass.mc.PeepholeOptimization;
+import pass.mc.RegAllocator;
+import util.Mylogger;
 
 public class PassManager {
 
@@ -31,21 +45,23 @@ public class PassManager {
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
-    irPasses.add(new LoopInfoFullAnalysis());
+    irPasses.add(new LCSSA());
+    irPasses.add(new LoopIdiom());
+    irPasses.add(new BranchOptimization());
+    irPasses.add(new GVNGCM());
+
     irPasses.add(new LCSSA());
     irPasses.add(new ConstantLoopUnroll());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
-    irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new LCSSA());
-//    irPasses.add(new EmitLLVM("beforeUnroll.ll"));
+    irPasses.add(new EmitLLVM("beforeUnroll.ll"));
     irPasses.add(new LoopUnroll());
 //    irPasses.add(new EmitLLVM("afterUnroll.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
-    irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new LCSSA());
 //    irPasses.add(new EmitLLVM("beforeTwiceUnroll.ll"));
     irPasses.add(new LoopUnroll());
@@ -57,7 +73,6 @@ public class PassManager {
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
 
-    irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new LCSSA());
 //    irPasses.add(new EmitLLVM("beforeRedundant.ll"));
     irPasses.add(new RedundantLoop());

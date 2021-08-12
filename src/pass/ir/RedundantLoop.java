@@ -16,7 +16,7 @@ import java.util.Queue;
 import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.Mylogger;
-import util.UnrollUtils;
+import util.LoopUtils;
 
 public class RedundantLoop implements IRPass {
 
@@ -50,7 +50,7 @@ public class RedundantLoop implements IRPass {
 
     // run on loop manager
     for (var topLoop : loopInfo.getTopLevelLoops()) {
-      UnrollUtils.addLoopToQueue(topLoop, loopQueue);
+      LoopUtils.addLoopToQueue(topLoop, loopQueue);
     }
     while (!loopQueue.isEmpty()) {
       var loop = loopQueue.remove();

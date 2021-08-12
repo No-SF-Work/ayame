@@ -17,7 +17,7 @@ import java.util.Queue;
 import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import util.Mylogger;
-import util.UnrollUtils;
+import util.LoopUtils;
 
 public class ConstantLoopUnroll implements IRPass {
 
@@ -61,7 +61,7 @@ public class ConstantLoopUnroll implements IRPass {
 
       // run on loop manager
       for (var topLoop : this.currLoopInfo.getTopLevelLoops()) {
-        UnrollUtils.addLoopToQueue(topLoop, loopQueue);
+        LoopUtils.addLoopToQueue(topLoop, loopQueue);
       }
       while (!loopQueue.isEmpty()) {
         var loop = loopQueue.remove();
@@ -89,7 +89,7 @@ public class ConstantLoopUnroll implements IRPass {
       }
     }
 
-    UnrollUtils.rearrangeBBOrder(loop);
+    LoopUtils.rearrangeBBOrder(loop);
     return constantUnroll(loop);
   }
 
@@ -168,7 +168,7 @@ public class ConstantLoopUnroll implements IRPass {
 
       for (var bb : loopBlocks) {
         HashMap<Value, Value> valueMap = new HashMap<>();
-        BasicBlock newBB = UnrollUtils.getLoopBasicBlockCopy(bb, valueMap);
+        BasicBlock newBB = LoopUtils.getLoopBasicBlockCopy(bb, valueMap);
 
         if (bb == header) {
           for (var phi : originPhis) {
@@ -204,7 +204,7 @@ public class ConstantLoopUnroll implements IRPass {
       var newHeader = lastValueMap.get(header);
       for (var newBB : newBlocks) {
         newBB.getList().forEach(instNode -> {
-          UnrollUtils.remapInstruction(instNode.getVal(), lastValueMap);
+          LoopUtils.remapInstruction(instNode.getVal(), lastValueMap);
         });
         if (newBB != newHeader) {
           for (var key : lastValueMap.keySet()) {
