@@ -110,6 +110,7 @@ public class CompilerDriver {
         pm.openedPasses_.add("LCSSA");
         pm.openedPasses_.add("loopUnroll");
         pm.openedPasses_.add("MergeMachineBlock");
+        pm.openedPasses_.add("promotion");
       }
 
       logger.info("running MIR passes");

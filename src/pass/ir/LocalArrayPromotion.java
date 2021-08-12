@@ -8,8 +8,11 @@ import ir.types.IntegerType;
 import ir.types.Type;
 import ir.values.BasicBlock;
 import ir.values.Constant;
+import ir.values.Constants.ConstantArray;
 import ir.values.Constants.ConstantInt;
+import ir.values.Function;
 import ir.values.Value;
+import ir.values.instructions.Instruction;
 import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.LoadInst;
@@ -23,6 +26,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.stream.Collectors;
 import pass.Pass.IRPass;
+import util.IList.INode;
 
 public class LocalArrayPromotion implements IRPass {
 
@@ -42,6 +46,7 @@ public class LocalArrayPromotion implements IRPass {
       if (!funcNode.getVal().isBuiltin_()) {
         funcNode.getVal().getList_().getEntry().getVal().getList().forEach(inst -> {
           if (inst.getVal() instanceof AllocaInst) {
+            counter = 0;
             analyse((AllocaInst) inst.getVal());
           }
         });
@@ -57,14 +62,15 @@ public class LocalArrayPromotion implements IRPass {
   todo :在用funcInline的方法加上一点trivial的数据流分析
   */
   public void analyse(AllocaInst alloca) {
+    if (!(alloca.getAllocatedType() instanceof ArrayType)) {
+      return;
+    }
     buffer = new Constant[((ArrayType) alloca.getAllocatedType()).getIntContains()];
     for (int i = 0; i < buffer.length; i++) {
       buffer[i] = ConstantInt.CONST0();
     }
-    if (!(alloca.getAllocatedType() instanceof ArrayType)) {
-      return;
-    }
     //因为会进行各种结构变换与代码移动，所以初始化的值不一定紧贴GEP和ALLOCA，得进行一个bfs,好烦啊，早知道我一开始写一个bfs的接口了
+    canBePromote = true;
     curArr = alloca;
     storeStores();
     if (canBePromote) {
@@ -90,40 +96,51 @@ public class LocalArrayPromotion implements IRPass {
   public void storeStores() {
     stores.clear();
     assert curArr != null;
-    curArr.getBB().getParent().getList_().forEach(
-        bbnode -> {
-          bbnode.getVal().getList().forEach(
-              instnode -> {
-                if (instnode.getVal() instanceof StoreInst
-                    && ((StoreInst) instnode.getVal()).getPointer().equals(curArr)) {
-                  StoreInst store = (StoreInst) instnode.getVal();
-                  if (!(store.getVal() instanceof ConstantInt)) {
+    for (INode<BasicBlock, Function> bbnode : curArr.getBB().getParent().getList_()) {
+      for (INode<Instruction, BasicBlock> instnode : bbnode.getVal().getList()) {
+        if (instnode.getVal() instanceof StoreInst) {
+          var ptr = ((StoreInst) instnode.getVal()).getPointer();
+          if (ptr instanceof GEPInst) {
+            if (((GEPInst) ptr).getAimTo() != null) {
+              if (((GEPInst) ptr).getAimTo().equals(curArr)) {
+                StoreInst store = (StoreInst) instnode.getVal();
+                if (!(store.getVal() instanceof ConstantInt)) {
+                  canBePromote = false;
+                }
+                GEPInst pointer = (GEPInst) store.getPointer();
+                for (int i = 1; i < pointer.getOperands().size(); i++) {
+                  var operand = pointer.getOperands().get(i);
+                  if (!(operand instanceof Constant)) {
                     canBePromote = false;
                   }
-                  GEPInst pointer = (GEPInst) store.getPointer();
-                  for (int i = 1; i < pointer.getOperands().size(); i++) {
-                    var operand = pointer.getOperands().get(i);
-                    if (!(operand instanceof Constant)) {
-                      canBePromote = false;
-                    }
-                  }
-                  if (canBePromote) {
-                    buffer[((ConstantInt) pointer.getOperands()
-                        .get(2)).getVal()] = (Constant) store.getVal();
+                }
+                if (canBePromote) {
+                  if (pointer.getOperands().size() == 3) {
+                    var loc = ((ConstantInt) pointer.getOperands()
+                        .get(2)).getVal();
+                    buffer[loc] = (Constant) store.getVal();
                     stores.add(store);
+                  } else if (pointer.getOperands().size() == 2) {
+                    var loc = ((ConstantInt) pointer.getOperands()
+                        .get(1)).getVal();
+                    buffer[loc] = (Constant) store.getVal();
+                    stores.add(store);
+                  } else {
+                    canBePromote = false;
                   }
                 }
               }
-          );
+            }
+          }
         }
-    );
+      }
+    }
   }
 
   private boolean metLoad = false;
 
   public void bfsAndAnalyse(BasicBlock start) {
     counter = 0;
-    canBePromote = true;
     metLoad = false;
     visitmap.clear();
     bbqueue.clear();
@@ -134,6 +151,7 @@ public class LocalArrayPromotion implements IRPass {
       analyse(b);
       for (BasicBlock succ : b.getSuccessor_()) {
         if (!visitmap.contains(succ)) {
+          visitmap.add(succ);
           bbqueue.add(succ);
         }
       }
@@ -155,8 +173,10 @@ public class LocalArrayPromotion implements IRPass {
       if (val instanceof StoreInst) {
         StoreInst store = (StoreInst) val;
         if (!metLoad) {
-          if (((GEPInst) store.getPointer()).getAimTo().equals(curArr)) {
-            counter++;
+          if (store.getPointer() instanceof GEPInst) {
+            if (((GEPInst) store.getPointer()).getAimTo().equals(curArr)) {
+              counter++;
+            }
           }
         }
       }
@@ -166,7 +186,11 @@ public class LocalArrayPromotion implements IRPass {
           Value v = call.getOperands().get(i);
           if (v instanceof GEPInst) {
             if (((GEPInst) v).getAimTo().equals(curArr)) {
-              canBePromote = false;
+              if (call.getOperands().get(0).getName() != "memset") {
+                canBePromote = false;
+              } else {
+                memset = call;
+              }
             }
           }
         }
@@ -174,6 +198,8 @@ public class LocalArrayPromotion implements IRPass {
 
     });
   }
+
+  CallInst memset;
 
   public Constant packConstArr(ArrayList<Integer> dims, ArrayList<Constant> inits) {
     var curDimLength = dims.get(0);
@@ -211,9 +237,20 @@ public class LocalArrayPromotion implements IRPass {
       ty = ((ArrayType) ty).getELeType();
     }
     Constant fixedInit = packConstArr(dims, init);
-//    MyFactoryBuilder.getInstance()
-//        .getGlobalvariable("", curArr.getAllocatedType(), fixedInit, init);
-
-//curArr.COReplaceAllUseWith();
+    ConstantArray arr = new ConstantArray(curArr.getAllocatedType(), init);
+    var gv = f.getGlobalvariable("promoted" + String.valueOf(counter), curArr.getAllocatedType(),
+        fixedInit,
+        arr);
+    gv.setConst();
+    stores.forEach(store -> {
+      store.CORemoveAllOperand();
+      store.node.removeSelf();
+    });
+    if (memset != null) {
+      memset.CORemoveAllOperand();
+      memset.node.removeSelf();
+      memset = null;
+    }
+    curArr.COReplaceAllUseWith(gv);
   }
 }

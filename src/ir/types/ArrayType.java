@@ -22,7 +22,7 @@ public class ArrayType extends Type {
     this.contained = contained;
     this.num_elements = num_elements;
     if (contained.isIntegerTy()) {
-      intContains = 1;
+      intContains = num_elements;
     } else {
       intContains =
           ((ArrayType) contained).intContains *
