@@ -3,7 +3,6 @@ package pass.ir;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.Use;
-import ir.values.BasicBlock;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.GlobalVariable;
@@ -14,11 +13,11 @@ import ir.values.instructions.TerminatorInst.RetInst;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Vector;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.stream.Collectors;
 import pass.Pass.IRPass;
 import util.IList.INode;
-import util.Pair;
 
 public class GlobalVariableLocalize implements IRPass {
 
@@ -38,7 +37,7 @@ public class GlobalVariableLocalize implements IRPass {
    *
    * */
   HashMap<GlobalVariable, ArrayList<Function>> gvUserFunc = new HashMap<>();
-  //一个函数通过调用关系bfs出去，如果用到了gv就认为是related
+  //一个函数通过调用关系dfs出去，如果用到了gv就认为是related
   HashMap<Function, HashSet<GlobalVariable>> relatedGVs = new HashMap<>();
   MyModule m;
   MyFactoryBuilder f;
@@ -143,7 +142,8 @@ public class GlobalVariableLocalize implements IRPass {
 
   //找related gvs 的目的是：在退出函数的时候，需要进行一个store把局部的值存回gv
 //在通过call退出的时候，如果gv和call的func的所有callee以及callee的callee都无关系，可以省去一条store
-  private boolean bfsFuncs(Function start, GlobalVariable gv) {
+
+  private boolean dfsFuncs(Function start, GlobalVariable gv) {
     if (visitfunc.contains(start)) {
       return false;
     }
@@ -153,7 +153,7 @@ public class GlobalVariableLocalize implements IRPass {
     }
     var result = false;
     for (Function callee : start.getCalleeList()) {
-      result |= bfsFuncs(callee, gv);
+      result |= dfsFuncs(callee, gv);
     }
     return result;
   }
@@ -165,9 +165,10 @@ public class GlobalVariableLocalize implements IRPass {
       relatedGVs.put(val, new HashSet<>());
       for (GlobalVariable globalVariable : m.__globalVariables) {
         visitfunc.clear();
-        if (bfsFuncs(val, globalVariable)) {
+        if (dfsFuncs(val, globalVariable)) {
           relatedGVs.get(val).add(globalVariable);
         }
+        
       }
     }
   }
