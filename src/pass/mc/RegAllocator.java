@@ -95,6 +95,12 @@ public class RegAllocator implements MCPass {
     }
 
     private void replaceReg(MachineCode instr, MachineOperand origin, MachineOperand target) {
+        if (instr.getShift().isReg) {
+            if (instr.getShift().getReg().equals(origin)) {
+                instr.getShift().setReg((Reg) target);
+            }
+        }
+
         if (instr instanceof MCBinary) {
             var binaryInstr = (MCBinary) instr;
             if (binaryInstr.getDst().equals(origin)) {
