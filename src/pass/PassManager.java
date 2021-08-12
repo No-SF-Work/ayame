@@ -15,11 +15,11 @@ import pass.ir.GVNGCM;
 import pass.ir.GlobalVariableLocalize;
 import pass.ir.InterproceduralAnalysis;
 import pass.ir.LCSSA;
+import pass.ir.LocalArrayPromotion;
 import pass.ir.LoopIdiom;
 import pass.ir.LoopInfoFullAnalysis;
 import pass.ir.LoopMergeLastBreak;
 import pass.ir.LoopUnroll;
-import pass.ir.MarkConstantArray;
 import pass.ir.Mem2reg;
 import pass.ir.RedundantLoop;
 import pass.mc.MergeMachineBlock;
@@ -36,13 +36,11 @@ public class PassManager {
   private ArrayList<MCPass> mcPasses = new ArrayList<>();
 
   private PassManager() {
-    //pass执行的顺序在这里决定,如果加了而且是open的，就先加的先跑
     irPasses.add(new BBPredSucc());
 //        irPasses.add(new EmitLLVM("tt.ll"));
     irPasses.add(new InterproceduralAnalysis());
     irPasses.add(new GlobalVariableLocalize());
     irPasses.add(new Mem2reg());
-    irPasses.add(new MarkConstantArray());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
@@ -75,6 +73,7 @@ public class PassManager {
     irPasses.add(new FunctionInline());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
+    irPasses.add(new LocalArrayPromotion());
 
     irPasses.add(new LCSSA());
 //    irPasses.add(new EmitLLVM("beforeRedundant.ll"));

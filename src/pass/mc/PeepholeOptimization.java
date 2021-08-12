@@ -544,14 +544,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                         };
 
                         Supplier<Boolean> reluctantMove = () -> {
-                            // anything (dst a)
+                            // anything (dst is a)
                             // move b a (to be remove)
                             // =>
                             // anything (replace dst)
-                            if (!hasNoShift) {
-                                return true;
-                            }
-
                             if (!(instr instanceof MCBinary ||
                                     instr instanceof MCFma ||
                                     instr instanceof MCLongMul ||
@@ -572,6 +568,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                                 return true;
                             }
                             var movInstr = (MCMove) nxtInstr;
+
+                            if (!(nxtInstr.getShift().getType() == None || nxtInstr.getShift().getImm() == 0)) {
+                                return true;
+                            }
 
                             MachineOperand dst = null;
                             if (instr instanceof MCBinary) {
@@ -1054,10 +1054,10 @@ public class PeepholeOptimization implements Pass.MCPass {
                             continue;
                         }
 
-//                        if (!reluctantMove.get()) {
-//                            done = false;
-//                            continue;
-//                        }
+                        if (!reluctantMove.get()) {
+                            done = false;
+                            continue;
+                        }
 
                         if (!movCmp.get()) {
                             done = false;

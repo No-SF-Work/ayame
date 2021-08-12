@@ -179,11 +179,10 @@ public class LoopIdiom implements IRPass {
         ConstantInt shiftTime = ConstantInt
             .newOne(factory.getI32Ty(), (int) (Math.log(cnum) / Math.log(2)));
         noLoopCalcInst = factory.buildBinary(TAG_.Mul, tripCountInst, shiftTime, header);
-        // TODO 替换成左移右移
         if (calcInst.tag == TAG_.Mul) {
-          noLoopSumInst = factory.buildBinary(TAG_.Mul, baseSum, noLoopCalcInst, header);
+          noLoopSumInst = factory.buildBinary(TAG_.Shl, baseSum, noLoopCalcInst, header);
         } else {
-          noLoopSumInst = factory.buildBinary(TAG_.Div, baseSum, noLoopCalcInst, header);
+          noLoopSumInst = factory.buildBinary(TAG_.Shr, baseSum, noLoopCalcInst, header);
         }
       }
     }

@@ -122,7 +122,9 @@ public class BinaryInst extends Instruction {
     return this.tag == TAG_.Div;
   }
 
-  public boolean isMod() { return this.tag == TAG_.Mod; }
+  public boolean isMod() {
+    return this.tag == TAG_.Mod;
+  }
 
 
   public boolean isCommutative() {
@@ -184,6 +186,8 @@ public class BinaryInst extends Instruction {
           case Add -> "add  i32 ";
           case Sub -> "sub  i32 ";
           case Rsb -> "rsb  i32 ";
+          case Shl -> "shl i32 ";
+          case Shr -> "ashr i32 ";
           case Mul -> "mul  i32 ";
           case Div -> "sdiv  i32 ";
           case Lt -> "icmp slt " + this.getOperands().get(0).getType() + " ";
