@@ -22,6 +22,8 @@ public abstract class Instruction extends User {
     Mod,
     Mul,
     Div,
+    Shr,
+    Shl,
     Lt,
     Le,
     Ge,
