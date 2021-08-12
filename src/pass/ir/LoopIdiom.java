@@ -78,6 +78,9 @@ public class LoopIdiom implements IRPass {
     var latchBrInst = loop.getSingleLatchBlock().getList().getLast().getVal();
     Phi sumInst = null;
     BinaryInst calcInst = null;
+    if (indVar == null || stepInst == null) {
+      return;
+    }
 
     for (var instNode : header.getList()) {
       var inst = instNode.getVal();
