@@ -83,7 +83,7 @@ public abstract class ValueCloner {
 
   private void bbProcessor(BasicBlock bb) {
     processBasicblock(bb, (BasicBlock) valueMap.get(bb));
-    if (!bb.getSuccessor_().isEmpty()) {
+     if (!bb.getSuccessor_().isEmpty()) {
       bb.getSuccessor_().stream().distinct().forEach(b -> {
         if (visitMap.get(b) == null) {
           visitMap.put(b, true);
