@@ -18,6 +18,7 @@ import backend.machinecodes.MachineBlock;
 import backend.machinecodes.MachineCode;
 import backend.machinecodes.MachineFunction;
 import backend.reg.MachineOperand;
+import backend.reg.Reg;
 import backend.reg.VirtualReg;
 import ir.MyModule;
 import ir.types.ArrayType;
@@ -1222,7 +1223,58 @@ public class CodeGenManager {
                     binary.setDst(dst);
                 }
 
-            } else if (ir instanceof BinaryInst && ((BinaryInst) ir).isCond()) {
+            } else if(ir instanceof BinaryInst && ir.tag== Instruction.TAG_.Shl){
+                MachineOperand dst=analyzeValue(ir,mb,true);
+                MachineOperand rhs = analyzeNoImm(ir.getOperands().get(0),mb);
+                MCMove mv=new MCMove(mb);
+                mv.setDst(dst);
+                mv.setRhs(rhs);
+                if(ir.getOperands().get(1) instanceof Constants.ConstantInt){
+                    int imm=((Constants.ConstantInt) (ir.getOperands().get(1))).getVal();
+                    mv.setShift(ArmAddition.ShiftType.Lsl,imm);
+                }else{
+                    Reg r=(Reg)(analyzeValue(ir,mb,false));
+                    mv.setShift(ArmAddition.ShiftType.Lsl,r);
+                }
+            }else if(ir instanceof BinaryInst && ir.tag== Instruction.TAG_.Shr){
+                MachineOperand dst=analyzeValue(ir,mb,true);
+                MachineOperand rhs = analyzeNoImm(ir.getOperands().get(0),mb);
+                if(!(ir.getOperands().get(1) instanceof Constants.ConstantInt)){
+                    MCMove mv=new MCMove(mb);
+                    mv.setDst(dst);
+                    mv.setRhs(rhs);
+                    Reg r=(Reg)(analyzeValue(ir,mb,false));
+                    mv.setShift(ArmAddition.ShiftType.Asr,r);
+                }else{
+                    int imm=((Constants.ConstantInt) (ir.getOperands().get(1))).getVal();
+                    assert(imm > 0 && imm <32);
+                    VirtualReg v = new VirtualReg();
+                    VirtualReg v1 = new VirtualReg();
+                    if (!isO2) {
+                        mf.addVirtualReg(v);
+                        MCMove mv1 = new MCMove(mb);
+                        mv1.setRhs(rhs);
+                        mv1.setShift(ArmAddition.ShiftType.Asr, 31);
+                        mv1.setDst(v);
+                        MCBinary add = new MCBinary(MachineCode.TAG.Add, mb);
+                        mf.addVirtualReg(v1);
+                        add.setLhs(rhs);
+                        add.setRhs(v);
+                        add.setShift(ArmAddition.ShiftType.Lsr, 32 - imm);
+                        add.setDst(v1);
+                    }
+                    MCMove mv2 = new MCMove(mb);
+                    mv2.setShift(ArmAddition.ShiftType.Asr, imm);
+                    mv2.setDst(dst);
+                    if (!isO2) {
+                        mv2.setRhs(v1);
+                    }else{
+                        mv2.setRhs(rhs);
+                    }
+                }
+
+            }
+            else if (ir instanceof BinaryInst && ((BinaryInst) ir).isCond()) {
                 continue;
             } else if (ir.tag == Instruction.TAG_.Br) {
                 if (ir.getNumOP() == 3) {

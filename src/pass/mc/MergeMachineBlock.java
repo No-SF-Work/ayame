@@ -1,12 +1,16 @@
 package pass.mc;
 
 import backend.CodeGenManager;
-import backend.machinecodes.*;
-import pass.Pass;
-import util.IList;
-
+import backend.machinecodes.ArmAddition;
+import backend.machinecodes.MCBranch;
+import backend.machinecodes.MCCall;
+import backend.machinecodes.MCComment;
+import backend.machinecodes.MCCompare;
+import backend.machinecodes.MCJump;
+import backend.machinecodes.MachineBlock;
+import backend.machinecodes.MachineCode;
 import java.util.ArrayList;
-import java.util.Iterator;
+import pass.Pass;
 
 /**
  * 如果基本块只有一个后继，且指令数量较少，没有cmp指令，
@@ -91,7 +95,7 @@ public class MergeMachineBlock implements Pass.MCPass {
                         //此处的合并基本块有可能损失性能
 //                        else if (false) {
                         if (pred.getTrueSucc() == mb && pred.getFalseSucc()!=null) {
-                            if (hasCompare || hasCall || hasCond || (mcNum - branchNum - jumpNum) > 4) {
+                            if (hasCompare || hasCall || hasCond || (mcNum - branchNum - jumpNum) > 5) {
                                 continue;
                             }
                             predToRemove.add(pred);

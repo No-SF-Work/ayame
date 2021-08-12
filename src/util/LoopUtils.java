@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Queue;
 
-public class UnrollUtils {
+public class LoopUtils {
 
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
   // return a new instruction but uses the old inst operands

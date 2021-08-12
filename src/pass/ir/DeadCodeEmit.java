@@ -64,7 +64,7 @@ public class DeadCodeEmit implements IRPass {
     }
   }
 
-  public void runDCE(Function func) {
+  public void removeUselessStore(Function func) {
     for (var bbNode : func.getList_()) {
       for (var instNode = bbNode.getVal().getList().getEntry(); instNode != null; ) {
         var next = instNode.getNext();
@@ -97,10 +97,13 @@ public class DeadCodeEmit implements IRPass {
         instNode = next;
       }
     }
+  }
+
+  public void runDCE(Function func) {
+    removeUselessStore(func);
 
     usefulInstSet.clear();
-    for (
-        var bbNode : func.getList_()) {
+    for (var bbNode : func.getList_()) {
       var bb = bbNode.getVal();
       for (var instNode : bb.getList()) {
         var instruction = instNode.getVal();
@@ -110,8 +113,7 @@ public class DeadCodeEmit implements IRPass {
       }
     }
 
-    for (
-        var bbNode : func.getList_()) {
+    for (var bbNode : func.getList_()) {
       var bb = bbNode.getVal();
       for (var instNode = bb.getList().getEntry(); instNode != null; ) {
         var tmp = instNode.getNext();
