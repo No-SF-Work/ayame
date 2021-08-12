@@ -63,8 +63,6 @@ public class PassManager {
 
     mcPasses.add(new RegAllocator());
     mcPasses.add(new PeepholeOptimization());
-//        mcPasses.add(new ListScheduling());
-    mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new MergeMachineBlock());
   }
 

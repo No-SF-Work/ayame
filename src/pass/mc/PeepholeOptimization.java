@@ -21,10 +21,12 @@ import backend.machinecodes.MachineBlock;
 import backend.machinecodes.MachineCode;
 import backend.machinecodes.MachineFunction;
 import backend.reg.MachineOperand;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.function.Supplier;
+
 import pass.Pass;
 import util.Pair;
 
@@ -51,7 +53,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                     if (instr instanceof MCBinary) {
                         MCBinary binInstr = (MCBinary) instr;
                         boolean isAddOrSub = binInstr.getTag() == MachineCode.TAG.Add ||
-                            binInstr.getTag() == MachineCode.TAG.Sub;
+                                binInstr.getTag() == MachineCode.TAG.Sub;
                         boolean isSameDstLhs = binInstr.getDst().equals(binInstr.getLhs());
                         boolean hasZeroOperand = binInstr.getRhs().getState() == imm && binInstr.getRhs().getImm() == 0;
 
@@ -197,11 +199,11 @@ public class PeepholeOptimization implements Pass.MCPass {
             var defs = instr.getMCDef();
             var uses = instr.getMCUse();
             var hasSideEffect = instr instanceof MCBranch ||
-                instr instanceof MCCall ||
-                instr instanceof MCJump ||
-                instr instanceof MCStore ||
-                instr instanceof MCReturn ||
-                instr instanceof MCComment;
+                    instr instanceof MCCall ||
+                    instr instanceof MCJump ||
+                    instr instanceof MCStore ||
+                    instr instanceof MCReturn ||
+                    instr instanceof MCComment;
 
             uses.stream().filter(lastDefiner::containsKey).forEach(use -> lastUserMap.put(lastDefiner.get(use), instr));
             defs.forEach(def -> lastDefiner.put(def, instr));
@@ -230,11 +232,11 @@ public class PeepholeOptimization implements Pass.MCPass {
             for (var instrEntry : block.getmclist()) {
                 var instr = instrEntry.getVal();
                 instr.getUse().stream()
-                    .filter(use -> !blockLiveInfo.liveDef.contains(use))
-                    .forEach(blockLiveInfo.liveUse::add);
+                        .filter(use -> !blockLiveInfo.liveDef.contains(use))
+                        .forEach(blockLiveInfo.liveUse::add);
                 instr.getDef().stream()
-                    .filter(def -> !blockLiveInfo.liveUse.contains(def))
-                    .forEach(blockLiveInfo.liveDef::add);
+                        .filter(def -> !blockLiveInfo.liveUse.contains(def))
+                        .forEach(blockLiveInfo.liveDef::add);
             }
 
             blockLiveInfo.liveIn.addAll(blockLiveInfo.liveUse);
@@ -264,8 +266,8 @@ public class PeepholeOptimization implements Pass.MCPass {
 
                     blockLiveInfo.liveIn = new HashSet<>(blockLiveInfo.liveUse);
                     blockLiveInfo.liveOut.stream()
-                        .filter(MachineOperand -> !blockLiveInfo.liveDef.contains(MachineOperand))
-                        .forEach(blockLiveInfo.liveIn::add);
+                            .filter(MachineOperand -> !blockLiveInfo.liveDef.contains(MachineOperand))
+                            .forEach(blockLiveInfo.liveIn::add);
                 }
             }
         }
@@ -541,6 +543,68 @@ public class PeepholeOptimization implements Pass.MCPass {
                             return false;
                         };
 
+                        Supplier<Boolean> reluctantMove = () -> {
+                            // anything (dst a)
+                            // move b a (to be remove)
+                            // =>
+                            // anything (replace dst)
+                            if (!hasNoShift) {
+                                return true;
+                            }
+
+                            if (!(instr instanceof MCBinary ||
+                                    instr instanceof MCFma ||
+                                    instr instanceof MCLongMul ||
+                                    instr instanceof MCMove ||
+                                    instr instanceof MCLoad)) {
+                                return true;
+                            }
+
+                            var nxtInstrEntry = instrEntry.getNext();
+                            if (nxtInstrEntry == null) {
+                                return true;
+                            }
+                            var nxtInstr = nxtInstrEntry.getVal();
+                            if (!Objects.equals(lastUser, nxtInstr)) {
+                                return true;
+                            }
+                            if (!(nxtInstr instanceof MCMove)) {
+                                return true;
+                            }
+                            var movInstr = (MCMove) nxtInstr;
+
+                            MachineOperand dst = null;
+                            if (instr instanceof MCBinary) {
+                                dst = ((MCBinary) instr).getDst();
+                            } else if (instr instanceof MCFma) {
+                                dst = ((MCFma) instr).getDst();
+                            } else if (instr instanceof MCLongMul) {
+                                dst = ((MCLongMul) instr).getDst();
+                            } else if (instr instanceof MCMove) {
+                                dst = ((MCMove) instr).getDst();
+                            } else if (instr instanceof MCLoad) {
+                                dst = ((MCLoad) instr).getDst();
+                            }
+
+                            if (dst != null && dst.equals(movInstr.getRhs())) {
+                                var newDst = movInstr.getDst();
+                                if (instr instanceof MCBinary) {
+                                    ((MCBinary) instr).setDst(newDst);
+                                } else if (instr instanceof MCFma) {
+                                    ((MCFma) instr).setDst(newDst);
+                                } else if (instr instanceof MCLongMul) {
+                                    ((MCLongMul) instr).setDst(newDst);
+                                } else if (instr instanceof MCMove) {
+                                    ((MCMove) instr).setDst(newDst);
+                                } else if (instr instanceof MCLoad) {
+                                    ((MCLoad) instr).setDst(newDst);
+                                }
+                                movInstr.setRhs(newDst);
+                                return false;
+                            }
+                            return true;
+                        };
+
                         Supplier<Boolean> addLdrStrShift = () -> {
                             // add a, b, c, shift
                             // ldr/str x, [a, #0]
@@ -637,7 +701,7 @@ public class PeepholeOptimization implements Pass.MCPass {
                                     var isOffsetZero = storeInstr.getOffset().getState() == imm && storeInstr.getOffset().getImm() == 0;
 
                                     if (isSameData && isSameDstAddr && isOffsetZero &&
-                                        notSameLhsData && notSameRhsData) {
+                                            notSameLhsData && notSameRhsData) {
                                         storeInstr.setAddr(addInstr.getLhs());
                                         storeInstr.setOffset(addInstr.getRhs());
                                         storeInstr.setShift(addInstr.getShift().getType(), addInstr.getShift().getImm());
@@ -965,14 +1029,46 @@ public class PeepholeOptimization implements Pass.MCPass {
                             }
                         }
 
-                        done &= addSubLdrStr.get();
-                        done &= addLdrStrShift.get();
-                        done &= mulAddSub.get();
-                        done &= subSub.get();
+                        if (!addSubLdrStr.get()) {
+                            done = false;
+                            continue;
+                        }
 
-                        done &= movReplace.get();
-                        done &= movCmp.get();
-                        done &= movShift.get();
+                        if (!addLdrStrShift.get()) {
+                            done = false;
+                            continue;
+                        }
+
+                        if (!mulAddSub.get()) {
+                            done = false;
+                            continue;
+                        }
+
+                        if (!subSub.get()) {
+                            done = false;
+                            continue;
+                        }
+
+                        if (!movReplace.get()) {
+                            done = false;
+                            continue;
+                        }
+
+                        if (!reluctantMove.get()) {
+                            done = false;
+                            continue;
+                        }
+
+                        if (!movCmp.get()) {
+                            done = false;
+                            continue;
+                        }
+
+                        if (!movShift.get()) {
+                            done = false;
+                            continue;
+                        }
+
                     }
                 }
             }
