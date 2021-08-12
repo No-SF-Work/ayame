@@ -226,7 +226,7 @@ public class LocalArrayPromotion implements IRPass {
     }
     return f.getConstantArray(arrTy, curDimArr);
   }
-
+  private int promotednum=0;
   public void promote() {
     ArrayList<Constant> init = (ArrayList<Constant>) Arrays.stream(buffer)
         .collect(Collectors.toList());
@@ -238,9 +238,10 @@ public class LocalArrayPromotion implements IRPass {
     }
     Constant fixedInit = packConstArr(dims, init);
     ConstantArray arr = new ConstantArray(curArr.getAllocatedType(), init);
-    var gv = f.getGlobalvariable("promoted" + String.valueOf(counter), curArr.getAllocatedType(),
+    var gv = f.getGlobalvariable("promoted" + promotednum, curArr.getAllocatedType(),
         fixedInit,
         arr);
+    promotednum++;
     gv.setConst();
     stores.forEach(store -> {
       store.CORemoveAllOperand();
