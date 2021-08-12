@@ -16,7 +16,6 @@ import pass.ir.GlobalVariableLocalize;
 import pass.ir.InterproceduralAnalysis;
 import pass.ir.LCSSA;
 import pass.ir.LocalArrayPromotion;
-import pass.ir.LoopIdiom;
 import pass.ir.LoopInfoFullAnalysis;
 import pass.ir.LoopUnroll;
 import pass.ir.Mem2reg;
@@ -45,7 +44,7 @@ public class PassManager {
 
     irPasses.add(new LCSSA());
 //    irPasses.add(new EmitLLVM("beforeLoopIdiom.ll"));
-    irPasses.add(new LoopIdiom());
+//    irPasses.add(new LoopIdiom());
 //    irPasses.add(new EmitLLVM("afterLoopIdiom.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
