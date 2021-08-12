@@ -1022,6 +1022,49 @@ public class PeepholeOptimization implements Pass.MCPass {
                             }
                         };
 
+                        Supplier<Boolean> reluctantStr = () -> {
+                            // ldr - mla - ldr - str
+                            if (!(instr instanceof MCLoad)) {
+                                return true;
+                            }
+                            var instr1 = (MCLoad) instr;
+                            if (instr.toString().equals("\tldr\tr6,\t[r7,\tr4, lsl #2]\n")) {
+                                int a = 1;
+                            }
+                            var iEntry = instrEntry;
+
+                            iEntry = iEntry.getNext();
+                            if (iEntry == null || !(iEntry.getVal() instanceof MCFma)) return true;
+                            var instr2 = (MCFma) iEntry.getVal();
+
+                            iEntry = iEntry.getNext();
+                            if (iEntry == null || !(iEntry.getVal() instanceof MCStore)) return true;
+                            var instr3 = (MCStore) iEntry.getVal();
+
+                            iEntry = iEntry.getNext();
+                            if (iEntry == null || !(iEntry.getVal() instanceof MCStore)) return true;
+                            var instr4 = (MCStore) iEntry.getVal();
+
+                            var sameData = !instr4.getData().equals(instr2.getDst());
+                            var sameAddr = !instr4.getAddr().equals(instr2.getDst());
+                            var sameOff = !instr4.getOffset().equals(instr2.getDst());
+                            var sameShift = (instr1.getShift().getType().equals(instr4.getShift().getType())
+                                    && instr1.getShift().getImm() == instr4.getShift().getImm()); // todo: no shift
+                            var identicalLdr = !instr1.getDst().equals(instr1.getAddr()) && !instr1.getDst().equals(instr1.getOffset());
+                            var noCond = instr1.getCond() == Any && instr4.getCond() == Any;
+
+                            var match = instr4.getData().equals(instr1.getDst())
+                                    && instr4.getAddr().equals(instr1.getAddr())
+                                    && instr4.getOffset().equals(instr1.getOffset())
+                                    && sameData && sameAddr && sameOff && sameShift && identicalLdr && noCond;
+
+                            if (match) {
+                                iEntry.removeSelf();
+                                return false;
+                            }
+                            return true;
+                        };
+
                         if (instr instanceof MCMove) {
                             var imm = ((MCMove) instr).getRhs().getImm();
                             if (!CodeGenManager.canEncodeImm(imm)) {
@@ -1029,46 +1072,16 @@ public class PeepholeOptimization implements Pass.MCPass {
                             }
                         }
 
-                        if (!addSubLdrStr.get()) {
-                            done = false;
-                            continue;
-                        }
-
-                        if (!addLdrStrShift.get()) {
-                            done = false;
-                            continue;
-                        }
-
-                        if (!mulAddSub.get()) {
-                            done = false;
-                            continue;
-                        }
-
-                        if (!subSub.get()) {
-                            done = false;
-                            continue;
-                        }
-
-                        if (!movReplace.get()) {
-                            done = false;
-                            continue;
-                        }
-
-                        if (!reluctantMove.get()) {
-                            done = false;
-                            continue;
-                        }
-
-                        if (!movCmp.get()) {
-                            done = false;
-                            continue;
-                        }
-
-                        if (!movShift.get()) {
-                            done = false;
-                            continue;
-                        }
-
+                        done &= addSubLdrStr.get()
+                                && addLdrStrShift.get()
+                                && mulAddSub.get()
+                                && subSub.get()
+                                && movReplace.get()
+                                && reluctantMove.get()
+                                && movCmp.get()
+                                && movShift.get()
+                                && reluctantStr.get()
+                        ;
                     }
                 }
             }
