@@ -109,6 +109,15 @@ public class MachineCode implements Cloneable {
         this.shift.setType(t, i);
     }
 
+    public void setShiftReg(Reg r){
+        this.shift.setReg(r);
+    }
+
+    public void setShift(ArmAddition.ShiftType t,Reg reg){
+        dealReg(this.getShift().getReg(),reg,true);
+        this.shift.setType(t,reg);
+    }
+
     public ArmAddition.CondType getCond() {
         return ArmAddition.CondType.Any;
     }
