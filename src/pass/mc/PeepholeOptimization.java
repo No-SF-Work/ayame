@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import backend.reg.Reg;
 import pass.Pass;
 import util.Pair;
 
@@ -276,6 +277,10 @@ public class PeepholeOptimization implements Pass.MCPass {
     }
 
     private void replaceUseReg(MachineCode instr, MachineOperand origin, MachineOperand target) {
+        if (instr.getShift().isReg && instr.getShift().getReg().equals(origin)) {
+            instr.getShift().setReg((Reg) target);
+        }
+
         if (instr instanceof MCBinary) {
             var binaryInstr = (MCBinary) instr;
             if (binaryInstr.getLhs().equals(origin)) {
