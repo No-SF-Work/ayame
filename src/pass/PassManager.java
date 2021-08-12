@@ -17,6 +17,7 @@ import pass.ir.InterproceduralAnalysis;
 import pass.ir.LCSSA;
 import pass.ir.LoopIdiom;
 import pass.ir.LoopInfoFullAnalysis;
+import pass.ir.LoopMergeLastBreak;
 import pass.ir.LoopUnroll;
 import pass.ir.MarkConstantArray;
 import pass.ir.Mem2reg;
@@ -82,6 +83,7 @@ public class PassManager {
     irPasses.add(new GVNGCM());
 
     irPasses.add(new LCSSA());
+    irPasses.add(new LoopMergeLastBreak());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
 
