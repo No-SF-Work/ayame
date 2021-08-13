@@ -292,6 +292,8 @@ public class LoopMergeLastBreak implements IRPass {
           .get(((Phi) inst).getIncomingVals().get(headerPredIndexOfExit));
       inst.CoReplaceOperandByIndex(headerPredIndexOfExit, headerIncoming);
     }
+
+//    switchHeaderCmp(loop);
   }
 
   public boolean structureJudge(Loop loop) {
@@ -304,5 +306,28 @@ public class LoopMergeLastBreak implements IRPass {
   public boolean isFourArithOp(Instruction inst) {
     return inst.tag == TAG_.Add || inst.tag == TAG_.Sub || inst.tag == TAG_.Mul
         || inst.tag == TAG_.Div;
+  }
+
+  public void switchHeaderCmp(Loop loop) {
+    var header = loop.getLoopHeader();
+    var headerBr = header.getList().getLast().getVal();
+    assert headerBr.getOperands().size() == 3;
+    var headerCmp = headerBr.getOperands().get(0);
+    BinaryInst cmp = (BinaryInst) headerCmp;
+    cmp.tag = getOppCmpTag(cmp.tag);
+    var trueBB = headerBr.getOperands().get(1);
+    var falseBB = headerBr.getOperands().get(2);
+    headerBr.CoReplaceOperandByIndex(1, falseBB);
+    headerBr.CoReplaceOperandByIndex(2, trueBB);
+  }
+
+  public TAG_ getOppCmpTag(TAG_ tag) {
+    return switch (tag) {
+      case Lt -> TAG_.Ge;
+      case Le -> TAG_.Gt;
+      case Gt -> TAG_.Le;
+      case Ge -> TAG_.Lt;
+      default -> tag;
+    };
   }
 }
