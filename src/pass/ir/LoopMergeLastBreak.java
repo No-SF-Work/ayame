@@ -6,6 +6,7 @@ import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.values.BasicBlock;
 import ir.values.Function;
+import ir.values.UndefValue;
 import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
@@ -14,15 +15,14 @@ import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
-import pass.Pass.IRPass;
-import util.LoopUtils;
-import util.Mylogger;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
+import pass.Pass.IRPass;
+import util.LoopUtils;
+import util.Mylogger;
 
 public class LoopMergeLastBreak implements IRPass {
 
@@ -118,7 +118,8 @@ public class LoopMergeLastBreak implements IRPass {
     }
 
     // 假设计算都在 header 中，header 的 br 对应 break，latch 的判断对应 while
-    // header 的计算尽可能移到 latch 中，在 header 和原 preheader 之间新建一个 preheader，进行一次 header 中的计算，并作为循环的新 preheader
+    // header 的计算尽可能移到 latch 中，在 header 和原 preheader 之间新建一个 preheader，并作为循环的新 preheader
+    // preHeader 和 secondPreHeader 之间插入一个基本块进行运算，指令数较小时可被后端优化成条件执行
     // start transform
     // build secondPreHeader
     HashMap<Value, Value> lastValueMap = new HashMap<>();
@@ -132,14 +133,14 @@ public class LoopMergeLastBreak implements IRPass {
         lastValueMap.put(phi, phi.getIncomingVals().get(preHeaderIndex));
       }
     }
-    // 构建 secondPreHeader，Phi 通过 remap 替换，Br 另外构建新的，跳转到 header 和 exit，Br 对应的 icmp 是 preheader 的 icmp
+    // 构建 calcBB
     HashMap<Value, Value> valueMap = new HashMap<>();
-    BasicBlock secondPreHeader = LoopUtils.getLoopBasicBlockCopy(header, valueMap);
-    currLoopInfo.addBBToLoop(secondPreHeader, loop.getParentLoop());
+    BasicBlock calcBB = LoopUtils.getLoopBasicBlockCopy(header, valueMap);
+    currLoopInfo.addBBToLoop(calcBB, loop.getParentLoop());
     for (var phi : originPhis) {
       valueMap.put(phi, lastValueMap.get(phi));
     }
-    for (var instNode = secondPreHeader.getList().getEntry(); instNode != null; ) {
+    for (var instNode = calcBB.getList().getEntry(); instNode != null; ) {
       var inst = instNode.getVal();
       var tmp = instNode.getNext();
       if (inst instanceof Phi || inst instanceof BrInst) {
@@ -151,12 +152,39 @@ public class LoopMergeLastBreak implements IRPass {
       instNode = tmp;
     }
 
-    // secondPreHeader 的 icmp 和 br
+    // preHeader 跳转到 calcBB
     var preBrInst = preHeader.getList().getLast().getVal();
     if (preBrInst.getOperands().size() == 1) {
       return;
     }
-    assert preBrInst.getOperands().size() == 3;
+    preBrInst.CoReplaceOperandByIndex(1, calcBB);
+
+    // 构建 secondPreHeader，Phi 通过 remap 替换，Br 另外构建新的，跳转到 header 和 exit，Br 对应的 icmp 是 preheader 的 icmp
+    BasicBlock secondPreHeader = factory.buildBasicBlock("", header.getParent());
+    currLoopInfo.addBBToLoop(secondPreHeader, loop.getParentLoop());
+
+    // calcBB 的 br
+    factory.buildBr(secondPreHeader, calcBB);
+    // preHeader 跳转到 secondPreHeader
+    preBrInst.CoReplaceOperandByIndex(2, secondPreHeader);
+
+
+    // secondPreHeader 的 phi：复制 header 的 phi。来自 preHeader 不变，来自 calcBB remap
+    // 维护完成后修改 lastValueMap 的 phi
+    int predIndex = header.getPredecessor_().indexOf(preHeader);
+    int latchPredIndex = header.getPredecessor_().indexOf(latchBlock);
+    for (var phi : originPhis) {
+      ArrayList<Value> incoming = new ArrayList<>();
+      incoming.add(new UndefValue());
+      incoming.add(new UndefValue());
+      var calcIncoming = valueMap.get(phi.getIncomingVals().get(latchPredIndex));
+      incoming.set(predIndex, phi.getIncomingVals().get(predIndex));
+      incoming.set(latchPredIndex, calcIncoming);
+      var newPhi = new Phi(TAG_.Phi, factory.getI32Ty(), 2, incoming, secondPreHeader);
+      valueMap.put(phi.getIncomingVals().get(latchPredIndex), newPhi);
+    }
+
+    // secondPreHeader 的 icmp 和 br
     var preCmpInst = (BinaryInst) preBrInst.getOperands().get(0);
     // secondPreHeader 中的 icmp 是 preheader 的复制，不过迭代器位置上是 stepInst 在 secondPreHeader 中的对应 value（只适用于最简单情况）（可以换成
     // latchCmpInst 的 remap）
@@ -166,45 +194,52 @@ public class LoopMergeLastBreak implements IRPass {
     lhs = preIndVarEndIndex == 0 ? indVarEnd : valueMap.get(stepInst);
     rhs = preIndVarEndIndex == 1 ? indVarEnd : valueMap.get(stepInst);
     BinaryInst secondCmpInst = factory.buildBinary(preCmpInst.tag, lhs, rhs, secondPreHeader);
-    BrInst secondBrInst = factory.buildBr(secondCmpInst,
-        (BasicBlock) (preBrInst.getOperands().get(1)),
-        (BasicBlock) (preBrInst.getOperands().get(2)),
-        secondPreHeader);
-    preBrInst.CoReplaceOperandByIndex(1, secondPreHeader);
+
+    BasicBlock trueBB = preBrInst.getOperands().get(1) == calcBB ? header : exit;
+    BasicBlock falseBB = preBrInst.getOperands().get(1) == calcBB ? exit : header;
+    factory.buildBr(secondCmpInst, trueBB, falseBB, secondPreHeader);
+    preBrInst.CoReplaceOperandByIndex(2, secondPreHeader);
     // 手动构造的代码生成出的 ir 结构：secondPreHeader/header/latch 跳到的 exit 只有一个 phi，preheader 和 exit 跳到一个基本块，里面是真正的
     // exit，出现性能问题再改成这样
 
     // 维护前驱后继关系
     preHeader.getSuccessor_().remove(header);
+    preHeader.getSuccessor_().remove(exit);
     preHeader.getSuccessor_().add(secondPreHeader);
-    secondPreHeader.getPredecessor_().add(preHeader);
+    preHeader.getSuccessor_().add(calcBB);
+    calcBB.getPredecessor_().add(preHeader);
+    calcBB.getSuccessor_().add(secondPreHeader);
+    secondPreHeader.getPredecessor_().add(predIndex == 0 ? preHeader : calcBB);
+    secondPreHeader.getPredecessor_().add(predIndex == 1 ? preHeader : calcBB);
     secondPreHeader.getSuccessor_().add(header);
     secondPreHeader.getSuccessor_().add(exit);
     header.getPredecessor_().set(preHeaderIndex, secondPreHeader);
-    exit.getPredecessor_().add(secondPreHeader);
+    int preHeaderIndexOfExit = exit.getPredecessor_().indexOf(preHeader);
+    exit.getPredecessor_().set(preHeaderIndexOfExit, secondPreHeader);
 
     // 维护 phi（header 和 exit）
     // header: preHeader 来源替换成 secondPreHeader 来源，即 valueMap.get(incomingVal.get(latchIndex))
-    int latchPredIndex = header.getPredecessor_().indexOf(latchBlock);
     for (var instNode : header.getList()) {
       var inst = instNode.getVal();
       if (!(inst instanceof Phi)) {
         break;
       }
-      var incomingVal = valueMap.get(inst.getOperands().get(latchPredIndex));
+      var incomingVal = valueMap.get(((Phi) inst).getIncomingVals().get(latchPredIndex));
       inst.CoReplaceOperandByIndex(preHeaderIndex,
           incomingVal); // preHeaderIndex 上对应的是 secondPreHeader
     }
 
     // exit: secondPreHeader 来源的 incomingVal 是 valueMap.get(incomingVal.get(latchIndex))
     int latchPredIndexOfExit = exit.getPredecessor_().indexOf(latchBlock);
+    int headerIndexOfExit = exit.getPredecessor_().indexOf(header);
     for (var instNode : exit.getList()) {
       var inst = instNode.getVal();
       if (!(inst instanceof Phi)) {
         break;
       }
-      var incomingVal = valueMap.get(inst.getOperands().get(latchPredIndexOfExit));
-      inst.COaddOperand(incomingVal);
+      var incomingVal = ((Phi) inst).getIncomingVals().get(latchPredIndexOfExit);
+      incomingVal = valueMap.get(incomingVal);
+      inst.CoReplaceOperandByIndex(preHeaderIndexOfExit, incomingVal);
     }
 
     // header 中的计算移到 latch
