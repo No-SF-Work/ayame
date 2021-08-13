@@ -95,6 +95,12 @@ public class RegAllocator implements MCPass {
     }
 
     private void replaceReg(MachineCode instr, MachineOperand origin, MachineOperand target) {
+        if (instr.getShift().isReg) {
+            if (instr.getShift().getReg().equals(origin)) {
+                instr.setShiftReg((Reg) target);
+            }
+        }
+
         if (instr instanceof MCBinary) {
             var binaryInstr = (MCBinary) instr;
             if (binaryInstr.getDst().equals(origin)) {
@@ -235,8 +241,7 @@ public class RegAllocator implements MCPass {
                             var uses = instr.getUse();
 
                             if (instr instanceof MCMove &&
-                                    instr.getCond() == ArmAddition.CondType.Any &&
-                                    (instr.getShift().getType() == ArmAddition.ShiftType.None || instr.getShift().getImm() == 0)) {
+                                    instr.getCond() == ArmAddition.CondType.Any && instr.getShift().isNone()) {
                                 var mcInstr = (MCMove) instr;
                                 var dst = mcInstr.getDst();
                                 var rhs = mcInstr.getRhs();

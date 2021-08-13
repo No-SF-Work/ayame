@@ -141,14 +141,16 @@ public class ArmAddition {
             Shift shift = (Shift) o;
             if (imm == shift.imm && t == shift.t) {
                 return true;
-            } else {
+            } else if (!isReg) {
                 return imm == 0 && shift.imm == 0;
+            } else {
+                return reg.equals(shift.reg);
             }
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(imm, t, isNone);
+            return Objects.hash(imm, t, reg);
         }
     }
 }
