@@ -57,7 +57,7 @@ public class PassManager {
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
-//    irPasses.add(new FunctionInline());
+    irPasses.add(new FunctionInline());
     irPasses.add(new InterProceduralDCE());
 
     irPasses.add(new BranchOptimization());
