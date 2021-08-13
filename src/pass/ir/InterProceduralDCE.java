@@ -39,6 +39,7 @@ public class InterProceduralDCE implements IRPass {
   HashSet<Function> needtokeep = new HashSet<>();
   HashSet<Value> cd = new HashSet<>();//can't be deleted
   private boolean changed = false;
+  HashSet<Function> optedFunc = new HashSet<>();
 
   @Override
   public void run(MyModule m) {
@@ -50,7 +51,10 @@ public class InterProceduralDCE implements IRPass {
         cd.add(node.getVal());
       }
     }
-    removeUseLessRet();
+    do {
+      changed = false;
+      removeUseLessRet();
+    } while (changed);
   }
 
   /*
@@ -73,9 +77,7 @@ public class InterProceduralDCE implements IRPass {
   //找到返回值没用的函数，把所有返回值改成ret0
   private void removeUseLessRet() {
     for (INode<Function, MyModule> fnd : m.__functions) {
-
       var fun = fnd.getVal();
-
       if (!fun.isBuiltin_() && fun.getType().getRetType().isIntegerTy()) {
         processOneFunc(fun);
       }
@@ -86,7 +88,9 @@ public class InterProceduralDCE implements IRPass {
     var isUseful = false;
     var recursion = false;
     ArrayList<CallInst> innerCall = new ArrayList<>();
-
+    if (optedFunc.contains(fun)) {
+      return;
+    }
     //analyse all call
     for (Use use : fun.getUsesList()) {
       var inst = use.getUser();
@@ -117,6 +121,8 @@ public class InterProceduralDCE implements IRPass {
         }
       }
       //ok 是我们想要的形式
+      changed = true;
+      optedFunc.add(fun);
       fun.getList_().forEach(
           bb -> {
             bb.getVal().getList().forEach(instnd -> {
