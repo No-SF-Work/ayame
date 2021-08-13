@@ -57,7 +57,7 @@ public class PassManager {
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
-    irPasses.add(new FunctionInline());
+//    irPasses.add(new FunctionInline());
     irPasses.add(new InterProceduralDCE());
 
     irPasses.add(new BranchOptimization());
@@ -76,6 +76,10 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM("beforeMerge.ll"));
     irPasses.add(new LoopMergeLastBreak());
 //    irPasses.add(new EmitLLVM("afterMerge.ll"));
+    irPasses.add(new BranchOptimization());
+    irPasses.add(new GVNGCM(true));
+
+    irPasses.add(new LCSSA());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
 
