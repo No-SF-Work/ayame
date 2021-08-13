@@ -387,7 +387,12 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable coalesce = () -> {
-                    var m = worklistMoves.iterator().next();
+                    var m = worklistMoves.stream().max((l, r) -> {
+                        var value1 = l.mb.getmclist().getNumNode();
+                        var value2 = r.mb.getmclist().getNumNode();
+                        return Double.compare(value1, value2);
+                    }).get();
+//                    var m = worklistMoves.iterator().next();
                     var u = getAlias.apply(m.getDst());
                     var v = getAlias.apply(m.getRhs());
                     if (v.isPrecolored()) {
@@ -444,7 +449,6 @@ public class RegAllocator implements MCPass {
                     var m = spillWorklist.stream().max((l, r) -> {
                         var value1 = degree.getOrDefault(l, 0).doubleValue() / Math.pow(1.4, loopDepth.getOrDefault(l, 0));
                         var value2 = degree.getOrDefault(r, 0).doubleValue() / Math.pow(1.4, loopDepth.getOrDefault(r, 0));
-
                         return Double.compare(value1, value2);
                     }).get();
                     simplifyWorklist.add(m);
