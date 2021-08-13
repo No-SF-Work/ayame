@@ -161,6 +161,22 @@ public class Loop {
     return (Instruction) brInst.getOperands().get(0);
   }
 
+  public BasicBlock getPreHeader() {
+    // preHeader 有多个时失效
+    BasicBlock preHeader = null;
+    int cnt = 0;
+    for (var pred : this.loopHeader.getPredecessor_()) {
+      if (pred.getLoopDepth() != this.loopHeader.getLoopDepth()) {
+        preHeader = pred;
+        cnt++;
+      }
+    }
+    if (cnt != 1) {
+      return null;
+    }
+    return preHeader;
+  }
+
   // [Deprecated] 循环边界
   public Value getFinalIndVar() {
     var latchCmpInst = getLatchCmpInst();

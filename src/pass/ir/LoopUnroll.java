@@ -16,7 +16,7 @@ import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst.CallInst;
 import pass.Pass.IRPass;
 import util.Mylogger;
-import util.UnrollUtils;
+import util.LoopUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,7 +56,7 @@ public class LoopUnroll implements IRPass {
 
     // run on loop manager
     for (var topLoop : this.currLoopInfo.getTopLevelLoops()) {
-      UnrollUtils.addLoopToQueue(topLoop, loopQueue);
+      LoopUtils.addLoopToQueue(topLoop, loopQueue);
     }
     while (!loopQueue.isEmpty()) {
       var loop = loopQueue.remove();
@@ -75,7 +75,7 @@ public class LoopUnroll implements IRPass {
     }
 
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
-    UnrollUtils.rearrangeBBOrder(loop);
+    LoopUtils.rearrangeBBOrder(loop);
 
     if (loop.getTripCount() != null) {
       return;
@@ -171,7 +171,7 @@ public class LoopUnroll implements IRPass {
     // 构建基本块，复制指令，删去 phi，更新 map，基本块加入循环
     for (var bb : loopBlocks) {
       HashMap<Value, Value> valueMap = new HashMap<>();
-      BasicBlock newBB = UnrollUtils.getLoopBasicBlockCopy(bb, valueMap);
+      BasicBlock newBB = LoopUtils.getLoopBasicBlockCopy(bb, valueMap);
 
       // 循环头中的 phi 直接用 incomingVal 替换
       if (bb == header) {
@@ -206,7 +206,7 @@ public class LoopUnroll implements IRPass {
     // 更新新基本块中的指令操作数，顺便维护新基本块之间的前驱后继关系
     for (var newBB : newBlocks) {
       newBB.getList().forEach(instNode -> {
-        UnrollUtils.remapInstruction(instNode.getVal(), lastValueMap);
+        LoopUtils.remapInstruction(instNode.getVal(), lastValueMap);
       });
       if (newBB != secondHeader) {
         for (var key : lastValueMap.keySet()) {
@@ -307,18 +307,18 @@ public class LoopUnroll implements IRPass {
         continue;
       }
 
-      var copy = UnrollUtils.copyInstruction(inst);
+      var copy = LoopUtils.copyInstruction(inst);
       copy.node.insertAtEnd(exitIfBB.getList());
-      UnrollUtils.remapInstruction(copy, lastValueMap);
+      LoopUtils.remapInstruction(copy, lastValueMap);
       lastValueMap.put(iterValueMap.get(inst), copy);
     }
-    var copyPhi = UnrollUtils.copyInstruction(loop.getIndVar());
-    var copyIcmp = UnrollUtils.copyInstruction(latchCmpInst);
+    var copyPhi = LoopUtils.copyInstruction(loop.getIndVar());
+    var copyIcmp = LoopUtils.copyInstruction(latchCmpInst);
     copyPhi.node.insertAtEnd(exitIfBB.getList());
-    UnrollUtils.remapInstruction(copyPhi, lastValueMap);
+    LoopUtils.remapInstruction(copyPhi, lastValueMap);
 
-    var copyIndVarCondInst = UnrollUtils.copyInstruction(loop.getIndVar());
-    UnrollUtils.remapInstruction(copyIndVarCondInst, lastValueMap);
+    var copyIndVarCondInst = LoopUtils.copyInstruction(loop.getIndVar());
+    LoopUtils.remapInstruction(copyIndVarCondInst, lastValueMap);
     copyIndVarCondInst
         .CoReplaceOperandByIndex(latchPredIndex, lastValueMap.get(loop.getIndVarCondInst()));
     copyIndVarCondInst.node.insertAtEnd(exitIfBB.getList());
@@ -337,7 +337,7 @@ public class LoopUnroll implements IRPass {
     BasicBlock restBBHeader = null, restBBLast = null;
     for (var bb : loopBlocks) {
       HashMap<Value, Value> valueMap = new HashMap<>();
-      BasicBlock newBB = UnrollUtils.getLoopBasicBlockCopy(bb, valueMap);
+      BasicBlock newBB = LoopUtils.getLoopBasicBlockCopy(bb, valueMap);
       if (bb == header) {
         for (var phi : originPhis) {
           var newPhi = (Phi) valueMap.get(phi);
@@ -368,7 +368,7 @@ public class LoopUnroll implements IRPass {
     assert restBBHeader != null && restBBLast != null;
     for (var newBB : restBBs) {
       newBB.getList().forEach(instNode -> {
-        UnrollUtils.remapInstruction(instNode.getVal(), lastValueMap);
+        LoopUtils.remapInstruction(instNode.getVal(), lastValueMap);
       });
       if (newBB != restBBHeader) {
         for (var key : lastValueMap.keySet()) {

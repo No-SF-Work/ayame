@@ -24,10 +24,15 @@ public class MCMove extends MachineCode {
         }
         if (rhs instanceof PhyReg) {
             ((VirtualReg) dst).setUnMoveable();
+            return;
         } else if (rhs.getState() == MachineOperand.state.imm) {
             ((VirtualReg) dst).setDef(this, 1);
         } else if (!getShift().isNone()) {
-            ((VirtualReg) dst).setDef(this, ((VirtualReg) rhs).getCost() + 2);
+            int c = 0;
+            if(getShift().isReg){
+                c = ((VirtualReg)(getShift().getReg())).getCost();
+            }
+            ((VirtualReg) dst).setDef(this, ((VirtualReg) rhs).getCost() + 2 + c);
         } else {
             ((VirtualReg) dst).setDef(this, ((VirtualReg) rhs).getCost() + 1);
         }

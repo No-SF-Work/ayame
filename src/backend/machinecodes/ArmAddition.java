@@ -1,5 +1,9 @@
 package backend.machinecodes;
 
+import backend.reg.MachineOperand;
+import backend.reg.PhyReg;
+import backend.reg.Reg;
+
 import java.util.Objects;
 
 public class ArmAddition {
@@ -56,16 +60,29 @@ public class ArmAddition {
 
         private int imm = 0;
 
+        public Reg getReg() {
+            return reg;
+        }
+
+        private Reg reg=null;
+
         private ShiftType t = ShiftType.None;
 
         private boolean isNone = true;
 
         public boolean isNone() {
-            return t == ShiftType.None || imm == 0;
+            return t == ShiftType.None || (imm == 0 && reg == null);
         }
+
+        public boolean isReg = false;
 
         public ShiftType getType() {
             return t;
+        }
+
+        public void setReg(Reg reg){
+            this.reg = reg;
+            isReg = true;
         }
 
         public int getImm() {
@@ -77,9 +94,15 @@ public class ArmAddition {
             this.t = t;
         }
 
+        public void setType(ShiftType t, Reg reg) {
+            this.reg = reg;
+            isReg = true;
+            this.t = t;
+        }
+
         @Override
         public String toString() {
-            if (t == ShiftType.None || imm == 0) {
+            if (t == ShiftType.None || (imm == 0 && reg == null)) {
                 return "";
             }
             String op = ", ";
@@ -93,7 +116,12 @@ public class ArmAddition {
                 op += "";
                 assert (false);
             }
-            op += " #" + ((Integer) imm).toString();
+            if(reg == null){
+                op += " #" + ((Integer) imm).toString();
+            }
+            else{
+                op += " "+reg.getName();
+            }
             return op;
         }
 
@@ -113,14 +141,16 @@ public class ArmAddition {
             Shift shift = (Shift) o;
             if (imm == shift.imm && t == shift.t) {
                 return true;
-            } else {
+            } else if (!isReg) {
                 return imm == 0 && shift.imm == 0;
+            } else {
+                return reg.equals(shift.reg);
             }
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(imm, t, isNone);
+            return Objects.hash(imm, t, reg);
         }
     }
 }
