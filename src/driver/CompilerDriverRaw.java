@@ -76,19 +76,24 @@ public class CompilerDriverRaw {
       pm.openedPasses_.add("interproceduralAnalysis");
       if (Config.getInstance().isO2) {
         pm.openedPasses_.add("gvlocalize");
-        pm.openedPasses_.add("promotion");
         pm.openedPasses_.add("branchOptimization");
         pm.openedPasses_.add("emitllvm");
         pm.openedPasses_.add("deadcodeemit");
         pm.openedPasses_.add("funcinline");
-        pm.openedPasses_.add("markConstantArray");
         pm.openedPasses_.add("interproceduraldce");
+        pm.openedPasses_.add("markConstantArray");
         pm.openedPasses_.add("ListScheduling");
         pm.openedPasses_.add("Peephole");
         pm.openedPasses_.add("CondExec");
         pm.openedPasses_.add("loopInfoFullAnalysis");
         pm.openedPasses_.add("LCSSA");
         pm.openedPasses_.add("loopUnroll");
+        pm.openedPasses_.add("constantLoopUnroll");
+        pm.openedPasses_.add("MergeMachineBlock");
+        pm.openedPasses_.add("redundantLoop");
+//        pm.openedPasses_.add("loopIdiom");
+//        pm.openedPasses_.add("loopMergeLastBreak");
+        pm.openedPasses_.add("promotion");
       }
 
       if (source.contains("register_alloc")) {
