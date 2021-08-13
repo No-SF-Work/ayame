@@ -5,6 +5,7 @@ import ir.MyModule;
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
 import pass.ir.*;
+import pass.mc.ListScheduling;
 import pass.mc.MergeMachineBlock;
 import pass.mc.PeepholeOptimization;
 import pass.mc.RegAllocator;
@@ -87,6 +88,8 @@ public class PassManager {
     irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());
+    mcPasses.add(new PeepholeOptimization());
+    mcPasses.add(new ListScheduling());
     mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new MergeMachineBlock());
   }
