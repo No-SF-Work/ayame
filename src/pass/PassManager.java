@@ -27,14 +27,14 @@ public class PassManager {
     irPasses.add(new Mem2reg());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
-
+    irPasses.add(new InterProceduralDCE());
     irPasses.add(new FunctionInline());
     irPasses.add(new EmitLLVM("Promotion.ll"));
     irPasses.add(new MarkConstantArray());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new DeadCodeEmit());
-
+    irPasses.add(new InterProceduralDCE());
     irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new LCSSA());
     irPasses.add(new LoopUnroll());
@@ -52,6 +52,7 @@ public class PassManager {
 //    irPasses.add(new GVNGCM());
 
     irPasses.add(new DeadCodeEmit());
+    irPasses.add(new InterProceduralDCE());
     irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new EmitLLVM());
 

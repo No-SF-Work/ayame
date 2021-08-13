@@ -43,17 +43,14 @@ public class InterProceduralDCE implements IRPass {
   @Override
   public void run(MyModule m) {
     this.m = m;
-    m.__functions.forEach(
-        node -> {
-          var name = node.getVal().getName();
-          if (name.equals("putch") || name.equals("putarray") || name.equals("putint")) {
-            funcs.add(node.getVal());
-            cd.add(node.getVal());
-          }
-        }
-    );
+    for (INode<Function, MyModule> node : m.__functions) {
+      var name = node.getVal().getName();
+      if (name.equals("putch") || name.equals("putarray") || name.equals("putint")) {
+        funcs.add(node.getVal());
+        cd.add(node.getVal());
+      }
+    }
     removeUseLessRet();
-
   }
 
   /*
