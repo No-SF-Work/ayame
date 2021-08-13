@@ -87,6 +87,7 @@ public class CompilerDriverRaw {
       File f = new File(target);
       FileWriter fw = new FileWriter(f);
       fw.append(cgm.genARM());
+      fw.append("@ver: 1");
       fw.close();
     } catch (IOException e) {
       e.printStackTrace();
