@@ -113,6 +113,7 @@ public class CompilerDriver {
         pm.openedPasses_.add("MergeMachineBlock");
         pm.openedPasses_.add("redundantLoop");
         pm.openedPasses_.add("loopIdiom");
+        pm.openedPasses_.add("loopMergeLastBreak");
         pm.openedPasses_.add("promotion");
       }
 

@@ -18,6 +18,7 @@ import pass.ir.LCSSA;
 import pass.ir.LocalArrayPromotion;
 import pass.ir.LoopIdiom;
 import pass.ir.LoopInfoFullAnalysis;
+import pass.ir.LoopMergeLastBreak;
 import pass.ir.LoopUnroll;
 import pass.ir.Mem2reg;
 import pass.ir.RedundantLoop;
@@ -78,9 +79,12 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM("beforeRedundant.ll"));
     irPasses.add(new RedundantLoop());
     irPasses.add(new BranchOptimization());
-    irPasses.add(new GVNGCM());
+    irPasses.add(new GVNGCM(true));
 
     irPasses.add(new LCSSA());
+    irPasses.add(new EmitLLVM("beforeMerge.ll"));
+    irPasses.add(new LoopMergeLastBreak());
+    irPasses.add(new EmitLLVM("afterMerge.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
 
