@@ -14,14 +14,15 @@ import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
+import pass.Pass.IRPass;
+import util.LoopUtils;
+import util.Mylogger;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
-import pass.Pass.IRPass;
-import util.LoopUtils;
-import util.Mylogger;
 
 public class LoopMergeLastBreak implements IRPass {
 
@@ -134,6 +135,7 @@ public class LoopMergeLastBreak implements IRPass {
     // 构建 secondPreHeader，Phi 通过 remap 替换，Br 另外构建新的，跳转到 header 和 exit，Br 对应的 icmp 是 preheader 的 icmp
     HashMap<Value, Value> valueMap = new HashMap<>();
     BasicBlock secondPreHeader = LoopUtils.getLoopBasicBlockCopy(header, valueMap);
+    currLoopInfo.addBBToLoop(secondPreHeader, loop.getParentLoop());
     for (var phi : originPhis) {
       valueMap.put(phi, lastValueMap.get(phi));
     }
@@ -153,7 +155,8 @@ public class LoopMergeLastBreak implements IRPass {
     var preBrInst = preHeader.getList().getLast().getVal();
     assert preBrInst.getOperands().size() == 3;
     var preCmpInst = (BinaryInst) preBrInst.getOperands().get(0);
-    // secondPreHeader 中的 icmp 是 preheader 的复制，不过迭代器位置上是 stepInst 在 secondPreHeader 中的对应 value（只适用于最简单情况）（可以换成 latchCmpInst 的 remap）
+    // secondPreHeader 中的 icmp 是 preheader 的复制，不过迭代器位置上是 stepInst 在 secondPreHeader 中的对应 value（只适用于最简单情况）（可以换成
+    // latchCmpInst 的 remap）
     // FIXME maybe bug here
     var preIndVarEndIndex = preCmpInst.getOperands().indexOf(indVarEnd);
     Value lhs = null, rhs = null;
@@ -165,7 +168,8 @@ public class LoopMergeLastBreak implements IRPass {
         (BasicBlock) (preBrInst.getOperands().get(2)),
         secondPreHeader);
     preBrInst.CoReplaceOperandByIndex(1, secondPreHeader);
-    // 手动构造的代码生成出的 ir 结构：secondPreHeader/header/latch 跳到的 exit 只有一个 phi，preheader 和 exit 跳到一个基本块，里面是真正的 exit，出现性能问题再改成这样
+    // 手动构造的代码生成出的 ir 结构：secondPreHeader/header/latch 跳到的 exit 只有一个 phi，preheader 和 exit 跳到一个基本块，里面是真正的
+    // exit，出现性能问题再改成这样
 
     // 维护前驱后继关系
     preHeader.getSuccessor_().remove(header);
@@ -212,7 +216,19 @@ public class LoopMergeLastBreak implements IRPass {
         for (var phi : originPhis) {
           if (phi.getIncomingVals().contains(inst)) {
             instNode.removeSelf();
-            instNode.insertAtSecondToEnd(latchBlock.getList());
+
+            boolean hasUser = false;
+            for (var latchInstNode : latchBlock.getList()) {
+              var latchInst = latchInstNode.getVal();
+              if (latchInst.getOperands().contains(inst)) {
+                instNode.insertBefore(latchInst.node);
+                hasUser = true;
+                break;
+              }
+            }
+            if (!hasUser) {
+              instNode.insertAtSecondToEnd(latchBlock.getList());
+            }
             lastValueMap.put(inst, phi);
             break;
           }
@@ -226,6 +242,17 @@ public class LoopMergeLastBreak implements IRPass {
         LoopUtils.remapInstruction(instNode.getVal(), lastValueMap);
       }
     });
+
+    // header 到 exit 的 phi 也需要更新
+    int headerPredIndexOfExit = exit.getPredecessor_().indexOf(header);
+    for (var instNode: exit.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+      var headerIncoming = lastValueMap.get(((Phi) inst).getIncomingVals().get(headerPredIndexOfExit));
+      inst.CoReplaceOperandByIndex(headerPredIndexOfExit, headerIncoming);
+    }
   }
 
   public boolean structureJudge(Loop loop) {
