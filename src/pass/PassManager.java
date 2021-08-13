@@ -43,17 +43,13 @@ public class PassManager {
     irPasses.add(new GVNGCM());
 
     irPasses.add(new LCSSA());
-//    irPasses.add(new EmitLLVM("beforeUnroll.ll"));
     irPasses.add(new LoopUnroll());
-//    irPasses.add(new EmitLLVM("afterUnroll.ll"));
     irPasses.add(new InterProceduralDCE());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
     irPasses.add(new LCSSA());
-//    irPasses.add(new EmitLLVM("beforeTwiceUnroll.ll"));
     irPasses.add(new LoopUnroll());
-//    irPasses.add(new EmitLLVM("afterTwiceUnroll.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
@@ -66,16 +62,13 @@ public class PassManager {
     irPasses.add(new GVNGCM());
 
     irPasses.add(new LCSSA());
-//    irPasses.add(new EmitLLVM("beforeRedundant.ll"));
     irPasses.add(new RedundantLoop());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
 
     irPasses.add(new InterProceduralDCE());
     irPasses.add(new LCSSA());
-//    irPasses.add(new EmitLLVM("beforeMerge.ll"));
     irPasses.add(new LoopMergeLastBreak());
-//    irPasses.add(new EmitLLVM("afterMerge.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
 
