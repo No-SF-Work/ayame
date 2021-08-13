@@ -137,7 +137,10 @@ public class EmitLLVM implements IRPass {
                         }
                       }
                       // === end print loop info ===
-
+                      sb.append("             ;user ->  ");
+                      instVal.getUsesList().forEach(use->{
+                        sb.append(use.getUser().getName()+" ");
+                      });
                       sb.append("\n");
                     }
                   }
