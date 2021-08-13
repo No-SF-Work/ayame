@@ -153,6 +153,9 @@ public class LoopMergeLastBreak implements IRPass {
 
     // secondPreHeader 的 icmp 和 br
     var preBrInst = preHeader.getList().getLast().getVal();
+    if (preBrInst.getOperands().size() == 1) {
+      return;
+    }
     assert preBrInst.getOperands().size() == 3;
     var preCmpInst = (BinaryInst) preBrInst.getOperands().get(0);
     // secondPreHeader 中的 icmp 是 preheader 的复制，不过迭代器位置上是 stepInst 在 secondPreHeader 中的对应 value（只适用于最简单情况）（可以换成
@@ -245,12 +248,13 @@ public class LoopMergeLastBreak implements IRPass {
 
     // header 到 exit 的 phi 也需要更新
     int headerPredIndexOfExit = exit.getPredecessor_().indexOf(header);
-    for (var instNode: exit.getList()) {
+    for (var instNode : exit.getList()) {
       var inst = instNode.getVal();
       if (!(inst instanceof Phi)) {
         break;
       }
-      var headerIncoming = lastValueMap.get(((Phi) inst).getIncomingVals().get(headerPredIndexOfExit));
+      var headerIncoming = lastValueMap
+          .get(((Phi) inst).getIncomingVals().get(headerPredIndexOfExit));
       inst.CoReplaceOperandByIndex(headerPredIndexOfExit, headerIncoming);
     }
   }
