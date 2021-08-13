@@ -102,6 +102,7 @@ public class CompilerDriver {
         pm.openedPasses_.add("gvngcm");
         pm.openedPasses_.add("deadcodeemit");
         pm.openedPasses_.add("funcinline");
+        pm.openedPasses_.add("interproceduraldce");
         pm.openedPasses_.add("markConstantArray");
         pm.openedPasses_.add("ListScheduling");
         pm.openedPasses_.add("Peephole");
