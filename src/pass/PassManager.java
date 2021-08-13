@@ -13,6 +13,7 @@ import pass.ir.EmitLLVM;
 import pass.ir.FunctionInline;
 import pass.ir.GVNGCM;
 import pass.ir.GlobalVariableLocalize;
+import pass.ir.InterProceduralDCE;
 import pass.ir.InterproceduralAnalysis;
 import pass.ir.LCSSA;
 import pass.ir.LocalArrayPromotion;
@@ -60,6 +61,7 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM("beforeUnroll.ll"));
     irPasses.add(new LoopUnroll());
 //    irPasses.add(new EmitLLVM("afterUnroll.ll"));
+    irPasses.add(new InterProceduralDCE());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
@@ -71,6 +73,8 @@ public class PassManager {
     irPasses.add(new GVNGCM());
 
     irPasses.add(new FunctionInline());
+    irPasses.add(new InterProceduralDCE());
+
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new LocalArrayPromotion());
@@ -80,10 +84,10 @@ public class PassManager {
     irPasses.add(new RedundantLoop());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
-
+    irPasses.add(new InterProceduralDCE());
     irPasses.add(new LCSSA());
     irPasses.add(new EmitLLVM("beforeMerge.ll"));
-    irPasses.add(new LoopMergeLastBreak());
+//    irPasses.add(new LoopMergeLastBreak());
     irPasses.add(new EmitLLVM("afterMerge.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));

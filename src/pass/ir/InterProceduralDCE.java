@@ -73,8 +73,10 @@ public class InterProceduralDCE implements IRPass {
   //找到返回值没用的函数，把所有返回值改成ret0
   private void removeUseLessRet() {
     for (INode<Function, MyModule> fnd : m.__functions) {
+
       var fun = fnd.getVal();
-      if (fun.getType().getRetType().isIntegerTy()) {
+
+      if (!fun.isBuiltin_() && fun.getType().getRetType().isIntegerTy()) {
         processOneFunc(fun);
       }
     }
@@ -89,7 +91,7 @@ public class InterProceduralDCE implements IRPass {
     for (Use use : fun.getUsesList()) {
       var inst = use.getUser();
       if (inst instanceof CallInst) {
-        if (inst.getOperands().get(0).equals(fun)) {
+        if (((CallInst) inst).getBB().getParent().equals(fun)) {
           recursion = true;
           innerCall.add(((CallInst) inst));
         } else {
