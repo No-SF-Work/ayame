@@ -100,6 +100,9 @@ public class EmitLLVM implements IRPass {
                   } else if (val.getLoopInfo().getLoopForBB(bbval).isCanonical()) {
                     sb.append(" (canonical loop)");
                   }
+                  if (bbval.isParallelLoopHeader()) {
+                    sb.append(" (can parallel)");
+                  }
                 }
                 sb.append(", loop depth: ");
                 sb.append(val.getLoopInfo().getLoopDepthForBB(bbval));

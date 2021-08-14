@@ -41,6 +41,13 @@ public class PassManager {
     irPasses.add(new GVNGCM());
 
     irPasses.add(new LCSSA());
+    irPasses.add(new EmitLLVM("beforeMarkParallel.ll"));
+    irPasses.add(new MarkParallel());
+    irPasses.add(new EmitLLVM("afterMarkParallel.ll"));
+    irPasses.add(new BranchOptimization());
+    irPasses.add(new GVNGCM());
+
+    irPasses.add(new LCSSA());
     irPasses.add(new LoopUnroll());
     irPasses.add(new InterProceduralDCE());
     irPasses.add(new BranchOptimization());

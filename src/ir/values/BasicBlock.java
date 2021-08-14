@@ -108,7 +108,6 @@ public class BasicBlock extends Value {
 
   private boolean dirty; // 在一些对基本块的遍历中，表示已经遍历过
 
-
   // domination info
   // FIXME maybe change `ArrayList` to `HashSet` is better.
   protected BasicBlock idomer;  // 直接支配节点
@@ -127,5 +126,15 @@ public class BasicBlock extends Value {
 
   public int getLoopDepth() {
     return this.node_.getParent().getVal().getLoopInfo().getLoopDepthForBB(this);
+  }
+
+  private boolean isParallelLoopHeader; // 是否是可并行循环的循环头基本块
+
+  public boolean isParallelLoopHeader() {
+    return isParallelLoopHeader;
+  }
+
+  public void setParallelLoopHeader(boolean parallelLoopHeader) {
+    isParallelLoopHeader = parallelLoopHeader;
   }
 }
