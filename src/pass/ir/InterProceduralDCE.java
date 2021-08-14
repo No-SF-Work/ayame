@@ -129,6 +129,17 @@ public class InterProceduralDCE implements IRPass {
           }
       );
     } else {
+      for (CallInst call : innerCall) {
+        if (call.getUsesList().size() > 1) {
+          return;
+        } else {
+          if (!call.getUsesList().isEmpty()) {
+            if (!(call.getUsesList().get(0).getUser() instanceof RetInst)) {
+              return;
+            }
+          }
+        }
+      }
       fun.getList_().forEach(
           bb -> {
             bb.getVal().getList().forEach(instnd -> {
