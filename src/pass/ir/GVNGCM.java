@@ -490,11 +490,11 @@ public class GVNGCM implements IRPass {
           Instruction userInst = (Instruction) user;
           scheduleLate(userInst, func);
           BasicBlock userbb = userInst.getBB();
-          ;
+
           if (userInst.tag == TAG_.Phi) {
             int idx = 0;
             for (Value value : ((Phi) userInst).getIncomingVals()) {
-              if (value.getUsesList().contains(use)) {
+              if (value instanceof Instruction && value.getUsesList().contains(use)) {
                 userbb = userInst.getBB().getPredecessor_().get(idx);
                 lcabb = (lcabb == null) ? userbb : lca(lcabb, userbb);
               }
@@ -511,9 +511,9 @@ public class GVNGCM implements IRPass {
               }
               idx++;
             }
+          } else {
+            lcabb = (lcabb == null) ? userbb : lca(lcabb, userbb);
           }
-
-          lcabb = (lcabb == null) ? userbb : lca(lcabb, userbb);
         }
       }
       // 在 schedule early 和 schedule late 找到的上下界中找到 loop depth 最小的基本块
@@ -521,8 +521,9 @@ public class GVNGCM implements IRPass {
       BasicBlock bestbb = lcabb;
       Integer bestbbLoopDepth = func.getLoopInfo().getLoopDepthForBB(bestbb);
       while (lcabb != inst.getBB()) {
+        assert lcabb.getIdomer() != null;
         lcabb = lcabb.getIdomer();
-        assert lcabb != null;
+
         int currLoopDepth = func.getLoopInfo().getLoopDepthForBB(lcabb);
         if (currLoopDepth < bestbbLoopDepth) {
           bestbb = lcabb;
