@@ -62,7 +62,6 @@ public class LoopMergeLastBreak implements IRPass {
     }
   }
 
-  // TODO 需要递归判断无用返回值
   public void runOnLoop(Loop loop) {
     if (!structureJudge(loop)) {
       return;
@@ -82,6 +81,10 @@ public class LoopMergeLastBreak implements IRPass {
           return;
         }
       }
+    }
+
+    if (header.isParallelLoopHeader()) {
+      return;
     }
 
     BasicBlock exit = latchBlock.getSuccessor_()

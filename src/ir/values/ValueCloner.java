@@ -50,6 +50,7 @@ public abstract class ValueCloner {
     source.getList_().forEach(bbnode -> {
       var val = bbnode.getVal();
       BasicBlock copyBB = (BasicBlock) findValue(val);
+      copyBB.setParallelLoopHeader(val.isParallelLoopHeader());
       //复制predecessor和successor，用于生成phi指令
       for (BasicBlock basicBlock : val.getPredecessor_()) {
         copyBB.getPredecessor_().add((BasicBlock) findValue(basicBlock));

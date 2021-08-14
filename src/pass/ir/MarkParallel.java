@@ -3,13 +3,16 @@ package pass.ir;
 import ir.Analysis.ArrayAliasAnalysis;
 import ir.Analysis.LoopInfo;
 import ir.Loop;
+import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.types.PointerType;
 import ir.types.Type;
+import ir.values.BasicBlock;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.Function.Arg;
 import ir.values.GlobalVariable;
+import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
@@ -19,6 +22,7 @@ import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.CallInst;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
@@ -30,6 +34,7 @@ import util.Mylogger;
 public class MarkParallel implements IRPass {
 
   private static Logger log = Mylogger.getLogger(IRPass.class);
+  private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
   private LoopInfo currLoopInfo;
   private Function currFunc;
 
@@ -81,6 +86,7 @@ public class MarkParallel implements IRPass {
       }
     }
 
+    var preHeader = loop.getPreHeader();
     var header = loop.getLoopHeader();
     var latchBlock = loop.getSingleLatchBlock();
     if (latchBlock == null) {
@@ -204,6 +210,45 @@ public class MarkParallel implements IRPass {
       }
     }
 
+    // mark parallel
     header.setParallelLoopHeader(true);
+
+    // insert parallel start/end function
+    BasicBlock parallelStartBB = factory.buildBasicBlock("", currFunc);
+    BasicBlock parallelEndBB = factory.buildBasicBlock("", currFunc);
+    currLoopInfo.addBBToLoop(parallelStartBB, loop.getParentLoop());
+    currLoopInfo.addBBToLoop(parallelEndBB, loop.getParentLoop());
+
+    Function parallelStartFunc = null;
+    Function parallelEndFunc = null;
+    for (var func : currFunc.getNode().getParent().getVal().__functions) {
+      if (func.getVal().getName().equals("parallel_start")) {
+        parallelStartFunc = func.getVal();
+      }
+      if (func.getVal().getName().equals("parallel_end")) {
+        parallelEndFunc = func.getVal();
+      }
+    }
+    assert parallelStartFunc != null && parallelEndFunc != null;
+
+    var callParallelStart = factory
+        .buildFuncCall(parallelStartFunc, new ArrayList<>(), parallelStartBB);
+    ArrayList<Value> args = new ArrayList<>();
+    args.add(callParallelStart);
+    factory.buildFuncCall(parallelEndFunc, args, parallelEndBB);
+
+    factory.buildBr(header, parallelStartBB);
+    factory.buildBr(exit, parallelEndBB);
+    preHeader.getList().getLast().getVal().COReplaceOperand(header, parallelStartBB);
+    latchBlock.getList().getLast().getVal().COReplaceOperand(exit, parallelEndBB);
+
+    parallelStartBB.getPredecessor_().add(preHeader);
+    parallelStartBB.getSuccessor_().add(header);
+    parallelEndBB.getPredecessor_().add(latchBlock);
+    parallelEndBB.getSuccessor_().add(exit);
+    preHeader.getSuccessor_().set(preHeader.getSuccessor_().indexOf(header), parallelStartBB);
+    header.getPredecessor_().set(header.getPredecessor_().indexOf(preHeader), parallelStartBB);
+    latchBlock.getSuccessor_().set(latchBlock.getSuccessor_().indexOf(exit), parallelEndBB);
+    exit.getPredecessor_().set(exit.getPredecessor_().indexOf(latchBlock), parallelEndBB);
   }
 }

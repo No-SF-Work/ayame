@@ -170,6 +170,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
     scope_
         .put("stoptime",
             f.buildFunction("_sysy_stoptime", f.getFuncTy(voidType, params_int), true));
+    scope_.put("parallel_start",
+        f.buildFunction("parallel_start", f.getFuncTy(i32Type, params_empty), true));
+    scope_.put("parallel_end",
+        f.buildFunction("parallel_end", f.getFuncTy(voidType, params_int), true));
 
     return super.visitProgram(ctx);
   }
@@ -1151,7 +1155,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           val = tmp_;
           offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
           Value finalOffset = offset;
-          if (((PointerType)t.getType()).getContained() instanceof IntegerType) {
+          if (((PointerType) t.getType()).getContained() instanceof IntegerType) {
             t = f.buildGEP(t, new ArrayList<>() {{
               add(finalOffset);
             }}, curBB_);
@@ -1175,7 +1179,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }}, curBB_);
         return null;
       } else {
-t = f.buildGEP(t, new ArrayList<>() {{
+        t = f.buildGEP(t, new ArrayList<>() {{
           add(CONST0);
           add(CONST0);
         }}, curBB_);
@@ -1198,7 +1202,7 @@ t = f.buildGEP(t, new ArrayList<>() {{
         var val = tmp_;
         offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
         Value finalOffset = offset;
-        if (((PointerType)t.getType()).getContained() instanceof IntegerType) {
+        if (((PointerType) t.getType()).getContained() instanceof IntegerType) {
           Value finalOffset1 = finalOffset;
           t = f.buildGEP(t, new ArrayList<>() {{
             add(finalOffset1);
@@ -1388,9 +1392,11 @@ t = f.buildGEP(t, new ArrayList<>() {{
         args.add(tmp_);
       }
     }
-    if (func.getName().equals("_sysy_starttime")||func.getName().equals("_sysy_stoptime")){
-      tmp_=f.buildFuncCall((Function) func,new ArrayList<>(){{add(CONST0);}},curBB_);
-    }else {
+    if (func.getName().equals("_sysy_starttime") || func.getName().equals("_sysy_stoptime")) {
+      tmp_ = f.buildFuncCall((Function) func, new ArrayList<>() {{
+        add(CONST0);
+      }}, curBB_);
+    } else {
       tmp_ = f.buildFuncCall((Function) func, args, curBB_);
     }
     return null;
