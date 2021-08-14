@@ -181,7 +181,9 @@ public class InterProceduralDCE implements IRPass {
     for (INode<Function, MyModule> fnd : m.__functions) {
       var fun = fnd.getVal();
       if (!fun.isBuiltin_() && fun.getType().getRetType().isIntegerTy()) {
-        processOneFunc(fun);
+        if (!fun.getName().equals("main")){
+          processOneFunc(fun);
+        }
       }
     }
   }
