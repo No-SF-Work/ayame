@@ -4,11 +4,16 @@ import ir.Analysis.ArrayAliasAnalysis;
 import ir.Analysis.LoopInfo;
 import ir.Loop;
 import ir.MyModule;
-import ir.types.ArrayType;
+import ir.types.PointerType;
+import ir.types.Type;
+import ir.values.Constants.ConstantInt;
 import ir.values.Function;
+import ir.values.Function.Arg;
+import ir.values.GlobalVariable;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.GEPInst;
 import ir.values.instructions.MemInst.LoadInst;
 import ir.values.instructions.MemInst.Phi;
@@ -26,6 +31,7 @@ public class MarkParallel implements IRPass {
 
   private static Logger log = Mylogger.getLogger(IRPass.class);
   private LoopInfo currLoopInfo;
+  private Function currFunc;
 
   @Override
   public String getName() {
@@ -47,6 +53,7 @@ public class MarkParallel implements IRPass {
   public void runOnFunction(Function func) {
     Queue<Loop> loopQueue = new LinkedList<>();
     this.currLoopInfo = func.getLoopInfo();
+    this.currFunc = func;
 
     // run on loop manager
     for (var topLoop : this.currLoopInfo.getTopLevelLoops()) {
@@ -115,32 +122,52 @@ public class MarkParallel implements IRPass {
     }
 
     // 判断唯一的 store 地址是不是满足迭代器要求
-    // TODO 判断 gepInst 指向的是否是全局数组
-    var bias = onlyPointer.getOperands().get(1);
-
-    // 指向 i32，退出
-    var pointToType = onlyPointer.getElementType_();
-    if (pointToType.isIntegerTy()) {
-      return;
+    // 指向 global i32，退出
+    if (onlyPointer.getAimTo() instanceof GlobalVariable) {
+      GlobalVariable gv = (GlobalVariable) onlyPointer.getAimTo();
+      if (gv.init instanceof ConstantInt) {
+        return;
+      }
     }
 
-    var arrType = pointToType;
-    int dimNum = 0;
-    while (arrType.isArrayTy()) {
-      arrType = ((ArrayType) arrType).getELeType();
-      dimNum++;
+    Type pointToType;
+
+    if (ArrayAliasAnalysis.getArrayValue(onlyPointer) instanceof GlobalVariable) {
+      // 普通全局数组
+      GlobalVariable gv = (GlobalVariable) ArrayAliasAnalysis.getArrayValue(onlyPointer);
+      pointToType = ((PointerType) (gv.getType())).getContained();
+    } else {
+      // 传参进函数的全局数组
+      AllocaInst alloca = (AllocaInst) ArrayAliasAnalysis.getArrayValue(onlyPointer);
+      if (alloca.getAllocatedType().isPointerTy()) {
+        PointerType allocatedType = (PointerType) alloca.getAllocatedType();
+        pointToType = allocatedType.getContained();
+
+        for (var instNode : currFunc.getList_().getEntry().getVal().getList()) {
+          var inst = instNode.getVal();
+          if (inst instanceof StoreInst && inst.getOperands().get(1) == alloca) {
+            if (!(inst.getOperands().get(0) instanceof Arg)) {
+              return;
+            }
+            if (!((Arg) (inst.getOperands().get(0))).isMustBeGlobal()) {
+              return;
+            }
+          }
+        }
+      } else {
+        return;
+      }
     }
-    if (dimNum == 0) {
-      return;
-    }
+
     // 指向一维数组
-    if (dimNum == 1 && bias != indVar) {
+    if (pointToType.isIntegerTy() && onlyPointer.getOperands().get(1) != indVar) {
       return;
     }
     // 指向多维数组
-    else if (dimNum != 1) {
+    else if (pointToType.isArrayTy()) {
       // %bias = add %indvar, %mul
       // %mul -> out of loop OR not an instruction
+      var bias = onlyPointer.getOperands().get(2);
       if (!(bias instanceof BinaryInst) || ((BinaryInst) bias).tag != TAG_.Add) {
         return;
       }
@@ -167,7 +194,8 @@ public class MarkParallel implements IRPass {
             continue;
           }
           var gepInst = (GEPInst) pointer;
-          if (ArrayAliasAnalysis.getArrayValue(gepInst) == ArrayAliasAnalysis.getArrayValue(onlyPointer)) {
+          if (ArrayAliasAnalysis.getArrayValue(gepInst) == ArrayAliasAnalysis
+              .getArrayValue(onlyPointer)) {
             if (gepInst != onlyPointer) {
               return;
             }

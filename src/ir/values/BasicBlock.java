@@ -128,13 +128,13 @@ public class BasicBlock extends Value {
     return this.node_.getParent().getVal().getLoopInfo().getLoopDepthForBB(this);
   }
 
-  private boolean isParallelLoopHeader; // 是否是可并行循环的循环头基本块
+  private boolean parallelLoopHeader; // 是否是可并行循环的循环头基本块
 
   public boolean isParallelLoopHeader() {
-    return isParallelLoopHeader;
+    return this.parallelLoopHeader;
   }
 
   public void setParallelLoopHeader(boolean parallelLoopHeader) {
-    isParallelLoopHeader = parallelLoopHeader;
+    this.parallelLoopHeader = parallelLoopHeader;
   }
 }
