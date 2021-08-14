@@ -31,9 +31,7 @@ public class PassManager {
     irPasses.add(new GVNGCM());
 
     irPasses.add(new LCSSA());
-//    irPasses.add(new EmitLLVM("beforeLoopIdiom.ll"));
     irPasses.add(new LoopIdiom());
-//    irPasses.add(new EmitLLVM("afterLoopIdiom.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
@@ -73,10 +71,7 @@ public class PassManager {
     irPasses.add(new GVNGCM(true));
 
     irPasses.add(new LCSSA());
-    irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
-
-    irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());
