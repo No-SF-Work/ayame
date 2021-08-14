@@ -15,14 +15,15 @@ import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
+import pass.Pass.IRPass;
+import util.LoopUtils;
+import util.Mylogger;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
-import pass.Pass.IRPass;
-import util.LoopUtils;
-import util.Mylogger;
 
 public class LoopMergeLastBreak implements IRPass {
 
@@ -168,7 +169,6 @@ public class LoopMergeLastBreak implements IRPass {
     // preHeader 跳转到 secondPreHeader
     preBrInst.CoReplaceOperandByIndex(2, secondPreHeader);
 
-
     // secondPreHeader 的 phi：复制 header 的 phi。来自 preHeader 不变，来自 calcBB remap
     // 维护完成后修改 lastValueMap 的 phi
     int predIndex = header.getPredecessor_().indexOf(preHeader);
@@ -293,7 +293,7 @@ public class LoopMergeLastBreak implements IRPass {
       inst.CoReplaceOperandByIndex(headerPredIndexOfExit, headerIncoming);
     }
 
-//    switchHeaderCmp(loop);
+    switchHeaderCmp(loop);
   }
 
   public boolean structureJudge(Loop loop) {
