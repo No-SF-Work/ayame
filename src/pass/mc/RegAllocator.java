@@ -200,9 +200,9 @@ public class RegAllocator implements MCPass {
                 var activeMoves = new TreeSet<MCMove>();
                 var loopDepth = new TreeMap<MachineOperand, Integer>();
                 // maybe removed
-                var coalescedMoves = new TreeSet<MCMove>();
-                var constrainedMoves = new TreeSet<MCMove>();
-                var frozenMoves = new TreeSet<MCMove>();
+//                var coalescedMoves = new TreeSet<MCMove>();
+//                var constrainedMoves = new TreeSet<MCMove>();
+//                var frozenMoves = new TreeSet<MCMove>();
 
                 Map<MachineOperand, Integer> degree = IntStream.range(0, 17)
                         .mapToObj(func::getPhyReg)
@@ -388,7 +388,13 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable coalesce = () -> {
-                    var m = worklistMoves.first();
+//                    var m = worklistMoves.first();
+                    var m = worklistMoves.stream().max((l, r) -> {
+                        var value1 = l.mb.getLoopDepth();
+                        var value2 = r.mb.getLoopDepth();
+
+                        return Double.compare(value1, value2);
+                    }).get();
                     var u = getAlias.apply(m.getDst());
                     var v = getAlias.apply(m.getRhs());
                     if (v.isPrecolored()) {
@@ -398,15 +404,15 @@ public class RegAllocator implements MCPass {
                     }
                     worklistMoves.remove(m);
                     if (u.equals(v)) {
-                        coalescedMoves.add(m);
+//                        coalescedMoves.add(m);
                         addWorklist.accept(u);
                     } else if (v.isPrecolored() || adjSet.contains(new ComparablePair<>(u, v))) {
-                        constrainedMoves.add(m);
+//                        constrainedMoves.add(m);
                         addWorklist.accept(u);
                         addWorklist.accept(v);
                     } else if ((u.isPrecolored() && adjOk.test(v, u)) ||
                             (!u.isPrecolored() && conservative.test(getAdjacent.apply(u), getAdjacent.apply(v)))) {
-                        coalescedMoves.add(m);
+//                        coalescedMoves.add(m);
                         combine.accept(u, v);
                         addWorklist.accept(u);
                     } else {
@@ -422,7 +428,7 @@ public class RegAllocator implements MCPass {
                         } else {
                             worklistMoves.remove(m);
                         }
-                        frozenMoves.add(m);
+//                        frozenMoves.add(m);
 
                         var v = m.getDst().equals(u) ? m.getRhs() : m.getDst();
                         if (!moveRelated.apply(v) && degree.getOrDefault(v, 0) < K) {
@@ -479,6 +485,17 @@ public class RegAllocator implements MCPass {
                             spilledNodes.add(n);
                         } else {
                             var color = okColors.first();
+//                            if (n instanceof VirtualReg) {
+//                                var defMC = ((VirtualReg) n).getDefMC();
+//                                if (defMC instanceof MCMove) {
+//                                    var rhs = ((MCMove) defMC).getRhs();
+//                                    if (rhs instanceof PhyReg && okColors.contains(((PhyReg) rhs).getIdx())) {
+//                                        color = ((PhyReg) rhs).getIdx();
+//                                    } else if (colored.containsKey(rhs) && okColors.contains(((PhyReg) colored.get(rhs)).getIdx())) {
+//                                        color = ((PhyReg) colored.get(rhs)).getIdx();
+//                                    }
+//                                }
+//                            }
                             colored.put(n, func.getAllocatedReg(color));
                         }
                     }
