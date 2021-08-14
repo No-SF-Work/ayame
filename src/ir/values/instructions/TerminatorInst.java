@@ -110,12 +110,12 @@ public abstract class TerminatorInst extends Instruction {
      * 条件转移
      */
     enum prefer {
-      left,
-      right,
-      def
+      T,//prefer true
+      F,//prefer false
+      D //default
     }
 
-    prefer pre = prefer.def;
+    prefer pre = prefer.D;
 
     public prefer getPrefer() {
       return pre;
