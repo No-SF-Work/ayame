@@ -237,7 +237,28 @@ public class InterProceduralDCE implements IRPass {
           }
       );
     } else {
-      //else不管了,内联和dce会解决他们的
+      for (CallInst call : innerCall) {
+        if (call.getUsesList().size() > 1) {
+          return;
+        } else {
+          if (!call.getUsesList().isEmpty()) {
+            if (!(call.getUsesList().get(0).getUser() instanceof RetInst)) {
+              return;
+            }
+          }
+        }
+      }
+      fun.getList_().forEach(
+          bb -> {
+            bb.getVal().getList().forEach(instnd -> {
+              var val = instnd.getVal();
+              if (val instanceof RetInst) {
+                val.CORemoveAllOperand();
+                val.COaddOperand(ConstantInt.CONST0());
+              }
+            });
+          }
+      );
     }
   }
 }

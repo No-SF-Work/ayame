@@ -5,7 +5,6 @@ import ir.types.PointerType;
 import ir.types.Type;
 import ir.types.Type.VoidType;
 import ir.values.BasicBlock;
-import ir.values.Constant;
 import ir.values.Constants.ConstantInt;
 import ir.values.GlobalVariable;
 import ir.values.UndefValue;
@@ -354,7 +353,16 @@ public abstract class MemInst extends Instruction {
     public Phi(TAG_ tag, Type type, int numOP, ArrayList<Value> incomingVals) {
       super(tag, type, numOP);
       for (int i = 0; i < incomingVals.size(); i++) {
-        this.CoSetOperand(i, incomingVals.get(i));
+        this.CoReplaceOperandByIndex(i, incomingVals.get(i));
+      }
+    }
+
+    public Phi(TAG_ tag, Type type, int numOP, ArrayList<Value> incomingVals, BasicBlock parent) {
+      super(tag, type, numOP);
+      this.node.insertAtEntry(parent.getList());
+      this.numOP = incomingVals.size();
+      for (int i = 0; i < incomingVals.size(); i++) {
+        this.CoReplaceOperandByIndex(i, incomingVals.get(i));
       }
     }
 
@@ -363,7 +371,7 @@ public abstract class MemInst extends Instruction {
     }
 
     public void setIncomingVals(int index, Value val) {
-      CoSetOperand(index, val);
+      CoReplaceOperandByIndex(index, val);
     }
 
     public void removeIncomingVals(int index) {

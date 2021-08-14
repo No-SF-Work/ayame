@@ -137,7 +137,10 @@ public class EmitLLVM implements IRPass {
                         }
                       }
                       // === end print loop info ===
-
+                      sb.append("             ;user ->  ");
+                      instVal.getUsesList().forEach(use->{
+                        sb.append(use.getUser().getName()+" ");
+                      });
                       sb.append("\n");
                     }
                   }
@@ -153,7 +156,7 @@ public class EmitLLVM implements IRPass {
     });
     try {
       FileWriter fw = new FileWriter(outputName);
-      System.out.println(sb);
+//      System.out.println(sb);
       fw.append(sb);
       fw.close();
       log.info("successfully export out.ll");
