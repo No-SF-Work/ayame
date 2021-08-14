@@ -2,31 +2,16 @@ package pass;
 
 import backend.CodeGenManager;
 import ir.MyModule;
-import java.util.ArrayList;
-import java.util.logging.Logger;
 import pass.Pass.IRPass;
 import pass.Pass.MCPass;
-import pass.ir.BBPredSucc;
-import pass.ir.BranchOptimization;
-import pass.ir.ConstantLoopUnroll;
-import pass.ir.EmitLLVM;
-import pass.ir.FunctionInline;
-import pass.ir.GVNGCM;
-import pass.ir.GlobalVariableLocalize;
-import pass.ir.InterProceduralDCE;
-import pass.ir.InterproceduralAnalysis;
-import pass.ir.LCSSA;
-import pass.ir.LocalArrayPromotion;
-import pass.ir.LoopIdiom;
-import pass.ir.LoopInfoFullAnalysis;
-import pass.ir.LoopMergeLastBreak;
-import pass.ir.LoopUnroll;
-import pass.ir.Mem2reg;
-import pass.ir.RedundantLoop;
+import pass.ir.*;
 import pass.mc.MergeMachineBlock;
 import pass.mc.PeepholeOptimization;
 import pass.mc.RegAllocator;
 import util.Mylogger;
+
+import java.util.ArrayList;
+import java.util.logging.Logger;
 
 public class PassManager {
 
@@ -46,9 +31,7 @@ public class PassManager {
     irPasses.add(new GVNGCM());
 
     irPasses.add(new LCSSA());
-//    irPasses.add(new EmitLLVM("beforeLoopIdiom.ll"));
     irPasses.add(new LoopIdiom());
-//    irPasses.add(new EmitLLVM("afterLoopIdiom.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
@@ -88,10 +71,7 @@ public class PassManager {
     irPasses.add(new GVNGCM(true));
 
     irPasses.add(new LCSSA());
-    irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
-
-    irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());

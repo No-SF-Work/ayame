@@ -156,7 +156,7 @@ public class EmitLLVM implements IRPass {
     });
     try {
       FileWriter fw = new FileWriter(outputName);
-      System.out.println(sb);
+//      System.out.println(sb);
       fw.append(sb);
       fw.close();
       log.info("successfully export out.ll");
