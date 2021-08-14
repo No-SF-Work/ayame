@@ -86,17 +86,7 @@ public class MachineOperand implements Comparable<MachineOperand> {
             else if (st1 == 2) {
                 var name1 = this.getName();
                 var name2 = rhs.getName();
-
-                var sign1 = name1.charAt(0);
-                var sign2 = name2.charAt(0);
-
-                var num1 = Integer.parseInt(name1.substring(1));
-                var num2 = Integer.parseInt(name2.substring(1));
-                if (sign1 == sign2) {
-                    return num1 - num2;
-                } else {
-                    return sign1 == '%' ? 1 : -1;
-                }
+                return name1.compareTo(name2);
             } else return imme - rhs.imme;
         } else return st1 - st2;
     }
