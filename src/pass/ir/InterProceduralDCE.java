@@ -118,8 +118,10 @@ public class InterProceduralDCE implements IRPass {
       happy = false;
       return;
     }
-
-
+    if (!relatedRet.isEmpty()) {
+      happy = false;
+      return;
+    }
   }
 
   private void findRelatedUsers(Value value) {
