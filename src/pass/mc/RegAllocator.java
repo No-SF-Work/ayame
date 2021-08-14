@@ -4,6 +4,7 @@ import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.*;
 import driver.Config;
+import util.ComparablePair;
 import util.Pair;
 
 import java.util.*;
@@ -185,32 +186,32 @@ public class RegAllocator implements MCPass {
             while (!done) {
                 var liveInfoMap = livenessAnalysis(func);
 
-                var adjList = new HashMap<MachineOperand, HashSet<MachineOperand>>();
-                var adjSet = new HashSet<Pair<MachineOperand, MachineOperand>>();
-                var alias = new HashMap<MachineOperand, MachineOperand>();
-                var moveList = new HashMap<MachineOperand, HashSet<MCMove>>();
-                var simplifyWorklist = new HashSet<MachineOperand>();
-                var freezeWorklist = new HashSet<MachineOperand>();
-                var spillWorklist = new HashSet<MachineOperand>();
-                var spilledNodes = new HashSet<MachineOperand>();
-                var coalescedNodes = new HashSet<MachineOperand>();
+                var adjList = new TreeMap<MachineOperand, HashSet<MachineOperand>>();
+                var adjSet = new TreeSet<ComparablePair<MachineOperand, MachineOperand>>();
+                var alias = new TreeMap<MachineOperand, MachineOperand>();
+                var moveList = new TreeMap<MachineOperand, HashSet<MCMove>>();
+                var simplifyWorklist = new TreeSet<MachineOperand>();
+                var freezeWorklist = new TreeSet<MachineOperand>();
+                var spillWorklist = new TreeSet<MachineOperand>();
+                var spilledNodes = new TreeSet<MachineOperand>();
+                var coalescedNodes = new TreeSet<MachineOperand>();
                 var selectStack = new Stack<MachineOperand>();
-                var worklistMoves = new HashSet<MCMove>();
-                var activeMoves = new HashSet<MCMove>();
-                var loopDepth = new HashMap<MachineOperand, Integer>();
+                var worklistMoves = new TreeSet<MCMove>();
+                var activeMoves = new TreeSet<MCMove>();
+                var loopDepth = new TreeMap<MachineOperand, Integer>();
                 // maybe removed
-                var coalescedMoves = new HashSet<MCMove>();
-                var constrainedMoves = new HashSet<MCMove>();
-                var frozenMoves = new HashSet<MCMove>();
+                var coalescedMoves = new TreeSet<MCMove>();
+                var constrainedMoves = new TreeSet<MCMove>();
+                var frozenMoves = new TreeSet<MCMove>();
 
                 Map<MachineOperand, Integer> degree = IntStream.range(0, 17)
                         .mapToObj(func::getPhyReg)
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
                 BiConsumer<MachineOperand, MachineOperand> addEdge = (u, v) -> {
-                    if (!adjSet.contains(new Pair<>(u, v)) && !u.equals(v)) {
-                        adjSet.add(new Pair<>(u, v));
-                        adjSet.add(new Pair<>(v, u));
+                    if (!adjSet.contains(new ComparablePair<>(u, v)) && !u.equals(v)) {
+                        adjSet.add(new ComparablePair<>(u, v));
+                        adjSet.add(new ComparablePair<>(v, u));
                         if (!u.isPrecolored()) {
                             adjList.putIfAbsent(u, new HashSet<>());
                             adjList.get(u).add(v);
@@ -332,7 +333,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable simplify = () -> {
-                    var n = simplifyWorklist.iterator().next();
+                    var n = simplifyWorklist.first();
                     simplifyWorklist.remove(n);
                     selectStack.push(n);
                     getAdjacent.apply(n).forEach(decrementDegree);
@@ -353,7 +354,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 BiPredicate<MachineOperand, MachineOperand> ok = (t, r) ->
-                        degree.get(t) < K || t.isPrecolored() || adjSet.contains(new Pair<>(t, r));
+                        degree.get(t) < K || t.isPrecolored() || adjSet.contains(new ComparablePair<>(t, r));
 
                 BiPredicate<MachineOperand, MachineOperand> adjOk = (v, u) ->
                         getAdjacent.apply(v).stream().allMatch(t -> ok.test(t, u));
@@ -387,7 +388,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable coalesce = () -> {
-                    var m = worklistMoves.iterator().next();
+                    var m = worklistMoves.first();
                     var u = getAlias.apply(m.getDst());
                     var v = getAlias.apply(m.getRhs());
                     if (v.isPrecolored()) {
@@ -399,7 +400,7 @@ public class RegAllocator implements MCPass {
                     if (u.equals(v)) {
                         coalescedMoves.add(m);
                         addWorklist.accept(u);
-                    } else if (v.isPrecolored() || adjSet.contains(new Pair<>(u, v))) {
+                    } else if (v.isPrecolored() || adjSet.contains(new ComparablePair<>(u, v))) {
                         constrainedMoves.add(m);
                         addWorklist.accept(u);
                         addWorklist.accept(v);
@@ -432,7 +433,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable freeze = () -> {
-                    var u = freezeWorklist.iterator().next();
+                    var u = freezeWorklist.first();
                     freezeWorklist.remove(u);
                     simplifyWorklist.add(u);
                     freezeMoves.accept(u);
@@ -458,7 +459,7 @@ public class RegAllocator implements MCPass {
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
                         var okColors = IntStream.range(0, 15).filter(i -> i != 13).boxed() // 15
-                                .collect(Collectors.toCollection(HashSet::new));
+                                .collect(Collectors.toCollection(TreeSet::new));
 
                         for (MachineOperand w : adjList.getOrDefault(n, new HashSet<>())) {
                             var a = getAlias.apply(w);
@@ -477,7 +478,7 @@ public class RegAllocator implements MCPass {
                         if (okColors.isEmpty()) {
                             spilledNodes.add(n);
                         } else {
-                            var color = okColors.iterator().next();
+                            var color = okColors.first();
                             colored.put(n, func.getAllocatedReg(color));
                         }
                     }
