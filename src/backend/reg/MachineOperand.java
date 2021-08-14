@@ -2,7 +2,7 @@ package backend.reg;
 
 import java.util.Objects;
 
-public class MachineOperand {
+public class MachineOperand implements Comparable<MachineOperand> {
     public static MachineOperand zeroImm = new MachineOperand(0);
 
     public enum state{
@@ -65,4 +65,40 @@ public class MachineOperand {
     public int hashCode() {
         return Objects.hash(imme, s);
     }
+
+    @Override
+    public int compareTo(MachineOperand rhs) {
+        int st1 = -1;
+        if (this.isPrecolored()) st1 = 0;
+        else if (this.isAllocated()) st1 = 1;
+        else if (this.s == state.virtual) st1 = 2;
+        else if (this.s == state.imm) st1 = 3;
+
+        int st2 = -1;
+        if (rhs.isPrecolored()) st2 = 0;
+        else if (rhs.isAllocated()) st2 = 1;
+        else if (rhs.s == state.virtual) st2 = 2;
+        else if (rhs.s == state.imm) st2 = 3;
+        assert st1 != -1 && st2 != -1;
+
+        if (st1 == st2) {
+            if (st1 == 0 || st1 == 1) return ((PhyReg) this).getIdx() - ((PhyReg) rhs).getIdx();
+            else if (st1 == 2) {
+                var name1 = this.getName();
+                var name2 = rhs.getName();
+
+                var sign1 = name1.charAt(0);
+                var sign2 = name2.charAt(0);
+
+                var num1 = Integer.parseInt(name1.substring(1));
+                var num2 = Integer.parseInt(name2.substring(1));
+                if (sign1 == sign2) {
+                    return num1 - num2;
+                } else {
+                    return sign1 == '%' ? 1 : -1;
+                }
+            } else return imme - rhs.imme;
+        } else return st1 - st2;
+    }
+
 }
