@@ -112,6 +112,7 @@ public class CompilerDriver {
         pm.openedPasses_.add("loopUnroll");
         pm.openedPasses_.add("constantLoopUnroll");
         pm.openedPasses_.add("MergeMachineBlock");
+        pm.openedPasses_.add("storeGVPointer");
         pm.openedPasses_.add("redundantLoop");
         pm.openedPasses_.add("loopIdiom");
         pm.openedPasses_.add("loopMergeLastBreak");

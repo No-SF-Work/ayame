@@ -3,6 +3,7 @@ package pass.ir;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
 import ir.Use;
+import ir.types.ArrayType;
 import ir.types.PointerType;
 import ir.values.Constants.ConstantArray;
 import ir.values.Function;
@@ -36,7 +37,7 @@ public class StoreGlobalArrayPointer implements IRPass {
 
   private void storePointers() {
     for (GlobalVariable gv : m.__globalVariables) {
-      if (gv.init instanceof ConstantArray) {
+      if (((PointerType) gv.getType()).getContained() instanceof ArrayType) {
         var userFuncs = gvUserFunc.get(gv);
         for (Function userFunc : userFuncs) {
           var entry = userFunc.getList_().getEntry();
