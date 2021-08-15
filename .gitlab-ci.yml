@@ -25,9 +25,9 @@ run_func_thu:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
   script:
-    - mv testcases/functional_test/* testcases/
+    - mv testcases/thu_test/* testcases/
     - bash scripts/server_scripts/build_ayame.sh
-    - bash scripts/send_to_pi_functional.sh
+    - bash scripts/send_to_pi_thu.sh
   tags:
     - x86
   timeout: 10m
