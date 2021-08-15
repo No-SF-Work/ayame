@@ -275,7 +275,35 @@ public class GVNGCM implements IRPass {
   }
 
   public void runGVNOnBasicBlock(BasicBlock bb) {
-    // TODO 可以加入消除重复 phi 指令
+    int predSize = bb.getPredecessor_().size();
+    for (var instNode = bb.getList().getEntry(); instNode != null; ) {
+      var tmp = instNode.getNext();
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+      for (var ninstNode = tmp; ninstNode != null; ninstNode = ninstNode.getNext()) {
+        var ninst = ninstNode.getVal();
+        if (!(ninst instanceof Phi)) {
+          break;
+        }
+
+        boolean allSame = true;
+        for (int i = 0; i < predSize; i++) {
+          if (inst.getOperands().get(i) != ninst.getOperands().get(i)) {
+            allSame = false;
+            break;
+          }
+        }
+        if (allSame) {
+          inst.COReplaceAllUseWith(ninst);
+          inst.CORemoveAllOperand();
+          instNode.removeSelf();
+          break;
+        }
+      }
+      instNode = tmp;
+    }
 
     for (var instNode = bb.getList().getEntry(); instNode != null; ) {
       var tmp = instNode.getNext();
