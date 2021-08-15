@@ -29,3 +29,6 @@ __pycache__
 build/
 aftinline
 bfinline
+*.s
+E/
+*.zip
