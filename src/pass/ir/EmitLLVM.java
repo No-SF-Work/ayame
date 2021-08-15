@@ -3,6 +3,7 @@ package pass.ir;
 import ir.MyModule;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction.TAG_;
+import ir.values.instructions.TerminatorInst.BrInst;
 import pass.Pass.IRPass;
 import util.Mylogger;
 
@@ -136,10 +137,13 @@ public class EmitLLVM implements IRPass {
                           sb.append(" ; is latchCmpInst");
                         }
                       }
+                      if (instVal instanceof BrInst) {
+                        sb.append("     ; prefer ").append(((BrInst) instVal).getPrefer());
+                      }
                       // === end print loop info ===
                       sb.append("             ;user ->  ");
-                      instVal.getUsesList().forEach(use->{
-                        sb.append(use.getUser().getName()+" ");
+                      instVal.getUsesList().forEach(use -> {
+                        sb.append(use.getUser().getName() + " ");
                       });
                       sb.append("\n");
                     }

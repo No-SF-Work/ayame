@@ -6,6 +6,7 @@ import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst;
+import ir.values.instructions.TerminatorInst.BrInst;
 import java.util.ArrayList;
 import java.util.HashMap;
 import util.IList.INode;
@@ -83,7 +84,7 @@ public abstract class ValueCloner {
 
   private void bbProcessor(BasicBlock bb) {
     processBasicblock(bb, (BasicBlock) valueMap.get(bb));
-     if (!bb.getSuccessor_().isEmpty()) {
+    if (!bb.getSuccessor_().isEmpty()) {
       bb.getSuccessor_().stream().distinct().forEach(b -> {
         if (visitMap.get(b) == null) {
           visitMap.put(b, true);
@@ -101,6 +102,7 @@ public abstract class ValueCloner {
       copy.node.insertAtEnd(target.getList());
     });
   }
+
   //对Phi指令的Copy只copy了phi本身，不会对IncomingVals copy，需要自己想办法维护
   public Instruction getInstCopy(Instruction instruction) {
     Instruction copy = null;
@@ -131,6 +133,7 @@ public abstract class ValueCloner {
           if (ops.size() == 3) {
             copy = factory.getBr(findValue(ops.get(0)), (BasicBlock) findValue(ops.get(1)),
                 (BasicBlock) findValue(ops.get(2)));
+            ((BrInst) copy).setPrefer(((BrInst) instruction).getPrefer());
           }
           if (ops.size() == 1) {
             copy = factory.getBr((BasicBlock) findValue(ops.get(0)));
