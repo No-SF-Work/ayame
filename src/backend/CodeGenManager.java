@@ -1063,14 +1063,20 @@ public class CodeGenManager {
                     mf.addVirtualReg(v1);
                     add.setDst(v1);
                 }
+                MachineOperand rhs;
+                if(isO2){
+                    rhs = genImm(~(abs - 1),mb);
+                }else{
+                    rhs = genImm((abs - 1),mb);
+                }
                 MCBinary mc1 = new MCBinary(MachineCode.TAG.Bic, mb);
                 if (isO2) {
                     mc1.setLhs(lhs);//fixme:a mod b,如果a是负数那结果错误
-                    mc1.setRhs(new MachineOperand(~(abs - 1)));//fixme:a mod b，如果a是负数那结果是错误的
+                    mc1.setRhs(rhs);//fixme:a mod b，如果a是负数那结果是错误的
                     mc1.setDst(dst);
                 } else {
                     mc1.setLhs(v1);
-                    mc1.setRhs(new MachineOperand((abs - 1)));
+                    mc1.setRhs(rhs);
                     VirtualReg v2 = new VirtualReg();
                     mf.addVirtualReg(v2);
                     mc1.setDst(v2);
@@ -1332,18 +1338,21 @@ public class CodeGenManager {
                     }
                 }
                 if (argNum > 4) {
+                    MachineOperand r = genImm((4*(argNum-4)),mb);
                     MachineCode sub = new MCBinary(MachineCode.TAG.Sub, mb);
                     ((MCBinary) sub).setLhs(mf.getPhyReg("sp"));
-                    ((MCBinary) sub).setRhs(new MachineOperand(4 * (argNum - 4)));
+
+                    ((MCBinary) sub).setRhs(r);
                     ((MCBinary) sub).setDst(mf.getPhyReg("sp"));
                 }
                 assert (ir.getOperands().get(0) instanceof Function);
                 ((MCCall) call).setFunc(fMap.get((Function) ir.getOperands().get(0)));
                 call.setMb(mb);
                 if (argNum > 4) {
+                    MachineOperand r = genImm((4*(argNum-4)),mb);
                     MachineCode add = new MCBinary(MachineCode.TAG.Add, mb);
                     ((MCBinary) add).setLhs(mf.getPhyReg("sp"));
-                    ((MCBinary) add).setRhs(new MachineOperand(4 * (argNum - 4)));
+                    ((MCBinary) add).setRhs(r);
                     ((MCBinary) add).setDst(mf.getPhyReg("sp"));
                 }
                 //r0-r3是caller-preserve,被调用的函数可能修改r0-r3值
