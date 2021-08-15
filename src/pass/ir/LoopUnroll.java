@@ -13,6 +13,7 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.Phi;
+import ir.values.instructions.TerminatorInst.BrInst.prefer;
 import ir.values.instructions.TerminatorInst.CallInst;
 import pass.Pass.IRPass;
 import util.Mylogger;
@@ -415,7 +416,8 @@ public class LoopUnroll implements IRPass {
     updatePhiNewIncoming(header, latchPredIndex, loop, iterValueMap);
 
     // restBBs 连接到循环中
-    factory.buildBr(copyIcmp, restBBHeader, exit, exitIfBB);
+    var tmp = factory.buildBr(copyIcmp, restBBHeader, exit, exitIfBB);
+    tmp.setPrefer(prefer.D);
     factory.buildBr(exit, restBBLast);
     restBBHeader.getPredecessor_().add(exitIfBB);
     restBBLast.getSuccessor_().add(exit);
@@ -473,7 +475,8 @@ public class LoopUnroll implements IRPass {
     // link secondLatch and header
     BasicBlock trueBB = latchBrHeaderIndex == 1 ? header : exitIfBB;
     BasicBlock falseBB = trueBB == header ? exitIfBB : header;
-    factory.buildBr(newIcmpInst, trueBB, falseBB, secondLatch);
+    tmp = factory.buildBr(newIcmpInst, trueBB, falseBB, secondLatch);
+    tmp.setPrefer(trueBB == header ? prefer.T : prefer.F);
     linkBasicBlock(secondLatch, header);
   }
 
