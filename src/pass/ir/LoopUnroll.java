@@ -326,7 +326,7 @@ public class LoopUnroll implements IRPass {
       copy.node.insertAtEnd(exitIfBB.getList());
       var exitIncoming = ((Phi) inst).getIncomingVals().get(exitLatchPredIndex);
       copy.CoReplaceOperandByIndex(latchPredIndex, iterValueMap.get(exitIncoming));
-      exitPhiToExitIfPhiMap.put(exitIncoming, copy);
+      exitPhiToExitIfPhiMap.put(inst, copy);
     }
 
     var copyIndVarCondInst = LoopUtils.copyInstruction(loop.getIndVar());
@@ -342,7 +342,17 @@ public class LoopUnroll implements IRPass {
 
     exit.getPredecessor_().set(exit.getPredecessor_().indexOf(latchBlock), exitIfBB);
     var exitExitIfBBIndex = exit.getPredecessor_().indexOf(exitIfBB);
-    updatePhiNewIncoming(exit, exitExitIfBBIndex, loop, exitPhiToExitIfPhiMap);
+    for (var instNode : exit.getList()) {
+      var inst = instNode.getVal();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+
+      var phi = (Phi) inst;
+      var incomingVal = exitPhiToExitIfPhiMap.get(inst);
+      phi.CoReplaceOperandByIndex(exitExitIfBBIndex, incomingVal);
+    }
+//    updatePhiNewIncoming(exit, exitExitIfBBIndex, loop, exitPhiToExitIfPhiMap);
 
     // 复制多余的一次迭代
     ArrayList<BasicBlock> restBBs = new ArrayList<>();
