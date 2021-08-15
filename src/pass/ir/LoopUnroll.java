@@ -137,6 +137,10 @@ public class LoopUnroll implements IRPass {
       exit = (BasicBlock) (latchBr.getOperands().get(1));
     }
 
+    if (exit.getPredecessor_().size() > 2) {
+      return;
+    }
+
     HashMap<Value, Value> lastValueMap = new HashMap<>();
     ArrayList<Phi> originPhis = new ArrayList<>();
 

@@ -63,13 +63,14 @@ public class GlobalVariableLocalize implements IRPass {
         uselessFuncs.add(function);
       }
     }
+    uselessFuncs= (ArrayList<INode>) uselessFuncs.stream().distinct().collect(Collectors.toList());
     for (INode uselessFunc : uselessFuncs) {
       for (GlobalVariable gv : m.__globalVariables) {
         gv.getUsesList().removeIf(use ->
             ((Instruction) use.getUser()).getBB().getParent().equals(uselessFunc.getVal())
         );
-        uselessFunc.removeSelf();
       }
+      uselessFunc.removeSelf();
     }
   }
 
