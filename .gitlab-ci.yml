@@ -1,30 +1,5 @@
 # variables:
 
-#default:
-#  image: roife/compiler-judger
-#
-#update_std: # Update the compiler of THU/USTC & Run test
-#  when: manual
-#  script:
-#    - bash scripts/fetch_thu.sh
-#    - bash scripts/fetch_ustc.sh
-#    - bash scripts/fetch_ustc_no_vec.sh
-#    - bash scripts/fetch_sysyruntimelibrary.sh
-#    - python3 scripts/test_std.py
-#  cache:
-#    paths:
-#      - build/bin/*
-#      - build/include/*
-#      - build/lib/*
-#      - build/log/*
-#      - build/test_results/*
-#  artifacts:
-#    paths:
-#      - build/log/*
-#  tags:
-#    - arm
-#  timeout: 3h
-
 run_func_1:
   when: manual
   before_script:
@@ -37,6 +12,22 @@ run_func_1:
     - mv testcases/functional_test/* testcases/
     - bash scripts/server_scripts/build_ayame.sh
     - bash scripts/send_to_pi_functional.sh
+  tags:
+    - x86
+  timeout: 10m
+
+run_func_thu:
+  when: manual
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - mv testcases/thu_test/* testcases/
+    - bash scripts/server_scripts/build_ayame.sh
+    - bash scripts/send_to_pi_thu.sh
   tags:
     - x86
   timeout: 10m
