@@ -11,6 +11,7 @@ import ir.values.instructions.Instruction.TAG_;
 public class SimplifyInstruction {
 
   public static MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
+  private static int midInstUserLimit = 2;
 
   public static Value simplifyInstruction(Instruction instruction) {
     return switch (instruction.tag) {
@@ -189,7 +190,7 @@ public class SimplifyInstruction {
       var addRhs = addInst.getOperands().get(1);
       BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), addRhs, rhs);
       Value simpleAdd = simplifyAddInst(tmpInst, false);
-      if (simpleAdd != tmpInst) {
+      if (simpleAdd != tmpInst && addInst.getUsesList().size() <= midInstUserLimit) {
         return simplifyAddInst(
             new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), addLhs, simpleAdd), false);
       }
