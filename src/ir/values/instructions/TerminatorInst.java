@@ -109,7 +109,7 @@ public abstract class TerminatorInst extends Instruction {
     /**
      * 条件转移
      */
-    enum prefer {
+    public enum prefer {
       T,//prefer true
       F,//prefer false
       D //default
