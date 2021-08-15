@@ -46,8 +46,8 @@ public class StoreGlobalArrayPointer implements IRPass {
           while (iter.getNext() != null && iter.getNext().getVal() instanceof AllocaInst) {
             iter = iter.getNext();
           }
-          var store = f.buildStoreAfter(gv, alloca, iter.getVal());
-          var load = f.buildLoadAfter(gv.getType(), alloca, store);
+
+          var load = f.buildLoadAfter(gv.getType(), alloca, iter.getVal());
           var size = gv.getUsesList().size();
           ArrayList<Use> tobeReplace = new ArrayList<>();
           for (int i = 0; i < size; i++) {
@@ -63,6 +63,11 @@ public class StoreGlobalArrayPointer implements IRPass {
             user.CoSetOperand(rank, load);
             use.getUser();
           }
+          var it = entry.getVal().getList().getEntry();
+          while (it.getNext() != null && it.getNext().getVal() instanceof AllocaInst) {
+            it= it.getNext();
+          }
+          var store = f.buildStoreAfter(gv, alloca, it.getVal());
         }
       }
     }
