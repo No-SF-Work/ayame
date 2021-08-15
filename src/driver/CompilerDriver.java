@@ -116,6 +116,7 @@ public class CompilerDriver {
         pm.openedPasses_.add("loopIdiom");
         pm.openedPasses_.add("loopMergeLastBreak");
         pm.openedPasses_.add("promotion");
+        pm.openedPasses_.add("loopFusion");
       }
 
       logger.info("running MIR passes");
