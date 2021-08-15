@@ -64,6 +64,8 @@ public class CodeGenManager {
 
     private boolean isO2 = true;
 
+    private boolean isAggressive = false;
+
     private boolean ifPrintIR = false;
 
     private static Logger logger;
@@ -902,7 +904,7 @@ public class CodeGenManager {
             int l = calcCTZ(abs);
             VirtualReg v = new VirtualReg();
             VirtualReg v1 = new VirtualReg();
-            if (!isO2) {
+            if (!isAggressive) {
                 mf.addVirtualReg(v);
                 MCMove mv1 = new MCMove(mb);
                 mv1.setRhs(lhs);
@@ -919,7 +921,7 @@ public class CodeGenManager {
             mv2.setRhs(lhs);
             mv2.setShift(ArmAddition.ShiftType.Asr, l);
             mv2.setDst(dst);
-            if (!isO2) {
+            if (!isAggressive) {
                 mv2.setRhs(v1);
             }
 
@@ -991,7 +993,7 @@ public class CodeGenManager {
                 MachineOperand rhs;
                 boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                 //优化除常量
-                if (rhsIsConst && isO2) {
+                if (rhsIsConst ) {
                     int imm = ((Constants.ConstantInt) ir.getOperands().get(1)).getVal();
                     if (imm == 1) {
                         irMap.put(ir, irMap.get(ir.getOperands().get(0)));
@@ -1044,7 +1046,7 @@ public class CodeGenManager {
                 }
                 VirtualReg v = new VirtualReg();
                 VirtualReg v1 = new VirtualReg();
-                if (!isO2) {
+                if (!isAggressive) {
                     if (abs != 2) {
                         mf.addVirtualReg(v);
                         MCMove mv1 = new MCMove(mb);
@@ -1063,14 +1065,20 @@ public class CodeGenManager {
                     mf.addVirtualReg(v1);
                     add.setDst(v1);
                 }
+                MachineOperand rhs;
+                if(isAggressive){
+                    rhs = genImm(~(abs - 1),mb);
+                }else{
+                    rhs = genImm((abs - 1),mb);
+                }
                 MCBinary mc1 = new MCBinary(MachineCode.TAG.Bic, mb);
-                if (isO2) {
+                if (isAggressive) {
                     mc1.setLhs(lhs);//fixme:a mod b,如果a是负数那结果错误
-                    mc1.setRhs(new MachineOperand(~(abs - 1)));//fixme:a mod b，如果a是负数那结果是错误的
+                    mc1.setRhs(rhs);//fixme:a mod b，如果a是负数那结果是错误的
                     mc1.setDst(dst);
                 } else {
                     mc1.setLhs(v1);
-                    mc1.setRhs(new MachineOperand((abs - 1)));
+                    mc1.setRhs(rhs);
                     VirtualReg v2 = new VirtualReg();
                     mf.addVirtualReg(v2);
                     mc1.setDst(v2);
@@ -1250,7 +1258,7 @@ public class CodeGenManager {
                     assert(imm > 0 && imm <32);
                     VirtualReg v = new VirtualReg();
                     VirtualReg v1 = new VirtualReg();
-                    if (!isO2) {
+                    if (!isAggressive) {
                         mf.addVirtualReg(v);
                         MCMove mv1 = new MCMove(mb);
                         mv1.setRhs(rhs);
@@ -1266,7 +1274,7 @@ public class CodeGenManager {
                     MCMove mv2 = new MCMove(mb);
                     mv2.setShift(ArmAddition.ShiftType.Asr, imm);
                     mv2.setDst(dst);
-                    if (!isO2) {
+                    if (!isAggressive) {
                         mv2.setRhs(v1);
                     }else{
                         mv2.setRhs(rhs);
@@ -1332,18 +1340,21 @@ public class CodeGenManager {
                     }
                 }
                 if (argNum > 4) {
+                    MachineOperand r = genImm((4*(argNum-4)),mb);
                     MachineCode sub = new MCBinary(MachineCode.TAG.Sub, mb);
                     ((MCBinary) sub).setLhs(mf.getPhyReg("sp"));
-                    ((MCBinary) sub).setRhs(new MachineOperand(4 * (argNum - 4)));
+
+                    ((MCBinary) sub).setRhs(r);
                     ((MCBinary) sub).setDst(mf.getPhyReg("sp"));
                 }
                 assert (ir.getOperands().get(0) instanceof Function);
                 ((MCCall) call).setFunc(fMap.get((Function) ir.getOperands().get(0)));
                 call.setMb(mb);
                 if (argNum > 4) {
+                    MachineOperand r = genImm((4*(argNum-4)),mb);
                     MachineCode add = new MCBinary(MachineCode.TAG.Add, mb);
                     ((MCBinary) add).setLhs(mf.getPhyReg("sp"));
-                    ((MCBinary) add).setRhs(new MachineOperand(4 * (argNum - 4)));
+                    ((MCBinary) add).setRhs(r);
                     ((MCBinary) add).setDst(mf.getPhyReg("sp"));
                 }
                 //r0-r3是caller-preserve,被调用的函数可能修改r0-r3值

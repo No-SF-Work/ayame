@@ -9,5 +9,9 @@ int g() {
 }
 
 int main () {
-  return (f() && g()) || (!f() && g());
+    if(f() && g() || !f() && g()){
+        return 0;
+    }else{
+        return 1;
+    }
 }
