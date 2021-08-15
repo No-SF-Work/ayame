@@ -1,34 +1,22 @@
 package ir;
 
-import driver.Config;
-import ir.types.ArrayType;
-import ir.types.FunctionType;
-import ir.types.IntegerType;
-import ir.types.PointerType;
-import ir.types.Type;
+import ir.types.*;
 import ir.types.Type.LabelType;
 import ir.types.Type.VoidType;
-import ir.values.BasicBlock;
-import ir.values.Constant;
+import ir.values.*;
 import ir.values.Constants.ConstantArray;
 import ir.values.Constants.ConstantInt;
-import ir.values.Function;
-import ir.values.GlobalVariable;
-import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
-import ir.values.instructions.MemInst.AllocaInst;
-import ir.values.instructions.MemInst.GEPInst;
-import ir.values.instructions.MemInst.LoadInst;
-import ir.values.instructions.MemInst.StoreInst;
-import ir.values.instructions.MemInst.ZextInst;
+import ir.values.instructions.MemInst.*;
 import ir.values.instructions.TerminatorInst.BrInst;
 import ir.values.instructions.TerminatorInst.CallInst;
 import ir.values.instructions.TerminatorInst.RetInst;
+import util.Mylogger;
+
 import java.util.ArrayList;
 import java.util.logging.Logger;
-import util.Mylogger;
 
 /**
  * get开头的方法是工厂方法，返回的是没有被持有的
@@ -159,7 +147,7 @@ public class MyFactoryBuilder {
    * 返回一个不被持有的Binary，需要指定tag
    */
   public BinaryInst getBinary(TAG_ tag, Value lhs, Value rhs) {
-    assert lhs.getType() == rhs.getType();
+//    assert lhs.getType() == rhs.getType();
     return new BinaryInst(tag, lhs.getType(), lhs, rhs);
   }
 

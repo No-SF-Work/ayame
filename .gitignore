@@ -22,9 +22,13 @@ test.sh
 !testcases/functional_test/*
 !testcases/performance_test/*
 !testcases/performance_test_pro/*
+!testcases/thu_test/*
 *.class
 __pycache__
 .DS_Store
 build/
 aftinline
 bfinline
+*.s
+E/
+*.zip
