@@ -54,9 +54,9 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM("afterUnroll.ll"));
     irPasses.add(new GVNGCM(true));
 
-//    irPasses.add(new FunctionInline());
+    irPasses.add(new FunctionInline());
     irPasses.add(new InterProceduralDCE());
-    irPasses.add(new StoreGlobalArrayPointer());
+
 
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
@@ -76,6 +76,7 @@ public class PassManager {
 
     irPasses.add(new LCSSA());
     irPasses.add(new GVNGCM(true));
+    irPasses.add(new StoreGlobalArrayPointer());
     irPasses.add(new EmitLLVM());
 
     mcPasses.add(new RegAllocator());
