@@ -48,10 +48,28 @@ public class GlobalVariableLocalize implements IRPass {
   public void run(MyModule m) {
     this.m = m;
     this.f = MyFactoryBuilder.getInstance();
+    removeCallerLessFunc();
     loadUserFuncs();
     findRecursion();
     findRelatedFunc();
     localize();
+  }
+
+  private void removeCallerLessFunc() {
+    ArrayList<INode> uselessFuncs = new ArrayList<>();
+    for (INode<Function, MyModule> function : m.__functions) {
+      if (function.getVal().getCallerList().isEmpty()) {
+        uselessFuncs.add(function);
+      }
+    }
+    for (INode uselessFunc : uselessFuncs) {
+      for (GlobalVariable gv : m.__globalVariables) {
+        gv.getUsesList().removeIf(use ->
+            ((Instruction) use.getUser()).getBB().getParent().equals(uselessFunc.getVal())
+        );
+        uselessFunc.removeSelf();
+      }
+    }
   }
 
   private void localize() {
@@ -168,7 +186,7 @@ public class GlobalVariableLocalize implements IRPass {
         if (dfsFuncs(val, globalVariable)) {
           relatedGVs.get(val).add(globalVariable);
         }
-        
+
       }
     }
   }
