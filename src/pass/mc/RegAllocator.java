@@ -182,8 +182,12 @@ public class RegAllocator implements MCPass {
     public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
             var done = false;
+
             HashMap<VirtualReg, VirtualReg> newToOldMap = new HashMap<>();
+            HashMap<VirtualReg, Integer> newVRegLiveLength = new HashMap<>();
+
             while (!done) {
+//                System.out.println(manager.genARM());
                 var liveInfoMap = livenessAnalysis(func);
 
                 var adjList = new TreeMap<MachineOperand, HashSet<MachineOperand>>();
@@ -452,6 +456,21 @@ public class RegAllocator implements MCPass {
                         var value1 = degree.getOrDefault(l, 0).doubleValue() / Math.pow(1.4, loopDepth.getOrDefault(l, 0));
                         var value2 = degree.getOrDefault(r, 0).doubleValue() / Math.pow(1.4, loopDepth.getOrDefault(r, 0));
 
+                        // attention: avoid to choose recently spilled reg which has short live range
+                        if (l instanceof VirtualReg) {
+                            var vl = (VirtualReg) l;
+                            if (newVRegLiveLength.getOrDefault(vl, INF) < 20) {
+                                value1 = 0;
+                            }
+                        }
+
+                        if (r instanceof VirtualReg) {
+                            var vr = (VirtualReg) r;
+                            if (newVRegLiveLength.getOrDefault(vr, INF) < 4) {
+                                value2 = 0;
+                            }
+                        }
+
                         return Double.compare(value1, value2);
                     }).get();
                     simplifyWorklist.add(m);
@@ -618,11 +637,9 @@ public class RegAllocator implements MCPass {
                                         loadInstr.setAddr(func.getPhyReg("sp"));
                                         loadInstr.setShift(ArmAddition.ShiftType.None, 0);
                                         loadInstr.setOffset(new MachineOperand(0));
-
                                         loadInstr.setDst(ref.vreg);
 
                                         fixOffset.accept(loadInstr);
-                                        ref.firstUse = null;
                                     }
 
                                     if (ref.lastDef != null) {
@@ -634,11 +651,8 @@ public class RegAllocator implements MCPass {
                                         storeInstr.setOffset(new MachineOperand(0));
                                         storeInstr.setData(ref.vreg);
                                         fixOffset.accept(storeInstr);
-                                        ref.lastDef = null;
                                     }
                                 } else {
-                                    ref.lastDef = null;
-
                                     if (ref.firstUse != null) {
                                         var defMC = ((VirtualReg) n).getDefMC();
 
@@ -834,11 +848,34 @@ public class RegAllocator implements MCPass {
                                             }
                                         }
 
-                                        ref.firstUse = null;
+                                    }
+                                }
+
+                                if (ref.vreg != null) {
+                                    // calc live-range length
+                                    int firstPos = -1;
+                                    int lastPos = -1;
+                                    int pos = 0;
+                                    for (var instrEntry : block.getmclist()) {
+                                        var instr = instrEntry.getVal();
+                                        ++pos;
+                                        if ((instr.getDef().contains(ref.vreg) || instr.getUse().contains(ref.vreg))) {
+                                            if (firstPos == -1) {
+                                                firstPos = pos;
+                                            }
+
+                                            lastPos = pos;
+                                        }
+                                    }
+
+                                    if (firstPos != -1) {
+                                        newVRegLiveLength.put(ref.vreg, lastPos - firstPos + 1);
                                     }
                                 }
 
                                 ref.vreg = null;
+                                ref.lastDef = null;
+                                ref.firstUse = null;
                             };
 
                             int cntInstr = 0;
