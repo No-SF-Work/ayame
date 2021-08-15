@@ -194,7 +194,7 @@ public class RegAllocator implements MCPass {
                 var adjSet = new TreeSet<ComparablePair<MachineOperand, MachineOperand>>();
                 var alias = new TreeMap<MachineOperand, MachineOperand>();
                 var moveList = new TreeMap<MachineOperand, HashSet<MCMove>>();
-                var simplifyWorklist = new TreeSet<MachineOperand>();
+                var simplifyWorklist = new HashSet<MachineOperand>();
                 var freezeWorklist = new TreeSet<MachineOperand>();
                 var spillWorklist = new TreeSet<MachineOperand>();
                 var spilledNodes = new TreeSet<MachineOperand>();
@@ -337,7 +337,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable simplify = () -> {
-                    var n = simplifyWorklist.first();
+                    var n = simplifyWorklist.iterator().next();
                     simplifyWorklist.remove(n);
                     selectStack.push(n);
                     getAdjacent.apply(n).forEach(decrementDegree);
@@ -459,14 +459,14 @@ public class RegAllocator implements MCPass {
                         // attention: avoid to choose recently spilled reg which has short live range
                         if (l instanceof VirtualReg) {
                             var vl = (VirtualReg) l;
-                            if (newVRegLiveLength.getOrDefault(vl, INF) < 20) {
+                            if (newVRegLiveLength.getOrDefault(vl, INF) < 5) {
                                 value1 = 0;
                             }
                         }
 
                         if (r instanceof VirtualReg) {
                             var vr = (VirtualReg) r;
-                            if (newVRegLiveLength.getOrDefault(vr, INF) < 4) {
+                            if (newVRegLiveLength.getOrDefault(vr, INF) < 5) {
                                 value2 = 0;
                             }
                         }
