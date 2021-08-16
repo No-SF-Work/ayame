@@ -52,7 +52,6 @@ public class CompilerDriverRaw {
         source = cmd;
       }
     }
-    Config.getInstance().isO2 = false;
     assert source != null;
     assert target != null;
 
