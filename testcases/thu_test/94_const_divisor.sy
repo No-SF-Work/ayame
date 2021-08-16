@@ -3,17 +3,17 @@ int main() {
   while (i < 17) {
     int a = getint();
     putint(a / 3);
-    putchar(10);
+    putch(10);
     putint(a / -3);
-    putchar(10);
+    putch(10);
     putint(a / 65537);
-    putchar(10);
+    putch(10);
     putint(a / -65537);
-    putchar(10);
+    putch(10);
     putint(a / 0x7FFFFFFF);
-    putchar(10);
+    putch(10);
     putint(a / -0x7FFFFFFF);
-    putchar(10);
+    putch(10);
     i = i + 1;
   }
   return 0;
