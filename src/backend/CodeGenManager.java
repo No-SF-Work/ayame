@@ -20,6 +20,8 @@ import backend.machinecodes.MachineFunction;
 import backend.reg.MachineOperand;
 import backend.reg.Reg;
 import backend.reg.VirtualReg;
+import ir.Analysis.LoopInfo;
+import ir.Loop;
 import ir.MyModule;
 import ir.types.ArrayType;
 import ir.types.IntegerType;
@@ -63,6 +65,8 @@ public class CodeGenManager {
     private static MyModule myModule;
 
     private boolean isO2 = true;
+
+    private boolean isAggressive = false;
 
     private boolean ifPrintIR = false;
 
@@ -128,6 +132,23 @@ public class CodeGenManager {
     interface DFSSerialize {
         void dfsSerialize();
     }
+
+    //线性化时如果mb两个后继都没被访问过，在此函数中判断是否交换True和False后继
+//    private boolean ifSwop(MachineBlock mb){
+//        if(mb.getPrefer()== MachineBlock.Prefer.True){
+//            return true;
+//        }else if(mb.getPrefer()==MachineBlock.Prefer.False){
+//            return false;
+//        }else{
+//            if(mb.getTrueSucc().getLoopDepth()>mb.getFalseSucc().getLoopDepth()){
+//                return true;
+//            }else if(mb.getTrueSucc().getLoopDepth()<mb.getFalseSucc().getLoopDepth()){
+//                return false;
+//            }else{
+//                return true;
+//            }
+//        }
+//    }
 
     //优先把false块放到当前块之后
     public void dfsFalseSerial(MachineBlock mb, MachineFunction mf, HashMap<MachineBlock, Boolean> isVisit) {
@@ -286,18 +307,31 @@ public class CodeGenManager {
                 dfsTrueSerial(mb.getTrueSucc(), mf, isVisit);
             }
         } else {
-            //和dfsFalseSerial不同，如果True块和False块都没被访问，也要交换，合并条件之后，条件变成
-            //只要True块没被访问，那就交换
-            //还有一种情况，如果True块和False块都被访问过，但是本块和True块之间有waiting，本块和False之间没有，
-            //也交换
-            if (!isVisit.containsKey(mb.getTrueSucc())
-                    || (isVisit.containsKey(mb.getTrueSucc())&&isVisit.containsKey(mb.getFalseSucc())&&
-                            waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()&&
-                            (!waiting.containsKey(falsePair)||waiting.get(falsePair).isEmpty()))
-            ) {
+            //如果True块和False块都没被访问过，根据ifSwop函数判断是否交换（依据mb的Prefer和两个后继的循环深度）
+            //如果True块和False块都被访问过，但是本块和True块之间有waiting，本块和False之间没有，则交换
+            //如果True块未被访问，False块被访问过了，那么交换
+            //剩下情况不换
+            boolean ifNeedSwop = false;
+            if((!isVisit.containsKey(mb.getTrueSucc()))&&(!isVisit.containsKey(mb.getFalseSucc()))){
+                ifNeedSwop = true;
+            }else if(isVisit.containsKey(mb.getTrueSucc()) && isVisit.containsKey(mb.getFalseSucc())){
+                if(waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()&&
+                        (!waiting.containsKey(falsePair)||waiting.get(falsePair).isEmpty())){
+                    ifNeedSwop = true;
+                }
+            }else if(!isVisit.containsKey(mb.getTrueSucc())){
+                ifNeedSwop = true;
+            }
+            if (ifNeedSwop)
+            {
                 MachineBlock temp = mb.getTrueSucc();
                 mb.setTrueSucc(mb.getFalseSucc());
                 mb.setFalseSucc(temp);
+//                if(mb.getPrefer()==MachineBlock.Prefer.True){
+//                    mb.setPrefer(MachineBlock.Prefer.False);
+//                }else if(mb.getPrefer()==MachineBlock.Prefer.False){
+//                    mb.setPrefer(MachineBlock.Prefer.True);
+//                }
                 assert (mb.getmclist().getLast().getVal() instanceof MCBranch);
                 CondType cond = mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
@@ -516,6 +550,14 @@ public class CodeGenManager {
                 if (mb.getFalseSucc() != null) {
                     arm += "@falseSucc: " + mb.getFalseSucc().getName() + "\n";
                 }
+//                if(mb.getPrefer()!= MachineBlock.Prefer.Default){
+//                    arm+="@Prefer:";
+//                    if(mb.getPrefer()==MachineBlock.Prefer.True){
+//                        arm+="tureSucc\n";
+//                    }else{
+//                        arm+="falseSucc\n";
+//                    }
+//                }
                 strOffset = arm.length();
                 Iterator<INode<MachineCode, MachineBlock>> mcIte = mb.getmclist().iterator();
                 while (mcIte.hasNext()) {
@@ -902,7 +944,7 @@ public class CodeGenManager {
             int l = calcCTZ(abs);
             VirtualReg v = new VirtualReg();
             VirtualReg v1 = new VirtualReg();
-            if (!isO2) {
+            if (!isAggressive) {
                 mf.addVirtualReg(v);
                 MCMove mv1 = new MCMove(mb);
                 mv1.setRhs(lhs);
@@ -919,7 +961,7 @@ public class CodeGenManager {
             mv2.setRhs(lhs);
             mv2.setShift(ArmAddition.ShiftType.Asr, l);
             mv2.setDst(dst);
-            if (!isO2) {
+            if (!isAggressive) {
                 mv2.setRhs(v1);
             }
 
@@ -978,7 +1020,12 @@ public class CodeGenManager {
 
     private void processBB(BasicBlock bb) {
         MachineBlock mb = bMap.get(bb);
-//        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
+        if(bb.isParallelLoopHeader()){
+            Loop loop = bb.getParent().getLoopInfo().getLoopForBB(bb);
+            Value indVarInit = loop.getIndVarInit();
+            Value indVarEnd = loop.getIndVarEnd();
+        }
+        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
         for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
             Instruction ir = iIt.next().getVal();
             if (ifPrintIR) {
@@ -991,7 +1038,7 @@ public class CodeGenManager {
                 MachineOperand rhs;
                 boolean rhsIsConst = ir.getOperands().get(1) instanceof Constants.ConstantInt;
                 //优化除常量
-                if (rhsIsConst && isO2) {
+                if (rhsIsConst ) {
                     int imm = ((Constants.ConstantInt) ir.getOperands().get(1)).getVal();
                     if (imm == 1) {
                         irMap.put(ir, irMap.get(ir.getOperands().get(0)));
@@ -1044,7 +1091,7 @@ public class CodeGenManager {
                 }
                 VirtualReg v = new VirtualReg();
                 VirtualReg v1 = new VirtualReg();
-                if (!isO2) {
+                if (!isAggressive) {
                     if (abs != 2) {
                         mf.addVirtualReg(v);
                         MCMove mv1 = new MCMove(mb);
@@ -1063,14 +1110,20 @@ public class CodeGenManager {
                     mf.addVirtualReg(v1);
                     add.setDst(v1);
                 }
+                MachineOperand rhs;
+                if(isAggressive){
+                    rhs = genImm(~(abs - 1),mb);
+                }else{
+                    rhs = genImm((abs - 1),mb);
+                }
                 MCBinary mc1 = new MCBinary(MachineCode.TAG.Bic, mb);
-                if (isO2) {
+                if (isAggressive) {
                     mc1.setLhs(lhs);//fixme:a mod b,如果a是负数那结果错误
-                    mc1.setRhs(new MachineOperand(~(abs - 1)));//fixme:a mod b，如果a是负数那结果是错误的
+                    mc1.setRhs(rhs);//fixme:a mod b，如果a是负数那结果是错误的
                     mc1.setDst(dst);
                 } else {
                     mc1.setLhs(v1);
-                    mc1.setRhs(new MachineOperand((abs - 1)));
+                    mc1.setRhs(rhs);
                     VirtualReg v2 = new VirtualReg();
                     mf.addVirtualReg(v2);
                     mc1.setDst(v2);
@@ -1250,7 +1303,7 @@ public class CodeGenManager {
                     assert(imm > 0 && imm <32);
                     VirtualReg v = new VirtualReg();
                     VirtualReg v1 = new VirtualReg();
-                    if (!isO2) {
+                    if (!isAggressive) {
                         mf.addVirtualReg(v);
                         MCMove mv1 = new MCMove(mb);
                         mv1.setRhs(rhs);
@@ -1266,7 +1319,7 @@ public class CodeGenManager {
                     MCMove mv2 = new MCMove(mb);
                     mv2.setShift(ArmAddition.ShiftType.Asr, imm);
                     mv2.setDst(dst);
-                    if (!isO2) {
+                    if (!isAggressive) {
                         mv2.setRhs(v1);
                     }else{
                         mv2.setRhs(rhs);
@@ -1294,9 +1347,18 @@ public class CodeGenManager {
                     }
                     CondType cond = dealCond((BinaryInst) (ir.getOperands().get(0)), mb, false);
                     MachineCode br = new MCBranch(mb);
-                    ((MCBranch) br).setCond(cond);
                     int trueT = 1;
                     int falseT = 2;
+                    //如果此条跳转倾向于跳false块，那条件取补（比如小于变大于等于），true块和false块交换
+//                    if(((TerminatorInst.BrInst)ir).getPrefer()== TerminatorInst.BrInst.prefer.F){
+//                        cond=getOppoCond(cond);
+//                        trueT = 2;
+//                        falseT = 1;
+//                        mb.setPrefer(MachineBlock.Prefer.True);
+//                    }else if(((TerminatorInst.BrInst)ir).getPrefer()== TerminatorInst.BrInst.prefer.T){
+//                        mb.setPrefer(MachineBlock.Prefer.True);
+//                    }
+                    ((MCBranch) br).setCond(cond);
                     //set trueblock to branch target
                     ((MCBranch) br).setTarget(bMap.get(ir.getOperands().get(trueT)));
                     mb.setFalseSucc(bMap.get(ir.getOperands().get(falseT)));
@@ -1332,18 +1394,21 @@ public class CodeGenManager {
                     }
                 }
                 if (argNum > 4) {
+                    MachineOperand r = genImm((4*(argNum-4)),mb);
                     MachineCode sub = new MCBinary(MachineCode.TAG.Sub, mb);
                     ((MCBinary) sub).setLhs(mf.getPhyReg("sp"));
-                    ((MCBinary) sub).setRhs(new MachineOperand(4 * (argNum - 4)));
+
+                    ((MCBinary) sub).setRhs(r);
                     ((MCBinary) sub).setDst(mf.getPhyReg("sp"));
                 }
                 assert (ir.getOperands().get(0) instanceof Function);
                 ((MCCall) call).setFunc(fMap.get((Function) ir.getOperands().get(0)));
                 call.setMb(mb);
                 if (argNum > 4) {
+                    MachineOperand r = genImm((4*(argNum-4)),mb);
                     MachineCode add = new MCBinary(MachineCode.TAG.Add, mb);
                     ((MCBinary) add).setLhs(mf.getPhyReg("sp"));
-                    ((MCBinary) add).setRhs(new MachineOperand(4 * (argNum - 4)));
+                    ((MCBinary) add).setRhs(r);
                     ((MCBinary) add).setDst(mf.getPhyReg("sp"));
                 }
                 //r0-r3是caller-preserve,被调用的函数可能修改r0-r3值
@@ -1587,7 +1652,7 @@ public class CodeGenManager {
         return res;
     }
 
-    private CondType getOppoCond(CondType t) {
+    public static CondType getOppoCond(CondType t) {
         if (t == CondType.Lt) {
             return CondType.Ge;
         } else if (t == CondType.Le) {

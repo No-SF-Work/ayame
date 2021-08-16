@@ -5,6 +5,7 @@ import ir.Analysis.LoopInfo;
 import ir.Loop;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
+import ir.types.IntegerType;
 import ir.types.PointerType;
 import ir.types.Type;
 import ir.values.BasicBlock;
@@ -98,9 +99,10 @@ public class MarkParallel implements IRPass {
     var indVar = loop.getIndVar();
     var indVarInit = loop.getIndVarInit();
     var indVarEnd = loop.getIndVarEnd();
+    var latchCmpInst = loop.getLatchCmpInst();
     var indVarCondInst = loop.getIndVarCondInst();
     var stepInst = loop.getStepInst();
-    if (indVar == null || indVarInit == null || indVarEnd == null || indVarCondInst == null || stepInst == null || indVarCondInst != stepInst) {
+    if (indVar == null || indVarInit == null || indVarEnd == null || indVarCondInst == null || stepInst == null || indVarCondInst != stepInst || latchCmpInst == null) {
       return;
     }
 
@@ -249,6 +251,11 @@ public class MarkParallel implements IRPass {
     var divInst = factory.buildBinaryAfter(TAG_.Div, multInst, ConstantInt.newOne(factory.getI32Ty(), parallelFactor), multInst);
     var initIndex = indVar.getOperands().indexOf(indVarInit);
     indVar.CoReplaceOperandByIndex(initIndex, divInst);
+    var addInst2 = factory.buildBinaryBefore(latchCmpInst,TAG_.Add,ConstantInt.newOne(factory.getI32Ty(),1),callParallelStart);
+    var multInst2 = factory.buildBinaryAfter(TAG_.Mul,addInst2,indVarEnd,addInst2);
+    var divInst2 = factory.buildBinaryAfter(TAG_.Div,multInst2,ConstantInt.newOne(factory.getI32Ty(), parallelFactor),multInst2);
+    latchCmpInst.COReplaceOperand(indVarEnd,divInst2);
+
 
     factory.buildFuncCall(parallelEndFunc, args, parallelEndBB);
 
