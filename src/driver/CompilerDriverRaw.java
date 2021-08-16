@@ -83,7 +83,7 @@ public class CompilerDriverRaw {
         pm.openedPasses_.add("interproceduraldce");
         pm.openedPasses_.add("markConstantArray");
         pm.openedPasses_.add("ListScheduling");
-        pm.openedPasses_.add("Peephole");
+//        pm.openedPasses_.add("Peephole");
         pm.openedPasses_.add("CondExec");
         pm.openedPasses_.add("loopInfoFullAnalysis");
         pm.openedPasses_.add("LCSSA");
