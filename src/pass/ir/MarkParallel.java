@@ -95,6 +95,15 @@ public class MarkParallel implements IRPass {
     var headerSuccIndex = latchBlock.getSuccessor_().indexOf(header);
     var exit = latchBlock.getSuccessor_().get(1 - headerSuccIndex);
     var indVar = loop.getIndVar();
+    var indVarInit = loop.getIndVarInit();
+    var indVarEnd = loop.getIndVarEnd();
+    var indVarCondInst = loop.getIndVarCondInst();
+    var stepInst = loop.getStepInst();
+    if (indVar == null || indVarInit == null || indVarEnd == null || indVarCondInst == null || stepInst == null || indVarCondInst != stepInst) {
+      return;
+    }
+
+
 
     // 如果 exit 有 phi，不并行
     if (exit.getList().getEntry().getVal() instanceof Phi) {
