@@ -35,6 +35,7 @@ public class MarkParallel implements IRPass {
 
   private static Logger log = Mylogger.getLogger(IRPass.class);
   private static final MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
+  private static int parallelFactor = 4;
   private LoopInfo currLoopInfo;
   private Function currFunc;
 
@@ -244,7 +245,13 @@ public class MarkParallel implements IRPass {
         .buildFuncCall(parallelStartFunc, new ArrayList<>(), parallelStartBB);
     ArrayList<Value> args = new ArrayList<>();
     args.add(callParallelStart);
+    var multInst = factory.buildBinaryAfter(TAG_.Mul, callParallelStart, indVarEnd, callParallelStart);
+    var divInst = factory.buildBinaryAfter(TAG_.Div, multInst, ConstantInt.newOne(factory.getI32Ty(), parallelFactor), multInst);
+    var initIndex = indVar.getOperands().indexOf(indVarInit);
+    indVar.CoReplaceOperandByIndex(initIndex, divInst);
+
     factory.buildFuncCall(parallelEndFunc, args, parallelEndBB);
+
 
     factory.buildBr(header, parallelStartBB);
     factory.buildBr(exit, parallelEndBB);
