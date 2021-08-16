@@ -820,17 +820,34 @@ public class Visitor extends SysYBaseVisitor<Void> {
     visitStmt(ctx.stmt());
     //保持几个Inst之间的use关系不乱，并且让使用了其他value的inst能够找到那些inst
     if (Config.getInstance().isO2) {
-      whileCondEntryBlock.getList().forEach(instNode -> {
-        var val = instNode.getVal();
-        for (Value operand : val.getOperands()) {
-          if (cloner.findValue(operand) == null) {
-            cloner.put(operand, operand);
-          }
+      if ((curBB_.getList().getLast() != null)) {
+        if (!(curBB_.getList().getLast()
+            .getVal() instanceof BrInst)) {
+          whileCondEntryBlock.getList().forEach(instNode -> {
+            var val = instNode.getVal();
+            for (Value operand : val.getOperands()) {
+              if (cloner.findValue(operand) == null) {
+                cloner.put(operand, operand);
+              }
+            }
+            var copy = cloner.getInstCopy(val);
+            cloner.put(val, copy);
+            copy.node.insertAtEnd(curBB_.getList());
+          });
         }
-        var copy = cloner.getInstCopy(val);
-        cloner.put(val, copy);
-        copy.node.insertAtEnd(curBB_.getList());
-      });
+      }else {
+        whileCondEntryBlock.getList().forEach(instNode -> {
+          var val = instNode.getVal();
+          for (Value operand : val.getOperands()) {
+            if (cloner.findValue(operand) == null) {
+              cloner.put(operand, operand);
+            }
+          }
+          var copy = cloner.getInstCopy(val);
+          cloner.put(val, copy);
+          copy.node.insertAtEnd(curBB_.getList());
+        });
+      }
     } else {
       f.buildBr(whileCondEntryBlock, curBB_);
     }
@@ -1137,13 +1154,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
             assert ty instanceof ArrayType;
             val = tmp_;
             var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
-            offset = f.buildBinary(TAG_.Mul, add,
-                ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
-            ty = ((ArrayType) ty).getELeType();
             t = f.buildGEP(t, new ArrayList<>() {{
               add(CONST0);
               add(CONST0);
             }}, curBB_);
+            offset = f.buildBinary(TAG_.Mul, add,
+                ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
+            ty = ((ArrayType) ty).getELeType();
 
           }
 
@@ -1151,7 +1168,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
           val = tmp_;
           offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
           Value finalOffset = offset;
-          if (((PointerType)t.getType()).getContained() instanceof IntegerType) {
+          if (((PointerType) t.getType()).getContained() instanceof IntegerType) {
             t = f.buildGEP(t, new ArrayList<>() {{
               add(finalOffset);
             }}, curBB_);
@@ -1175,7 +1192,7 @@ public class Visitor extends SysYBaseVisitor<Void> {
         }}, curBB_);
         return null;
       } else {
-t = f.buildGEP(t, new ArrayList<>() {{
+        t = f.buildGEP(t, new ArrayList<>() {{
           add(CONST0);
           add(CONST0);
         }}, curBB_);
@@ -1186,19 +1203,19 @@ t = f.buildGEP(t, new ArrayList<>() {{
           visit(ctx.exp(i));
           var val = tmp_;
           var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
-          offset = f.buildBinary(TAG_.Mul, add,
-              ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
-          ty = ((ArrayType) ty).getELeType();
           t = f.buildGEP(t, new ArrayList<>() {{
             add(CONST0);
             add(CONST0);
           }}, curBB_);
+          offset = f.buildBinary(TAG_.Mul, add,
+              ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
+          ty = ((ArrayType) ty).getELeType();
         }
         visit(ctx.exp(ctx.exp().size() - 1));
         var val = tmp_;
         offset = f.buildBinary(TAG_.Add, offset, val, curBB_);
         Value finalOffset = offset;
-        if (((PointerType)t.getType()).getContained() instanceof IntegerType) {
+        if (((PointerType) t.getType()).getContained() instanceof IntegerType) {
           Value finalOffset1 = finalOffset;
           t = f.buildGEP(t, new ArrayList<>() {{
             add(finalOffset1);
@@ -1388,9 +1405,11 @@ t = f.buildGEP(t, new ArrayList<>() {{
         args.add(tmp_);
       }
     }
-    if (func.getName().equals("_sysy_starttime")||func.getName().equals("_sysy_stoptime")){
-      tmp_=f.buildFuncCall((Function) func,new ArrayList<>(){{add(CONST0);}},curBB_);
-    }else {
+    if (func.getName().equals("_sysy_starttime") || func.getName().equals("_sysy_stoptime")) {
+      tmp_ = f.buildFuncCall((Function) func, new ArrayList<>() {{
+        add(CONST0);
+      }}, curBB_);
+    } else {
       tmp_ = f.buildFuncCall((Function) func, args, curBB_);
     }
     return null;
