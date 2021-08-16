@@ -131,6 +131,23 @@ public class CodeGenManager {
         void dfsSerialize();
     }
 
+    //线性化时如果mb两个后继都没被访问过，在此函数中判断是否交换True和False后继
+    private boolean ifSwop(MachineBlock mb){
+        if(mb.getPrefer()== MachineBlock.Prefer.True){
+            return true;
+        }else if(mb.getPrefer()==MachineBlock.Prefer.False){
+            return false;
+        }else{
+            if(mb.getTrueSucc().getLoopDepth()>mb.getFalseSucc().getLoopDepth()){
+                return true;
+            }else if(mb.getTrueSucc().getLoopDepth()<mb.getFalseSucc().getLoopDepth()){
+                return false;
+            }else{
+               return true;
+            }
+        }
+    }
+
     //优先把false块放到当前块之后
     public void dfsFalseSerial(MachineBlock mb, MachineFunction mf, HashMap<MachineBlock, Boolean> isVisit) {
         isVisit.put(mb, true);
@@ -288,18 +305,31 @@ public class CodeGenManager {
                 dfsTrueSerial(mb.getTrueSucc(), mf, isVisit);
             }
         } else {
-            //和dfsFalseSerial不同，如果True块和False块都没被访问，也要交换，合并条件之后，条件变成
-            //只要True块没被访问，那就交换
-            //还有一种情况，如果True块和False块都被访问过，但是本块和True块之间有waiting，本块和False之间没有，
-            //也交换
-            if (!isVisit.containsKey(mb.getTrueSucc())
-                    || (isVisit.containsKey(mb.getTrueSucc())&&isVisit.containsKey(mb.getFalseSucc())&&
-                            waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()&&
-                            (!waiting.containsKey(falsePair)||waiting.get(falsePair).isEmpty()))
-            ) {
+            //如果True块和False块都没被访问过，根据ifSwop函数判断是否交换（依据mb的Prefer和两个后继的循环深度）
+            //如果True块和False块都被访问过，但是本块和True块之间有waiting，本块和False之间没有，则交换
+            //如果True块未被访问，False块被访问过了，那么交换
+            //剩下情况不换
+            boolean ifNeedSwop = false;
+            if((!isVisit.containsKey(mb.getTrueSucc()))&&(!isVisit.containsKey(mb.getFalseSucc()))){
+                ifNeedSwop = ifSwop(mb);
+            }else if(isVisit.containsKey(mb.getTrueSucc()) && isVisit.containsKey(mb.getFalseSucc())){
+                if(waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()&&
+                        (!waiting.containsKey(falsePair)||waiting.get(falsePair).isEmpty())){
+                    ifNeedSwop = true;
+                }
+            }else if(!isVisit.containsKey(mb.getTrueSucc())){
+                ifNeedSwop = true;
+            }
+            if (ifNeedSwop)
+             {
                 MachineBlock temp = mb.getTrueSucc();
                 mb.setTrueSucc(mb.getFalseSucc());
                 mb.setFalseSucc(temp);
+                if(mb.getPrefer()==MachineBlock.Prefer.True){
+                    mb.setPrefer(MachineBlock.Prefer.False);
+                }else if(mb.getPrefer()==MachineBlock.Prefer.False){
+                    mb.setPrefer(MachineBlock.Prefer.True);
+                }
                 assert (mb.getmclist().getLast().getVal() instanceof MCBranch);
                 CondType cond = mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
@@ -517,6 +547,14 @@ public class CodeGenManager {
                 }
                 if (mb.getFalseSucc() != null) {
                     arm += "@falseSucc: " + mb.getFalseSucc().getName() + "\n";
+                }
+                if(mb.getPrefer()!= MachineBlock.Prefer.Default){
+                    arm+="@Prefer:";
+                    if(mb.getPrefer()==MachineBlock.Prefer.True){
+                        arm+="tureSucc\n";
+                    }else{
+                        arm+="falseSucc\n";
+                    }
                 }
                 strOffset = arm.length();
                 Iterator<INode<MachineCode, MachineBlock>> mcIte = mb.getmclist().iterator();
@@ -1302,9 +1340,18 @@ public class CodeGenManager {
                     }
                     CondType cond = dealCond((BinaryInst) (ir.getOperands().get(0)), mb, false);
                     MachineCode br = new MCBranch(mb);
-                    ((MCBranch) br).setCond(cond);
                     int trueT = 1;
                     int falseT = 2;
+                    //如果此条跳转倾向于跳false块，那条件取补（比如小于变大于等于），true块和false块交换
+                    if(((TerminatorInst.BrInst)ir).getPrefer()== TerminatorInst.BrInst.prefer.F){
+                        cond=getOppoCond(cond);
+                        trueT = 2;
+                        falseT = 1;
+                        mb.setPrefer(MachineBlock.Prefer.True);
+                    }else if(((TerminatorInst.BrInst)ir).getPrefer()== TerminatorInst.BrInst.prefer.T){
+                        mb.setPrefer(MachineBlock.Prefer.True);
+                    }
+                    ((MCBranch) br).setCond(cond);
                     //set trueblock to branch target
                     ((MCBranch) br).setTarget(bMap.get(ir.getOperands().get(trueT)));
                     mb.setFalseSucc(bMap.get(ir.getOperands().get(falseT)));
@@ -1598,7 +1645,7 @@ public class CodeGenManager {
         return res;
     }
 
-    private CondType getOppoCond(CondType t) {
+    public static CondType getOppoCond(CondType t) {
         if (t == CondType.Lt) {
             return CondType.Ge;
         } else if (t == CondType.Le) {
