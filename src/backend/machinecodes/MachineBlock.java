@@ -36,6 +36,25 @@ public class MachineBlock {
     //phi machinecode
     private HashMap<VirtualReg, MachineCode> phiMap;
 
+    //此跳转的倾向性，倾向与真
+    public enum Prefer{
+        True,
+        False,
+        Default
+    }
+
+    public Prefer getPrefer() {
+        return prefer;
+    }
+
+    public void setPrefer(Prefer prefer) {
+        this.prefer = prefer;
+    }
+
+    private Prefer prefer = Prefer.Default;
+
+
+
     //phi sets
     private ArrayList<HashSet<VirtualReg>> phis;
 

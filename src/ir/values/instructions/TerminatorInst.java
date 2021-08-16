@@ -109,6 +109,23 @@ public abstract class TerminatorInst extends Instruction {
     /**
      * 条件转移
      */
+    public enum prefer {
+      T,//prefer true
+      F,//prefer false
+      D //default
+    }
+
+
+    prefer pre = prefer.D;
+
+    public prefer getPrefer() {
+      return pre;
+    }
+
+    public void setPrefer(prefer pre) {
+      this.pre = pre;
+    }
+
     public BrInst(Value cond, BasicBlock trueBlock, BasicBlock falseBlock, BasicBlock parent) {
       super(TAG_.Br, Type.VoidType.getType(), 3, parent);
       this.CoSetOperand(

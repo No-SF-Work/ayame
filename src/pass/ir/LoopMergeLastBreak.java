@@ -14,6 +14,7 @@ import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.BrInst;
+import ir.values.instructions.TerminatorInst.BrInst.prefer;
 import ir.values.instructions.TerminatorInst.CallInst;
 import pass.Pass.IRPass;
 import util.LoopUtils;
@@ -103,7 +104,9 @@ public class LoopMergeLastBreak implements IRPass {
         indVarEnd = op;
       }
     }
-    assert stepInst != null;
+    if (stepInst == null) {
+      return;
+    }
     for (var op : stepInst.getOperands()) {
       if (op instanceof Phi && ((Phi) op).getIncomingVals().contains(stepInst)) {
         indVar = (Phi) op;
@@ -111,7 +114,9 @@ public class LoopMergeLastBreak implements IRPass {
         step = op;
       }
     }
-    assert indVar != null;
+    if (indVar == null) {
+      return;
+    }
     for (var op : indVar.getIncomingVals()) {
       if (op != stepInst) {
         indVarInit = op;
@@ -168,6 +173,7 @@ public class LoopMergeLastBreak implements IRPass {
     factory.buildBr(secondPreHeader, calcBB);
     // preHeader 跳转到 secondPreHeader
     preBrInst.CoReplaceOperandByIndex(2, secondPreHeader);
+    ((BrInst) (preBrInst)).setPrefer(prefer.T);
 
     // secondPreHeader 的 phi：复制 header 的 phi。来自 preHeader 不变，来自 calcBB remap
     // 维护完成后修改 lastValueMap 的 phi
@@ -197,8 +203,9 @@ public class LoopMergeLastBreak implements IRPass {
 
     BasicBlock trueBB = preBrInst.getOperands().get(1) == calcBB ? header : exit;
     BasicBlock falseBB = preBrInst.getOperands().get(1) == calcBB ? exit : header;
-    factory.buildBr(secondCmpInst, trueBB, falseBB, secondPreHeader);
-    preBrInst.CoReplaceOperandByIndex(2, secondPreHeader);
+    var secondBr = factory.buildBr(secondCmpInst, trueBB, falseBB, secondPreHeader);
+    secondBr.setPrefer(trueBB == header ? prefer.T : prefer.F);
+
     // 手动构造的代码生成出的 ir 结构：secondPreHeader/header/latch 跳到的 exit 只有一个 phi，preheader 和 exit 跳到一个基本块，里面是真正的
     // exit，出现性能问题再改成这样
 
@@ -319,6 +326,8 @@ public class LoopMergeLastBreak implements IRPass {
     var falseBB = headerBr.getOperands().get(2);
     headerBr.CoReplaceOperandByIndex(1, falseBB);
     headerBr.CoReplaceOperandByIndex(2, trueBB);
+    ((BrInst) headerBr).setPrefer(
+        ((BasicBlock) trueBB).getLoopDepth() == loop.getLoopDepth() ? prefer.T : prefer.F);
   }
 
   public TAG_ getOppCmpTag(TAG_ tag) {

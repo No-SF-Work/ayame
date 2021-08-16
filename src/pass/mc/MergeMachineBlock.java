@@ -67,7 +67,7 @@ public class MergeMachineBlock implements Pass.MCPass {
                         //如果pred只有一个后继，且线性化后本块不是pred的下一个块
                         //或者如果本块是pred的false后继，且线性化后本块不是pred的下一个块
                         if ((pred.getFalseSucc() == null || pred.getFalseSucc() == mb )
-                        && pred.getNode() != currentMbEntry.getPrev()) {
+                                && pred.getNode() != currentMbEntry.getPrev()) {
                             assert (pred.getmclist().getLast().getVal() instanceof MCJump);
                             var jump = (MCJump) (pred.getmclist().getLast().getVal());
                             var mcEntry = mb.getmclist().getEntry();
@@ -145,6 +145,7 @@ public class MergeMachineBlock implements Pass.MCPass {
                                     }
                                     if(subHasCompare || subHasCall || subHasCond ||(subMcNum)>5
                                         || subBranchNum > 0 || subJumpNum > 0){
+
                                         continue;
                                     }else{
                                         entry = branch.getNode().getNext();
@@ -161,6 +162,11 @@ public class MergeMachineBlock implements Pass.MCPass {
                                 if (hasCompare || hasCall || hasCond || (mcNum - branchNum - jumpNum) > 5) {
                                     continue;
                                 }
+                                //如果pred的Prefer不是default，且mb不是pred的Prefer，那么不插入
+                                if(pred.getPrefer()== MachineBlock.Prefer.False){
+                                    continue;
+                                }
+
                                 predToRemove.add(pred);
                                 var lastEntry = pred.getmclist().getLast();
                                 var branch = lastEntry.getVal();
@@ -170,6 +176,7 @@ public class MergeMachineBlock implements Pass.MCPass {
                                     if (mc instanceof MCBranch && ((MCBranch) mc).getTarget() == mb) {
                                         branch = mc;
                                     }
+
                                 }
                                 assert(branch instanceof MCBranch);
                                 var mcEntry = mb.getmclist().getEntry();
