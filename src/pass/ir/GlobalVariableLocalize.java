@@ -59,7 +59,7 @@ public class GlobalVariableLocalize implements IRPass {
     ArrayList<INode> uselessFuncs = new ArrayList<>();
     for (INode<Function, MyModule> function : m.__functions) {
       if (!(function.getVal().getName().equals("main")) && function.getVal().getCallerList()
-          .isEmpty()) {
+          .isEmpty()&&!function.getVal().isBuiltin_()) {
         uselessFuncs.add(function);
       }
     }
