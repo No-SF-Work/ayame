@@ -41,7 +41,7 @@ public class PassManager {
     irPasses.add(new GVNGCM());
 
     irPasses.add(new LCSSA());
-    irPasses.add(new EmitLLVM("beforeFusion.ll"));
+//    irPasses.add(new EmitLLVM("beforeFusion.ll"));
     irPasses.add(new LoopFusion());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
