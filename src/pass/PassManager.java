@@ -61,7 +61,7 @@ public class PassManager {
 //    irPasses.add(new EmitLLVM("afterUnroll.ll"));
     irPasses.add(new GVNGCM(true));
 
-    irPasses.add(new FunctionInline());
+//    irPasses.add(new FunctionInline());
     irPasses.add(new InterProceduralDCE());
 
     irPasses.add(new BranchOptimization());
