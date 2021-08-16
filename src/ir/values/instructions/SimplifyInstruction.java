@@ -187,8 +187,24 @@ public class SimplifyInstruction {
       BinaryInst addInst = (BinaryInst) lhs;
       var addLhs = addInst.getOperands().get(0);
       var addRhs = addInst.getOperands().get(1);
-      BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), addRhs, rhs);
-      Value simpleAdd = simplifyAddInst(tmpInst, false);
+      BinaryInst tmpInst = null;
+      Value simpleAdd = null;
+      if (addRhs instanceof ConstantInt && rhs instanceof ConstantInt) {
+        var clhs = ((ConstantInt) addRhs).getVal();
+        var crhs = ((ConstantInt) rhs).getVal();
+        var sum = clhs + crhs;
+        if (((clhs ^ sum) & (crhs ^ sum)) < 0) {
+          return inst;
+        } else {
+          tmpInst = new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), addRhs,
+              rhs);
+          simpleAdd = simplifyAddInst(tmpInst, false);
+        }
+      } else {
+        tmpInst = new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), addRhs,
+            rhs);
+        simpleAdd = simplifyAddInst(tmpInst, false);
+      }
       if (simpleAdd != tmpInst) {
         return simplifyAddInst(
             new BinaryInst(targetEndInst, TAG_.Add, factory.getI32Ty(), addLhs, simpleAdd), false);
