@@ -74,8 +74,12 @@ public class LoopUnroll implements IRPass {
       }
     }
 
-    if (loop.getLoopHeader().isParallelLoopHeader()) {
-      return;
+    var tmp = loop;
+    while (tmp != null) {
+      if (tmp.getLoopHeader().isParallelLoopHeader()) {
+        return;
+      }
+      tmp = tmp.getParentLoop();
     }
 
     // stepInst 是 add (phi, constant) 才展开（sub 被转换成了 add 负常数）
@@ -87,7 +91,7 @@ public class LoopUnroll implements IRPass {
 //      doubleUnroll(loop);
 //    }
     doubleUnroll(loop);
-  }
+}
 
   public void doubleUnroll(Loop loop) {
     log.info("Run double unroll");
