@@ -83,9 +83,10 @@ public class PassManager {
     irPasses.add(new LCSSA());
     irPasses.add(new GVNGCM(true));
     irPasses.add(new EmitLLVM());
-
+    
     mcPasses.add(new RegAllocator());
     mcPasses.add(new PeepholeOptimization());
+    mcPasses.add(new MergeMachineBlock());
     mcPasses.add(new MergeMachineBlock());
   }
 

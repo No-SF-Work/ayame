@@ -5,7 +5,7 @@ import backend.reg.MachineOperand;
 import backend.reg.PhyReg;
 import backend.reg.VirtualReg;
 
-public class MCMove extends MachineCode {
+public class MCMove extends MachineCode implements Comparable<MCMove> {
 
     public MachineOperand getDst() {
         return dst;
@@ -97,5 +97,13 @@ public class MCMove extends MachineCode {
 
     public MCMove(MachineBlock mb, int num) {
         super(TAG.Mv, mb, num);
+    }
+
+    @Override
+    public int compareTo(MCMove rhs) {
+        if (!this.cond.equals(rhs.cond)) return this.cond.compareTo(rhs.cond);
+        if (!this.dst.equals(rhs.dst)) return this.dst.compareTo(rhs.dst);
+        if (!this.rhs.equals(rhs.rhs)) return this.rhs.compareTo(rhs.rhs);
+        return 0;
     }
 }

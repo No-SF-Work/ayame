@@ -4,6 +4,7 @@ import backend.CodeGenManager;
 import backend.machinecodes.*;
 import backend.reg.*;
 import driver.Config;
+import util.ComparablePair;
 import util.Pair;
 
 import java.util.*;
@@ -181,36 +182,40 @@ public class RegAllocator implements MCPass {
     public void run(CodeGenManager manager) {
         for (var func : manager.getMachineFunctions()) {
             var done = false;
+
             HashMap<VirtualReg, VirtualReg> newToOldMap = new HashMap<>();
+            HashMap<VirtualReg, Integer> newVRegLiveLength = new HashMap<>();
+
             while (!done) {
+//                System.out.println(manager.genARM());
                 var liveInfoMap = livenessAnalysis(func);
 
-                var adjList = new HashMap<MachineOperand, HashSet<MachineOperand>>();
-                var adjSet = new HashSet<Pair<MachineOperand, MachineOperand>>();
-                var alias = new HashMap<MachineOperand, MachineOperand>();
-                var moveList = new HashMap<MachineOperand, HashSet<MCMove>>();
+                var adjList = new TreeMap<MachineOperand, HashSet<MachineOperand>>();
+                var adjSet = new TreeSet<ComparablePair<MachineOperand, MachineOperand>>();
+                var alias = new TreeMap<MachineOperand, MachineOperand>();
+                var moveList = new TreeMap<MachineOperand, HashSet<MCMove>>();
                 var simplifyWorklist = new HashSet<MachineOperand>();
-                var freezeWorklist = new HashSet<MachineOperand>();
-                var spillWorklist = new HashSet<MachineOperand>();
-                var spilledNodes = new HashSet<MachineOperand>();
-                var coalescedNodes = new HashSet<MachineOperand>();
+                var freezeWorklist = new TreeSet<MachineOperand>();
+                var spillWorklist = new TreeSet<MachineOperand>();
+                var spilledNodes = new TreeSet<MachineOperand>();
+                var coalescedNodes = new TreeSet<MachineOperand>();
                 var selectStack = new Stack<MachineOperand>();
-                var worklistMoves = new HashSet<MCMove>();
-                var activeMoves = new HashSet<MCMove>();
-                var loopDepth = new HashMap<MachineOperand, Integer>();
+                var worklistMoves = new TreeSet<MCMove>();
+                var activeMoves = new TreeSet<MCMove>();
+                var loopDepth = new TreeMap<MachineOperand, Integer>();
                 // maybe removed
-                var coalescedMoves = new HashSet<MCMove>();
-                var constrainedMoves = new HashSet<MCMove>();
-                var frozenMoves = new HashSet<MCMove>();
+//                var coalescedMoves = new TreeSet<MCMove>();
+//                var constrainedMoves = new TreeSet<MCMove>();
+//                var frozenMoves = new TreeSet<MCMove>();
 
                 Map<MachineOperand, Integer> degree = IntStream.range(0, 17)
                         .mapToObj(func::getPhyReg)
                         .collect(Collectors.toMap(MachineOperand -> MachineOperand, MachineOperand -> INF));
 
                 BiConsumer<MachineOperand, MachineOperand> addEdge = (u, v) -> {
-                    if (!adjSet.contains(new Pair<>(u, v)) && !u.equals(v)) {
-                        adjSet.add(new Pair<>(u, v));
-                        adjSet.add(new Pair<>(v, u));
+                    if (!adjSet.contains(new ComparablePair<>(u, v)) && !u.equals(v)) {
+                        adjSet.add(new ComparablePair<>(u, v));
+                        adjSet.add(new ComparablePair<>(v, u));
                         if (!u.isPrecolored()) {
                             adjList.putIfAbsent(u, new HashSet<>());
                             adjList.get(u).add(v);
@@ -353,7 +358,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 BiPredicate<MachineOperand, MachineOperand> ok = (t, r) ->
-                        degree.get(t) < K || t.isPrecolored() || adjSet.contains(new Pair<>(t, r));
+                        degree.get(t) < K || t.isPrecolored() || adjSet.contains(new ComparablePair<>(t, r));
 
                 BiPredicate<MachineOperand, MachineOperand> adjOk = (v, u) ->
                         getAdjacent.apply(v).stream().allMatch(t -> ok.test(t, u));
@@ -387,7 +392,13 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable coalesce = () -> {
-                    var m = worklistMoves.iterator().next();
+//                    var m = worklistMoves.first();
+                    var m = worklistMoves.stream().max((l, r) -> {
+                        var value1 = l.mb.getLoopDepth();
+                        var value2 = r.mb.getLoopDepth();
+
+                        return Double.compare(value1, value2);
+                    }).get();
                     var u = getAlias.apply(m.getDst());
                     var v = getAlias.apply(m.getRhs());
                     if (v.isPrecolored()) {
@@ -397,15 +408,15 @@ public class RegAllocator implements MCPass {
                     }
                     worklistMoves.remove(m);
                     if (u.equals(v)) {
-                        coalescedMoves.add(m);
+//                        coalescedMoves.add(m);
                         addWorklist.accept(u);
-                    } else if (v.isPrecolored() || adjSet.contains(new Pair<>(u, v))) {
-                        constrainedMoves.add(m);
+                    } else if (v.isPrecolored() || adjSet.contains(new ComparablePair<>(u, v))) {
+//                        constrainedMoves.add(m);
                         addWorklist.accept(u);
                         addWorklist.accept(v);
                     } else if ((u.isPrecolored() && adjOk.test(v, u)) ||
                             (!u.isPrecolored() && conservative.test(getAdjacent.apply(u), getAdjacent.apply(v)))) {
-                        coalescedMoves.add(m);
+//                        coalescedMoves.add(m);
                         combine.accept(u, v);
                         addWorklist.accept(u);
                     } else {
@@ -421,7 +432,7 @@ public class RegAllocator implements MCPass {
                         } else {
                             worklistMoves.remove(m);
                         }
-                        frozenMoves.add(m);
+//                        frozenMoves.add(m);
 
                         var v = m.getDst().equals(u) ? m.getRhs() : m.getDst();
                         if (!moveRelated.apply(v) && degree.getOrDefault(v, 0) < K) {
@@ -432,7 +443,7 @@ public class RegAllocator implements MCPass {
                 };
 
                 Runnable freeze = () -> {
-                    var u = freezeWorklist.iterator().next();
+                    var u = freezeWorklist.first();
                     freezeWorklist.remove(u);
                     simplifyWorklist.add(u);
                     freezeMoves.accept(u);
@@ -444,6 +455,21 @@ public class RegAllocator implements MCPass {
                     var m = spillWorklist.stream().max((l, r) -> {
                         var value1 = degree.getOrDefault(l, 0).doubleValue() / Math.pow(1.4, loopDepth.getOrDefault(l, 0));
                         var value2 = degree.getOrDefault(r, 0).doubleValue() / Math.pow(1.4, loopDepth.getOrDefault(r, 0));
+
+                        // attention: avoid to choose recently spilled reg which has short live range
+                        if (l instanceof VirtualReg) {
+                            var vl = (VirtualReg) l;
+                            if (newVRegLiveLength.getOrDefault(vl, INF) < 5) {
+                                value1 = 0;
+                            }
+                        }
+
+                        if (r instanceof VirtualReg) {
+                            var vr = (VirtualReg) r;
+                            if (newVRegLiveLength.getOrDefault(vr, INF) < 5) {
+                                value2 = 0;
+                            }
+                        }
 
                         return Double.compare(value1, value2);
                     }).get();
@@ -458,7 +484,7 @@ public class RegAllocator implements MCPass {
                     while (!selectStack.isEmpty()) {
                         var n = selectStack.pop();
                         var okColors = IntStream.range(0, 15).filter(i -> i != 13).boxed() // 15
-                                .collect(Collectors.toCollection(HashSet::new));
+                                .collect(Collectors.toCollection(TreeSet::new));
 
                         for (MachineOperand w : adjList.getOrDefault(n, new HashSet<>())) {
                             var a = getAlias.apply(w);
@@ -477,7 +503,18 @@ public class RegAllocator implements MCPass {
                         if (okColors.isEmpty()) {
                             spilledNodes.add(n);
                         } else {
-                            var color = okColors.iterator().next();
+                            var color = okColors.first();
+//                            if (n instanceof VirtualReg) {
+//                                var defMC = ((VirtualReg) n).getDefMC();
+//                                if (defMC instanceof MCMove) {
+//                                    var rhs = ((MCMove) defMC).getRhs();
+//                                    if (rhs instanceof PhyReg && okColors.contains(((PhyReg) rhs).getIdx())) {
+//                                        color = ((PhyReg) rhs).getIdx();
+//                                    } else if (colored.containsKey(rhs) && okColors.contains(((PhyReg) colored.get(rhs)).getIdx())) {
+//                                        color = ((PhyReg) colored.get(rhs)).getIdx();
+//                                    }
+//                                }
+//                            }
                             colored.put(n, func.getAllocatedReg(color));
                         }
                     }
@@ -600,11 +637,9 @@ public class RegAllocator implements MCPass {
                                         loadInstr.setAddr(func.getPhyReg("sp"));
                                         loadInstr.setShift(ArmAddition.ShiftType.None, 0);
                                         loadInstr.setOffset(new MachineOperand(0));
-
                                         loadInstr.setDst(ref.vreg);
 
                                         fixOffset.accept(loadInstr);
-                                        ref.firstUse = null;
                                     }
 
                                     if (ref.lastDef != null) {
@@ -616,11 +651,8 @@ public class RegAllocator implements MCPass {
                                         storeInstr.setOffset(new MachineOperand(0));
                                         storeInstr.setData(ref.vreg);
                                         fixOffset.accept(storeInstr);
-                                        ref.lastDef = null;
                                     }
                                 } else {
-                                    ref.lastDef = null;
-
                                     if (ref.firstUse != null) {
                                         var defMC = ((VirtualReg) n).getDefMC();
 
@@ -816,11 +848,34 @@ public class RegAllocator implements MCPass {
                                             }
                                         }
 
-                                        ref.firstUse = null;
+                                    }
+                                }
+
+                                if (ref.vreg != null) {
+                                    // calc live-range length
+                                    int firstPos = -1;
+                                    int lastPos = -1;
+                                    int pos = 0;
+                                    for (var instrEntry : block.getmclist()) {
+                                        var instr = instrEntry.getVal();
+                                        ++pos;
+                                        if ((instr.getDef().contains(ref.vreg) || instr.getUse().contains(ref.vreg))) {
+                                            if (firstPos == -1) {
+                                                firstPos = pos;
+                                            }
+
+                                            lastPos = pos;
+                                        }
+                                    }
+
+                                    if (firstPos != -1) {
+                                        newVRegLiveLength.put(ref.vreg, lastPos - firstPos + 1);
                                     }
                                 }
 
                                 ref.vreg = null;
+                                ref.lastDef = null;
+                                ref.firstUse = null;
                             };
 
                             int cntInstr = 0;
