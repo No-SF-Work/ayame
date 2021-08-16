@@ -7,6 +7,7 @@ import ir.MyModule;
 import ir.values.Constants.ConstantInt;
 import ir.values.Function;
 import ir.values.instructions.Instruction;
+import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst.BrInst;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -71,11 +72,15 @@ public class LoopFusion implements IRPass {
 
   public void runOnLoops(Loop predLoop, Loop succLoop) {
     // TODO: pred exit/succ preheader 中的指令是否能移到 pred preheader
+    var predPreHeader = predLoop.getPreHeader();
     var predHeader = predLoop.getLoopHeader();
+    var succHeader = succLoop.getLoopHeader();
     var commonBB = succLoop.getPreHeader();
+    var succExit = succLoop.getExitBlocks().iterator().next();
     HashSet<Instruction> opIrrelevantInstSet = new HashSet<>();
     HashSet<Instruction> userIrrelevantInstSet = new HashSet<>();
     HashSet<Instruction> irrelevantInstSet = new HashSet<>();
+    HashSet<Instruction> relevantInstSet = new HashSet<>();
     for (var instNode : commonBB.getList()) {
       var inst = instNode.getVal();
       if (!(inst instanceof BrInst)) {
@@ -97,8 +102,91 @@ public class LoopFusion implements IRPass {
     }
     for (var instNode = commonBB.getList().getLast(); instNode != null;
         instNode = instNode.getPrev()) {
-
+      var inst = instNode.getVal();
+      if (!(inst instanceof BrInst)) {
+        boolean isIrrelevant = true;
+        for (var use : inst.getUsesList()) {
+          if (!(use.getUser() instanceof Instruction)) {
+            continue;
+          }
+          Instruction userInst = (Instruction) use.getUser();
+          if (!userIrrelevantInstSet.contains(userInst) && !userInst.getBB().getDomers()
+              .contains(predPreHeader)) {
+            isIrrelevant = false;
+          }
+          if (isIrrelevant) {
+            userIrrelevantInstSet.add(inst);
+          }
+        }
+      }
     }
+    irrelevantInstSet.addAll(opIrrelevantInstSet);
+    irrelevantInstSet.retainAll(userIrrelevantInstSet);
+    commonBB.getList().forEach(instNode -> {
+      if (!(irrelevantInstSet.contains(instNode.getVal()))) {
+        relevantInstSet.add(instNode.getVal());
+      }
+    });
+
+    var brInst = relevantInstSet.iterator().next();
+    if (!(brInst instanceof BrInst)) {
+      return;
+    }
+
+    // irrelevantInst 移动到 predPreHeader
+    for (var inst : irrelevantInstSet) {
+      inst.node.removeSelf();
+      inst.node.insertAtSecondToEnd(predPreHeader.getList());
+    }
+
+    System.out.println("fusion");
+
+    // predHeader 直接跳到 succHeader
+    // succHeader 对 indVar 的 use 换成对 predHeader indVar 的 use
+    // predHeader 和 succHeader 的 indVarCondInst 和 latchCmpInst 同构
+    // TODO: 检查 Br trueBB falseBB 的对应是否相同
+    var predBrInst = predHeader.getList().getLast().getVal();
+    predBrInst.CORemoveAllOperand();
+    predBrInst.COaddOperand(succHeader);
+    succHeader.getList().forEach(instNode -> {
+      var inst   = instNode.getVal();
+      inst.COReplaceOperand(succLoop.getIndVar(), predLoop.getIndVar());
+    });
+    // succHeader 的 phi 移到 predHeader 前面
+    for (var instNode = succHeader.getList().getEntry(); instNode != null; ) {
+      var inst = instNode.getVal();
+      var tmp = instNode.getNext();
+      if (!(inst instanceof Phi)) {
+        break;
+      }
+      instNode.removeSelf();
+      instNode.insertAtEntry(predHeader.getList());
+      instNode = tmp;
+    }
+
+    int predHeaderPredIndexOfPredLatch = predHeader.getPredecessor_().indexOf(predHeader);
+    int succHeaderPredIndexOfSuccLatch = succHeader.getPredecessor_().indexOf(succHeader);
+    int succHeaderPredIndexOfSuccPreHeader = succHeader.getPredecessor_().indexOf(commonBB);
+    int succExitPredIndexOfSuccPreHeader = succExit.getPredecessor_().indexOf(commonBB);
+    int predPreHeaderSuccIndexOfPredExit = predPreHeader.getSuccessor_().indexOf(commonBB);
+    int predLatchSuccIndexOfPredHeader = predHeader.getSuccessor_().indexOf(predHeader);
+    int predLatchSuccIndexOfPredExit = predHeader.getSuccessor_().indexOf(commonBB);
+    int succLatchSuccIndexOfSuccHeader = succHeader.getSuccessor_().indexOf(succHeader);
+
+    predHeader.getPredecessor_().set(predHeaderPredIndexOfPredLatch, succHeader);
+    succHeader.getPredecessor_().clear();
+    succHeader.getPredecessor_().add(predHeader);
+    succExit.getPredecessor_().set(succExitPredIndexOfSuccPreHeader, predPreHeader);
+
+    predPreHeader.getSuccessor_().set(predPreHeaderSuccIndexOfPredExit, succExit);
+    predHeader.getSuccessor_().clear();
+    predHeader.getSuccessor_().add(succHeader);
+    succHeader.getSuccessor_().set(succLatchSuccIndexOfSuccHeader, predHeader);
+
+    BrInst predPreBrInst = (BrInst) predPreHeader.getList().getLast().getVal();
+    BrInst succBrInst = (BrInst) succHeader.getList().getLast().getVal();
+    predPreBrInst.COReplaceOperand(commonBB, succExit);
+    succBrInst.COReplaceOperand(succHeader, predHeader);
   }
 
   public boolean fusionConditionForSingleLoop(Loop loop) {
@@ -127,7 +215,10 @@ public class LoopFusion implements IRPass {
     }
     if (predLoop.getIndVarInit() != succLoop.getIndVarInit()
         || predLoop.getIndVarEnd() != succLoop.getIndVarEnd()
-        || predLoop.getLatchCmpInst().tag != succLoop.getLatchCmpInst().tag) {
+        || predLoop.getLatchCmpInst().tag != succLoop.getLatchCmpInst().tag
+        || !predLoop.getIndVarCondInst().getOperands().contains(predLoop.getIndVar())
+        || !succLoop.getIndVarCondInst().getOperands().contains(succLoop.getIndVar())
+    ) {
       return false;
     }
     if (predLoop.getStep() instanceof ConstantInt && succLoop.getStep() instanceof ConstantInt
