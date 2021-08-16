@@ -380,6 +380,7 @@ public class SimplifyInstruction {
     }
 
     var targetBB = inst.getBB();
+    var targetEndInst = targetBB.getList().getLast().getVal();
 
     Value c = foldConstant(inst.tag, lhs, rhs);
     if (c != null) {
@@ -416,6 +417,18 @@ public class SimplifyInstruction {
 
     // TODO 乘法结合律优化，共4种
     // TODO 乘法分配律优化
+    // (A * B) * C => A * (B * C)
+    if (lhs instanceof BinaryInst && ((Instruction) lhs).tag == TAG_.Mul) {
+      BinaryInst mulInst = (BinaryInst) lhs;
+      var mulLhs = mulInst.getOperands().get(0);
+      var mulRhs = mulInst.getOperands().get(1);
+      BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Mul, factory.getI32Ty(), mulRhs, rhs);
+      Value simpleMul = simplifyMulInst(tmpInst, false);
+      if (simpleMul != tmpInst) {
+        return simplifyMulInst(
+            new BinaryInst(targetEndInst, TAG_.Mul, factory.getI32Ty(), mulLhs, simpleMul), false);
+      }
+    }
 
     return inst;
   }
@@ -430,6 +443,9 @@ public class SimplifyInstruction {
       rhs = ((GlobalVariable) rhs).init;
     }
 
+    var targetBB = inst.getBB();
+    var targetEndInst = targetBB.getList().getLast().getVal();
+
     Value c = foldConstant(inst.tag, lhs, rhs);
     if (c != null) {
       return c;
@@ -442,6 +458,26 @@ public class SimplifyInstruction {
     // lhs / 1 -> lhs
     if (rhs instanceof ConstantInt && ((ConstantInt) rhs).getVal() == 1) {
       return lhs;
+    }
+
+    if (lhs instanceof BinaryInst && ((Instruction) lhs).tag == TAG_.Mul) {
+      BinaryInst mulInst = (BinaryInst) lhs;
+      var mulLhs = mulInst.getOperands().get(0);
+      var mulRhs = mulInst.getOperands().get(1);
+      if (mulRhs instanceof ConstantInt && rhs instanceof ConstantInt) {
+        var clhs = ((ConstantInt) mulRhs).getVal();
+        var crhs = ((ConstantInt) rhs).getVal();
+        if (clhs % crhs == 0) {
+          BinaryInst tmpInst = new BinaryInst(targetEndInst, TAG_.Div, factory.getI32Ty(), mulRhs,
+              rhs);
+          Value simpleDiv = simplifyDivInst(tmpInst, false);
+          if (simpleDiv != tmpInst) {
+            return simplifyMulInst(
+                new BinaryInst(targetEndInst, TAG_.Mul, factory.getI32Ty(), mulLhs, simpleDiv),
+                false);
+          }
+        }
+      }
     }
 
     return inst;
