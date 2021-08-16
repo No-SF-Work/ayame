@@ -820,17 +820,19 @@ public class Visitor extends SysYBaseVisitor<Void> {
     visitStmt(ctx.stmt());
     //保持几个Inst之间的use关系不乱，并且让使用了其他value的inst能够找到那些inst
     if (Config.getInstance().isO2) {
-      whileCondEntryBlock.getList().forEach(instNode -> {
-        var val = instNode.getVal();
-        for (Value operand : val.getOperands()) {
-          if (cloner.findValue(operand) == null) {
-            cloner.put(operand, operand);
-          }
-        }
-        var copy = cloner.getInstCopy(val);
-        cloner.put(val, copy);
-        copy.node.insertAtEnd(curBB_.getList());
-      });
+     if (!(curBB_.getList().getLast().getVal() instanceof BrInst)){
+       whileCondEntryBlock.getList().forEach(instNode -> {
+         var val = instNode.getVal();
+         for (Value operand : val.getOperands()) {
+           if (cloner.findValue(operand) == null) {
+             cloner.put(operand, operand);
+           }
+         }
+         var copy = cloner.getInstCopy(val);
+         cloner.put(val, copy);
+         copy.node.insertAtEnd(curBB_.getList());
+       });
+     }
     } else {
       f.buildBr(whileCondEntryBlock, curBB_);
     }
