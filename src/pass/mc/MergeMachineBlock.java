@@ -163,9 +163,9 @@ public class MergeMachineBlock implements Pass.MCPass {
                                     continue;
                                 }
                                 //如果pred的Prefer不是default，且mb不是pred的Prefer，那么不插入
-                                if(pred.getPrefer()== MachineBlock.Prefer.False){
-                                    continue;
-                                }
+//                                if(pred.getPrefer()== MachineBlock.Prefer.False){
+//                                    continue;
+//                                }
 
                                 predToRemove.add(pred);
                                 var lastEntry = pred.getmclist().getLast();

@@ -326,8 +326,13 @@ public class LoopMergeLastBreak implements IRPass {
     var falseBB = headerBr.getOperands().get(2);
     headerBr.CoReplaceOperandByIndex(1, falseBB);
     headerBr.CoReplaceOperandByIndex(2, trueBB);
+    if (cmp.tag == TAG_.Ge)
     ((BrInst) headerBr).setPrefer(
-        ((BasicBlock) trueBB).getLoopDepth() == loop.getLoopDepth() ? prefer.T : prefer.F);
+        ((BasicBlock) trueBB).getLoopDepth() == loop.getLoopDepth() ? prefer.F : prefer.T);
+    else
+    ((BrInst) headerBr).setPrefer(
+            ((BasicBlock) trueBB).getLoopDepth() == loop.getLoopDepth() ? prefer.T : prefer.F);
+
   }
 
   public TAG_ getOppCmpTag(TAG_ tag) {
