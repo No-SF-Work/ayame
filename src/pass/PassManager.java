@@ -52,7 +52,7 @@ public class PassManager {
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new InterProceduralDCE());
-    irPasses.add(new StoreGlobalArrayPointer());
+//    irPasses.add(new StoreGlobalArrayPointer());
 
     irPasses.add(new LCSSA());
 //    irPasses.add(new EmitLLVM("beforeUnroll.ll"));
