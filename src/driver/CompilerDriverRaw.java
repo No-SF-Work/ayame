@@ -52,7 +52,7 @@ public class CompilerDriverRaw {
         source = cmd;
       }
     }
-    Config.getInstance().isO2 = false;
+//    Config.getInstance().isO2 = false;
     assert source != null;
     assert target != null;
 
@@ -72,7 +72,7 @@ public class CompilerDriverRaw {
       pm.openedPasses_.add("bbPredSucc");
       pm.openedPasses_.add("Mem2reg");
       pm.openedPasses_.add("RegAlloc");
-//      pm.openedPasses_.add("gvngcm");
+      pm.openedPasses_.add("gvngcm");
       pm.openedPasses_.add("interproceduralAnalysis");
       if (Config.getInstance().isO2) {
         pm.openedPasses_.add("gvlocalize");
@@ -91,8 +91,8 @@ public class CompilerDriverRaw {
         pm.openedPasses_.add("constantLoopUnroll");
         pm.openedPasses_.add("MergeMachineBlock");
         pm.openedPasses_.add("redundantLoop");
-        pm.openedPasses_.add("loopIdiom");
-        pm.openedPasses_.add("loopMergeLastBreak");
+//        pm.openedPasses_.add("loopIdiom");
+//        pm.openedPasses_.add("loopMergeLastBreak");
         pm.openedPasses_.add("promotion");
       }
 
