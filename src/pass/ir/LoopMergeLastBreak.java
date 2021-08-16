@@ -106,7 +106,9 @@ public class LoopMergeLastBreak implements IRPass {
         indVarEnd = op;
       }
     }
-    assert stepInst != null;
+    if (stepInst == null) {
+      return;
+    }
     for (var op : stepInst.getOperands()) {
       if (op instanceof Phi && ((Phi) op).getIncomingVals().contains(stepInst)) {
         indVar = (Phi) op;
@@ -114,7 +116,9 @@ public class LoopMergeLastBreak implements IRPass {
         step = op;
       }
     }
-    assert indVar != null;
+    if (indVar == null) {
+      return;
+    }
     for (var op : indVar.getIncomingVals()) {
       if (op != stepInst) {
         indVarInit = op;

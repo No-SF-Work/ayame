@@ -1,0 +1,30 @@
+int n = 0, m = 0;
+
+int f() {
+    n = 1;
+    return 2;
+}
+
+int g() {
+    m = 2;
+    return 3;
+}
+
+int h() {
+    m = 3;
+    return 5;
+}
+
+int main() {
+    int a = 0;
+    if (f() == 2 || h() == 3) {
+        a = 1;
+    }
+    if (f() == 3 && h() == 3) {
+        a = 1;
+    }
+    if (f() == 2 && g() == -1 && h() == 99) {
+        a = 1;
+    }
+    return m + n;
+}

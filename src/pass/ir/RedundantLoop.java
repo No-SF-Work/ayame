@@ -101,7 +101,7 @@ public class RedundantLoop implements IRPass {
     // 出口限制：循环内指令不被出口处 LCSSA Phi 使用
     ArrayList<Integer> predIndexList = new ArrayList<>();
     int index = 0;
-    for (var pred: exit.getPredecessor_()) {
+    for (var pred : exit.getPredecessor_()) {
       if (loop.getExitingBlocks().contains(pred)) {
         predIndexList.add(index);
       }
@@ -121,7 +121,7 @@ public class RedundantLoop implements IRPass {
         }
       }
 
-      for (var i: predIndexList) {
+      for (var i : predIndexList) {
         if (inst.getOperands().get(i) != inst.getOperands().get(preHeaderIndex)) {
           return;
         }
@@ -129,8 +129,12 @@ public class RedundantLoop implements IRPass {
     }
 
     // 开始消除无用循环
-    preHeader.getSuccessor_().remove(loop.getLoopHeader());
     var preBrInst = preHeader.getList().getLast().getVal();
+    if (preBrInst.getOperands().size() == 1) {
+      return;
+    }
+    preHeader.getSuccessor_().remove(loop.getLoopHeader());
+
     assert preBrInst.getOperands().size() == 3;
     int headerOpIndex = preBrInst.getOperands().indexOf(loop.getHeader());
     preBrInst.CORemoveNOperand(new int[]{0, headerOpIndex});
@@ -153,7 +157,7 @@ public class RedundantLoop implements IRPass {
     for (int i = 0; i < phiPredList.size(); i++) {
       predArr[i] = phiPredList.get(i);
     }
-    for (var instNode: exit.getList()) {
+    for (var instNode : exit.getList()) {
       var inst = instNode.getVal();
       if (!(inst instanceof Phi)) {
         break;
@@ -162,7 +166,7 @@ public class RedundantLoop implements IRPass {
     }
 
     for (var bb : loop.getBlocks()) {
-      for (var instNode = bb.getList().getEntry(); instNode != null ; ) {
+      for (var instNode = bb.getList().getEntry(); instNode != null; ) {
         var tmp = instNode.getNext();
         var inst = instNode.getVal();
         inst.CORemoveAllOperand();

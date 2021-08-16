@@ -75,8 +75,7 @@ public class DeadCodeEmit implements IRPass {
             var nnext = ninstNode.getNext();
             var ninst = ninstNode.getVal();
             if (ninst.tag == TAG_.Store) {
-              if (inst.getOperands().get(0) == ninst.getOperands().get(0)
-                  && inst.getOperands().get(1) == ninst.getOperands().get(1)) {
+              if (inst.getOperands().get(1) == ninst.getOperands().get(1)) {
                 inst.CORemoveAllOperand();
                 inst.node.removeSelf();
                 break;

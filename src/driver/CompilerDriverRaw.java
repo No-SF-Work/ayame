@@ -52,7 +52,7 @@ public class CompilerDriverRaw {
         source = cmd;
       }
     }
-
+//    Config.getInstance().isO2 = false;
     assert source != null;
     assert target != null;
 
@@ -91,8 +91,8 @@ public class CompilerDriverRaw {
         pm.openedPasses_.add("constantLoopUnroll");
         pm.openedPasses_.add("MergeMachineBlock");
         pm.openedPasses_.add("redundantLoop");
-        pm.openedPasses_.add("loopIdiom");
-        pm.openedPasses_.add("loopMergeLastBreak");
+//        pm.openedPasses_.add("loopIdiom");
+//        pm.openedPasses_.add("loopMergeLastBreak");
         pm.openedPasses_.add("promotion");
         pm.openedPasses_.add("markParallel");
       }
@@ -112,6 +112,7 @@ public class CompilerDriverRaw {
       File f = new File(target);
       FileWriter fw = new FileWriter(f);
       fw.append(cgm.genARM());
+      fw.append("@ver: 1");
       fw.close();
     } catch (IOException e) {
       e.printStackTrace();
