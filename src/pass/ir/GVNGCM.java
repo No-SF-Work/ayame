@@ -41,6 +41,7 @@ public class GVNGCM implements IRPass {
   private HashSet<Instruction> instructionsVis = new HashSet<>();
 
   private boolean finalOpt = false;
+  private boolean disableLookupNew = true;
 
   @Override
   public String getName() {
@@ -305,9 +306,13 @@ public class GVNGCM implements IRPass {
       instNode = tmp;
     }
 
+    var endInst = bb.getList().getLast().getPrev();
     for (var instNode = bb.getList().getEntry(); instNode != null; ) {
       var tmp = instNode.getNext();
       runGVNOnInstruction(instNode.getVal());
+      if (instNode == endInst && !finalOpt) {
+        break;
+      }
       instNode = tmp;
     }
     assert bb.getList().getLast().getVal() instanceof BrInst || bb.getList().getLast()
@@ -331,6 +336,10 @@ public class GVNGCM implements IRPass {
     if (inst.isBinary()) {
       // 循环展开时发现可能有多个 br 共用一个 icmp 的情况，而循环展开时会更改 icmp，所以不替换 icmp
       if (inst.isRelBinary() && !finalOpt) {
+        return;
+      }
+      if (simpInst != inst && !disableLookupNew) {
+        replace(inst, simpInst);
         return;
       }
       Value val = lookupOrAdd(simpInst);
