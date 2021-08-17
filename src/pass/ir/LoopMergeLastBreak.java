@@ -1,5 +1,6 @@
 package pass.ir;
 
+import driver.Config;
 import ir.Analysis.LoopInfo;
 import ir.Loop;
 import ir.MyFactoryBuilder;
@@ -298,6 +299,7 @@ public class LoopMergeLastBreak implements IRPass {
     }
 
     switchHeaderCmp(loop);
+    Config.getInstance().runStableRegAlloc = true;
   }
 
   public boolean structureJudge(Loop loop) {

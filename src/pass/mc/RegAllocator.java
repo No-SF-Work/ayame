@@ -179,6 +179,10 @@ public class RegAllocator implements MCPass {
     }
 
     public void run(CodeGenManager manager) {
+        if (Config.getInstance().runStableRegAlloc) {
+            return;
+        }
+
         for (var func : manager.getMachineFunctions()) {
             var done = false;
             HashMap<VirtualReg, VirtualReg> newToOldMap = new HashMap<>();

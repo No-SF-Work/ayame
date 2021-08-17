@@ -180,6 +180,10 @@ public class RegAllocatorStable implements MCPass {
     }
 
     public void run(CodeGenManager manager) {
+        if (!Config.getInstance().runStableRegAlloc) {
+            return;
+        }
+
         for (var func : manager.getMachineFunctions()) {
             var done = false;
 

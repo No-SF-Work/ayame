@@ -18,6 +18,7 @@ public class Config {
   public boolean isIRMode = false;
   public boolean isOutPutMode = false;
   public boolean isO2 = false;
+  public boolean runStableRegAlloc = false;
 
   private Config() {
   }
