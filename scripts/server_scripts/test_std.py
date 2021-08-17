@@ -21,7 +21,7 @@ thu_thu_scheme = {"scheme": "thu_thu",
                   "emit_llvm_ir": False}
 
 ayame_ayame_scheme = {"scheme": "ayame_ayame",
-                "frontend_instr": ayame_compiler + "-S {sy} -o {asm}",
+                "frontend_instr": ayame_compiler + "-S {sy} -o {asm} -O2",
                 "emit_llvm_ir": False}
 
 # ustc_ustc_scheme = {"scheme": "ustc_ustc",
