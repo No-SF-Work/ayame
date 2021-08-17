@@ -41,7 +41,7 @@ public class GVNGCM implements IRPass {
   private HashSet<Instruction> instructionsVis = new HashSet<>();
 
   private boolean finalOpt = false;
-  private boolean disableLookupNew = true;
+  private boolean disableLookupNew = false;
 
   @Override
   public String getName() {
