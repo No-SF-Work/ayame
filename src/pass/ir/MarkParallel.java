@@ -14,8 +14,6 @@ import ir.values.Function;
 import ir.values.Function.Arg;
 import ir.values.GlobalVariable;
 import ir.values.Value;
-import ir.values.instructions.BinaryInst;
-import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst.AllocaInst;
 import ir.values.instructions.MemInst.GEPInst;
@@ -82,7 +80,7 @@ public class MarkParallel implements IRPass {
     for (var bb : loop.getBlocks()) {
       for (var instNode : bb.getList()) {
         var inst = instNode.getVal();
-        if (inst instanceof CallInst && ((CallInst) inst).getFunc().isHasSideEffect()) {
+        if (inst instanceof CallInst) {
           return;
         }
       }
@@ -140,6 +138,9 @@ public class MarkParallel implements IRPass {
 
     // 判断唯一的 store 地址是不是满足迭代器要求
     // 指向 global i32，退出
+    if (onlyPointer.getAimTo() == null) {
+      return;
+    }
     if (onlyPointer.getAimTo() instanceof GlobalVariable) {
       GlobalVariable gv = (GlobalVariable) onlyPointer.getAimTo();
       if (((PointerType) gv.getType()).getContained() instanceof IntegerType) {
@@ -162,6 +163,9 @@ public class MarkParallel implements IRPass {
       AllocaInst alloca = (AllocaInst) ArrayAliasAnalysis.getArrayValue(onlyPointer);
       if (alloca.getAllocatedType().isPointerTy()) {
         PointerType allocatedType = (PointerType) alloca.getAllocatedType();
+        if (allocatedType == null) {
+          return;
+        }
         pointToType = allocatedType.getContained();//ARRTY
 
         for (var instNode : currFunc.getList_().getEntry().getVal().getList()) {
@@ -183,26 +187,8 @@ public class MarkParallel implements IRPass {
     // 指向一维数组
     if (pointToType.isIntegerTy() && onlyPointer.getOperands().get(1) != indVar) {
       return;
-    }
-    // 指向多维数组
-    else if (pointToType.isArrayTy()) {
-      // %bias = add %indvar, %mul
-      // %mul -> out of loop OR not an instruction
-      var bias = onlyPointer.getOperands().get(1);
-      if (!(bias instanceof BinaryInst) || ((BinaryInst) bias).tag != TAG_.Add) {
-        return;
-      }
-      var biasInst = (BinaryInst) bias;
-      var indVarOpIndex = biasInst.getOperands().indexOf(indVar);
-      if (indVarOpIndex == -1) {
-        return;
-      }
-
-      var mulInst = biasInst.getOperands().get(1 - indVarOpIndex);
-      if (mulInst instanceof Instruction && ((Instruction) mulInst).getBB().getLoopDepth() == loop
-          .getLoopDepth()) {
-        return;
-      }
+    } else if (pointToType.isArrayTy()) {
+      return;
     }
 
     // 判断循环中其他此 store 地址数组的使用中，下标是不是和这个 store 相同
