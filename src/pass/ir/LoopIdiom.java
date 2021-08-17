@@ -224,6 +224,7 @@ public class LoopIdiom implements IRPass {
     currLoopInfo.removeLoop(loop);
 
     Config.getInstance().runStableRegAlloc = true;
+    Config.getInstance().isAggressiveDiv = true;
   }
 
   public BinaryInst buildCeilDiv(BasicBlock bb, Value lhs, Value rhs) {

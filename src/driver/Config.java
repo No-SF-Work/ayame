@@ -19,6 +19,7 @@ public class Config {
   public boolean isOutPutMode = false;
   public boolean isO2 = false;
   public boolean runStableRegAlloc = false;
+  public boolean isAggressiveDiv = false;
 
   private Config() {
   }

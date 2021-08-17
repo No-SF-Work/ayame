@@ -20,6 +20,7 @@ import backend.machinecodes.MachineFunction;
 import backend.reg.MachineOperand;
 import backend.reg.Reg;
 import backend.reg.VirtualReg;
+import driver.Config;
 import ir.Loop;
 import ir.MyModule;
 import ir.types.ArrayType;
@@ -76,6 +77,7 @@ public class CodeGenManager {
     }
 
     public void load(MyModule m) {
+        isAggressive = Config.getInstance().isAggressiveDiv;
         myModule = m;
     }
 
