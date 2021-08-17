@@ -35,15 +35,17 @@ public class PassManager {
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
+
     irPasses.add(new LCSSA());
     irPasses.add(new ConstantLoopUnroll());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
     irPasses.add(new MarkArgs());
+
     irPasses.add(new LCSSA());
-    irPasses.add(new EmitLLVM("beforeMarkParallel.ll"));
+//    irPasses.add(new EmitLLVM("beforeMarkParallel.ll"));
     irPasses.add(new MarkParallel());
-    irPasses.add(new EmitLLVM("afterMarkParallel.ll"));
+//    irPasses.add(new EmitLLVM("afterMarkParallel.ll"));
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
@@ -72,8 +74,8 @@ public class PassManager {
 
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
-    irPasses.add(new LocalArrayPromotion());
-    irPasses.add(new GVNGCM(true));
+//    irPasses.add(new LocalArrayPromotion());
+//    irPasses.add(new GVNGCM(true));
 
     irPasses.add(new LCSSA());
     irPasses.add(new RedundantLoop());
@@ -88,7 +90,6 @@ public class PassManager {
     irPasses.add(new LCSSA());
     irPasses.add(new GVNGCM(true));
     irPasses.add(new EmitLLVM());
-
     mcPasses.add(new RegAllocator());
     mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new MergeMachineBlock());
