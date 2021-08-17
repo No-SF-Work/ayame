@@ -63,7 +63,7 @@ public class CodeGenManager {
 
     private boolean isO2 = true;
 
-    private boolean isAggressive = true;
+    private boolean isAggressive = false;
 
     private boolean ifPrintIR = false;
 
