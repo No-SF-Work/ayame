@@ -10,11 +10,11 @@ ayame_compiler = "java -classpath src:lib/antlr4-runtime-4.8.jar:lib/argparse4j-
 
 clang_llvm_o2_scheme = {"scheme": "clang_llvm_o2",
                         "frontend_instr": "clang -x c -c -O2 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -emit-llvm -include {header} {sy} -o {ir}",
-                        "emit_llvm_ir": False}
+                        "emit_llvm_ir": True}
 
 clang_llvm_o3_scheme = {"scheme": "clang_llvm_o3",
                         "frontend_instr": "clang -x c -c -O3 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -emit-llvm -include {header} {sy} -o {ir}",
-                     "emit_llvm_ir": False}
+                     "emit_llvm_ir": True}
 
 ayame_ayame_scheme = {"scheme": "ayame_ayame",
                 "frontend_instr": ayame_compiler + "-S {sy} -o {asm} -O2",
