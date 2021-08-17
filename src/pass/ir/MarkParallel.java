@@ -185,7 +185,7 @@ public class MarkParallel implements IRPass {
     else if (pointToType.isArrayTy()) {
       // %bias = add %indvar, %mul
       // %mul -> out of loop OR not an instruction
-      var bias = onlyPointer.getOperands().get(2);
+      var bias = onlyPointer.getOperands().get(1);
       if (!(bias instanceof BinaryInst) || ((BinaryInst) bias).tag != TAG_.Add) {
         return;
       }
