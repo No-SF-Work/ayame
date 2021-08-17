@@ -8,41 +8,24 @@ ustc_compiler = "build/bin/ustc_compiler "
 ustc_compiler_no_vec = "build/bin/ustc_compiler_no_vec "
 ayame_compiler = "java -classpath src:lib/antlr4-runtime-4.8.jar:lib/argparse4j-0.9.0.jar Compiler "
 
-clang_llvm_o2_scheme = {"scheme": "clang_llvm",
-                        "frontend_instr": "clang -x c -c -O2 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
+clang_llvm_o2_scheme = {"scheme": "clang_llvm_o2",
+                        "frontend_instr": "clang -x c -c {sy} {header} -O2 -target armv7-linux-eabi -mcpu=cortex-a72 -mfloat-abi=hard -mfpu=neon -S -o {asm}",
                         "emit_llvm_ir": False}
 
-clang_llvm_o3_scheme = {"scheme": "clang_llvm",
-                     "frontend_instr": "clang -x c -c -O3 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
+clang_llvm_o3_scheme = {"scheme": "clang_llvm_o3",
+                        "frontend_instr": "clang -x c -c {sy} {header} -O3 -target armv7-linux-eabi -mcpu=cortex-a72 -mfloat-abi=hard -mfpu=neon -S -o {asm}",
                      "emit_llvm_ir": False}
-
-# thu_llvm_scheme = {"scheme": "thu_llvm",
-#                    "frontend_instr": thu_compiler + "-l {ir} {sy}",
-#                    "emit_llvm_ir": True}
-
-# thu_thu_scheme = {"scheme": "thu_thu",
-#                   "frontend_instr": thu_compiler + "-o {asm} {sy}",
-#                   "emit_llvm_ir": False}
 
 ayame_ayame_scheme = {"scheme": "ayame_ayame",
                 "frontend_instr": ayame_compiler + "-S {sy} -o {asm} -O2",
                 "emit_llvm_ir": False}
 
-# ustc_ustc_scheme = {"scheme": "ustc_ustc",
-#                     "frontend_instr": ustc_compiler + "-o {asm} {sy}",
-#                     "emit_llvm_ir": False}
-
-# ustc_ustc_no_vec_scheme = {
-#                     "scheme": "ustc_ustc_no_vec",
-#                     "frontend_instr": ustc_compiler_no_vec + "-o {asm} {sy}",
-#                     "emit_llvm_ir": False}
-
-gcc_gcc_o2_scheme = {"scheme": "gcc_gcc",
-                     "frontend_instr": "gcc -x c -c -O2 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
+gcc_gcc_o2_scheme = {"scheme": "gcc_gcc_o2",
+                     "frontend_instr": "arm-none-linux-gnueabihf-gcc -x c -c -O2 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
                      "emit_llvm_ir": False}
 
-gcc_gcc_o3_scheme = {"scheme": "gcc_gcc",
-                  "frontend_instr": "gcc -x c -c -O3 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
+gcc_gcc_o3_scheme = {"scheme": "gcc_gcc_o3",
+                  "frontend_instr": "arm-none-linux-gnueabihf-gcc -x c -c -O3 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
                   "emit_llvm_ir": False}
 
 # ustc_llvm_scheme = {"scheme": "ustc_llvm", # generate ir only
