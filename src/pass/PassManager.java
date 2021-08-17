@@ -88,7 +88,7 @@ public class PassManager {
     irPasses.add(new GVNGCM(true));
 
     irPasses.add(new LCSSA());
-    irPasses.add(new BranchOptimization());
+//    irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
     irPasses.add(new LoopInfoFullAnalysis());
     irPasses.add(new EmitLLVM());
