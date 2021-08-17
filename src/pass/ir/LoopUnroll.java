@@ -154,6 +154,26 @@ public class LoopUnroll implements IRPass {
       return;
     }
 
+    var preHeader = header.getPredecessor_().get(1 - latchPredIndex);
+    var preBrInst = preHeader.getList().getLast().getVal();
+    var preIcmpInst = (Instruction) (preBrInst.getOperands().get(0));
+    int preIndVarEndIndex = 0;
+    var indVarEnd = loop.getIndVarEnd();
+    for (var op : preIcmpInst.getOperands()) {
+      if (op == loop.getIndVarEnd() || (op instanceof ConstantInt
+          && indVarEnd instanceof ConstantInt
+          && ((ConstantInt) op).getVal() == ((ConstantInt) indVarEnd).getVal())) {
+        break;
+      }
+      preIndVarEndIndex++;
+    }
+    var preStepIndex = 1 - preIndVarEndIndex;
+    if (preStepIndex < 0) {
+      return;
+    }
+    var preStepInst = preIcmpInst.getOperands().get(preStepIndex);
+
+
     HashMap<Value, Value> lastValueMap = new HashMap<>();
     ArrayList<Phi> originPhis = new ArrayList<>();
 
@@ -277,26 +297,13 @@ public class LoopUnroll implements IRPass {
 
     // preHeader 维护跳转：跳转条件中迭代器加 1；对后继的维护在后面做
     // canonical loop 的 header 只有两个前驱
-    var preHeader = header.getPredecessor_().get(1 - latchPredIndex);
+
 
     // 修改 preHeader 进入循环的判断条件
     // while (i < n) => while (i + 1 < n)
     // preHeader 中的 icmp 的 i 设为 i + 1
     assert preHeader.getList().getLast().getVal().getOperands().size() == 3;
-    var preBrInst = preHeader.getList().getLast().getVal();
-    var preIcmpInst = (Instruction) (preBrInst.getOperands().get(0));
-    int preIndVarEndIndex = 0;
-    var indVarEnd = loop.getIndVarEnd();
-    for (var op : preIcmpInst.getOperands()) {
-      if (op == loop.getIndVarEnd() || (op instanceof ConstantInt
-          && indVarEnd instanceof ConstantInt
-          && ((ConstantInt) op).getVal() == ((ConstantInt) indVarEnd).getVal())) {
-        break;
-      }
-      preIndVarEndIndex++;
-    }
-    var preStepIndex = 1 - preIndVarEndIndex;
-    var preStepInst = preIcmpInst.getOperands().get(preStepIndex);
+
     lhs = stepIndex == 0 ? loop.getStep() : preStepInst;
     rhs = stepIndex == 0 ? preStepInst : loop.getStep();
     var preStepIterOnce = factory.buildBinaryBefore(preIcmpInst, stepInst.tag, lhs, rhs);

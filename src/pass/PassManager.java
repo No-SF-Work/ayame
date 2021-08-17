@@ -35,7 +35,6 @@ public class PassManager {
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
 
-
     irPasses.add(new LCSSA());
     irPasses.add(new ConstantLoopUnroll());
     irPasses.add(new BranchOptimization());
@@ -74,8 +73,8 @@ public class PassManager {
 
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
-//    irPasses.add(new LocalArrayPromotion());
-//    irPasses.add(new GVNGCM(true));
+    irPasses.add(new LocalArrayPromotion());
+    irPasses.add(new GVNGCM(true));
 
     irPasses.add(new LCSSA());
     irPasses.add(new RedundantLoop());
