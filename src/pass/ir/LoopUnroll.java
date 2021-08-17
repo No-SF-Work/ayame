@@ -1,5 +1,6 @@
 package pass.ir;
 
+import driver.Config;
 import ir.Analysis.LoopInfo;
 import ir.Loop;
 import ir.MyFactoryBuilder;
@@ -14,15 +15,14 @@ import ir.values.instructions.Instruction.TAG_;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst.CallInst;
-import pass.Pass.IRPass;
-import util.Mylogger;
-import util.LoopUtils;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
+import pass.Pass.IRPass;
+import util.LoopUtils;
+import util.Mylogger;
 
 public class LoopUnroll implements IRPass {
 
@@ -119,6 +119,7 @@ public class LoopUnroll implements IRPass {
     if (loop.getStep() instanceof ConstantInt) {
       var s = ((ConstantInt) loop.getStep()).getVal();
       if (Math.abs(s) > 100000000) {
+        Config.getInstance().isAggressiveDiv = true;
         return;
       }
     }
