@@ -111,6 +111,10 @@ public class LoopUnroll implements IRPass {
       return;
     }
 
+    if (loop.getPreHeader().getList().getLast().getVal().getNumOP() == 1) {
+      return;
+    }
+
     // step too big
     if (loop.getStep() instanceof ConstantInt) {
       var s = ((ConstantInt) loop.getStep()).getVal();
