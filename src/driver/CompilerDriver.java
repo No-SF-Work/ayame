@@ -97,7 +97,7 @@ public class CompilerDriver {
       pm.openedPasses_.add("RegAlloc");
       if (Config.getInstance().isO2) {
         pm.openedPasses_.add("markglobal");
-        pm.openedPasses_.add("gvlocalize");
+//        pm.openedPasses_.add("gvlocalize");
         pm.openedPasses_.add("branchOptimization");
         pm.openedPasses_.add("emitllvm");
         pm.openedPasses_.add("gvngcm");
@@ -113,7 +113,7 @@ public class CompilerDriver {
         pm.openedPasses_.add("loopUnroll");
         pm.openedPasses_.add("constantLoopUnroll");
         pm.openedPasses_.add("MergeMachineBlock");
-        pm.openedPasses_.add("storeGVPointer");
+//        pm.openedPasses_.add("storeGVPointer");
         pm.openedPasses_.add("redundantLoop");
         pm.openedPasses_.add("loopIdiom");
         pm.openedPasses_.add("loopMergeLastBreak");
