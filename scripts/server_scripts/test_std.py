@@ -9,11 +9,11 @@ ustc_compiler_no_vec = "build/bin/ustc_compiler_no_vec "
 ayame_compiler = "java -classpath src:lib/antlr4-runtime-4.8.jar:lib/argparse4j-0.9.0.jar Compiler "
 
 clang_llvm_o2_scheme = {"scheme": "clang_llvm_o2",
-                        "frontend_instr": "clang -x c -c {sy} -O2 -target armv7-linux-eabi -mcpu=cortex-a72 -mfloat-abi=hard -mfpu=neon -S -o {asm}",
+                        "frontend_instr": "clang -x c -c -O2 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -emit-llvm -include {header} {sy} -o {ir}",
                         "emit_llvm_ir": False}
 
 clang_llvm_o3_scheme = {"scheme": "clang_llvm_o3",
-                        "frontend_instr": "clang -x c -c {sy} -O3 -target armv7-linux-eabi -mcpu=cortex-a72 -mfloat-abi=hard -mfpu=neon -S -o {asm}",
+                        "frontend_instr": "clang -x c -c -O3 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -emit-llvm -include {header} {sy} -o {ir}",
                      "emit_llvm_ir": False}
 
 ayame_ayame_scheme = {"scheme": "ayame_ayame",
