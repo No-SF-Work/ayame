@@ -5,7 +5,6 @@ import ir.Analysis.LoopInfo;
 import ir.Loop;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
-import ir.types.ArrayType;
 import ir.types.IntegerType;
 import ir.types.PointerType;
 import ir.types.Type;
@@ -18,16 +17,19 @@ import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
-import ir.values.instructions.MemInst.*;
+import ir.values.instructions.MemInst.AllocaInst;
+import ir.values.instructions.MemInst.GEPInst;
+import ir.values.instructions.MemInst.LoadInst;
+import ir.values.instructions.MemInst.Phi;
+import ir.values.instructions.MemInst.StoreInst;
 import ir.values.instructions.TerminatorInst.CallInst;
-import pass.Pass.IRPass;
-import util.LoopUtils;
-import util.Mylogger;
-
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
+import pass.Pass.IRPass;
+import util.LoopUtils;
+import util.Mylogger;
 
 // 识别到可并行循环后，在循环头基本块处标记
 public class MarkParallel implements IRPass {
@@ -149,11 +151,12 @@ public class MarkParallel implements IRPass {
 
     if (ArrayAliasAnalysis.getArrayValue(onlyPointer) instanceof GlobalVariable) {
       // 普通全局数组
-      GlobalVariable gv = (GlobalVariable) ArrayAliasAnalysis.getArrayValue(onlyPointer);
-      pointToType = ((PointerType) (gv.getType())).getContained();//ARRTY
-      if (pointToType instanceof ArrayType) {
-        pointToType = ((ArrayType) pointToType).getELeType();
-      }
+      return;
+//      GlobalVariable gv = (GlobalVariable) ArrayAliasAnalysis.getArrayValue(onlyPointer);
+//      pointToType = ((PointerType) (gv.getType())).getContained();//ARRTY
+//      if (pointToType instanceof ArrayType) {
+//        pointToType = ((ArrayType) pointToType).getELeType();
+//      }
     } else {
       // 传参进函数的全局数组
       AllocaInst alloca = (AllocaInst) ArrayAliasAnalysis.getArrayValue(onlyPointer);
