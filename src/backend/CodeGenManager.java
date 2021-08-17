@@ -628,6 +628,71 @@ public class CodeGenManager {
             }
             arm += "\n";
         }
+        arm+="parallel_start:\n" +
+                "\tmovw\tr2,\t:lower16:$start_r7\n" +
+                "\tmovt\tr2,\t:upper16:$start_r7\n" +
+                "\tstr\tr7,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$start_r5\n" +
+                "\tmovt\tr2,\t:upper16:$start_r5\n" +
+                "\tstr\tr5,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$start_lr\n" +
+                "\tmovt\tr2,\t:upper16:$start_lr\n" +
+                "\tstr\tlr,\t[r2]\n" +
+                "    mov r5, #4   @4代表总共4个进程，因为处理器有4个核心\n" +
+                ".parallel_start1:\n" +
+                "    sub r5, r5, #1\n" +
+                "    cmp r5, #0   \n" +
+                "    beq .parallel_start2+0 @r2每次减一，到0的时候就跳到.__mtstart2\n" +
+                "    mov r7, #120   @系统调用号\n" +
+                "    mov r0, #273   @系统调用的第一个参数值\n" +
+                "    mov r1, sp\n" +
+                "    swi #0   @根据寄存器r7的值进行系统调用，r7中为120，所以进行120号系统调用，为clone\n" +
+                "    cmp r0, #0 @clone调用者进程返回创建的子进程号，在创建的子进程里返回0\n" +
+                "    bne .parallel_start1+0 @如果是clone出来的进程就继续执行.parallel_start2，主进程跳到.parallel_start1，继续开启下一个进程\n" +
+                ".parallel_start2:\n" +
+                "    mov r0, r5\n" +
+                "\tmovw\tr2,\t:lower16:$start_r7\n" +
+                "\tmovt\tr2,\t:upper16:$start_r7\n" +
+                "\tldr\tr7,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$start_r5\n" +
+                "\tmovt\tr2,\t:upper16:$start_r5\n" +
+                "\tldr\tr5,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$start_lr\n" +
+                "\tmovt\tr2,\t:upper16:$start_lr\n" +
+                "\tldr\tlr,\t[r2]\n" +
+                "    bx  lr\n" +
+                "\n" +
+                "parallel_end:\n" +
+                "    cmp r0, #0 @主进程的r10为0，其余三个进程为3,2,1\n" +
+                "    beq .parallel_end2+0 @子进程到.parallel_end1，主进程到.parallel_end2\n" +
+                ".parallel_end1:\n" +
+                "    mov r7, #1\n" +
+                "    swi #0 @子进程调用1号系统调用，结束进程\n" +
+                ".parallel_end2:\n" +
+                "\tmovw\tr2,\t:lower16:$end_r7\n" +
+                "\tmovt\tr2,\t:upper16:$end_r7\n" +
+                "\tstr\tr7,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$end_lr\n" +
+                "\tmovt\tr2,\t:upper16:$end_lr\n" +
+                "\tstr\tlr,\t[r2]\n" +
+                "    mov r7, #4\n" +
+                ".parallel_end3:\n" +
+                "    sub r7, r7, #1\n" +
+                "    cmp r7, #0\n" +
+                "    beq .parallel_end4+0\n" +
+                "    sub r0, sp, #4\n" +
+                "    sub sp, sp, #4\n" +
+                "    bl wait\n" +
+                "    add sp, sp, #4\n" +
+                "    b .parallel_end3+0\n" +
+                ".parallel_end4:\n" +
+                "    movw\tr2,\t:lower16:$end_r7\n" +
+                "\tmovt\tr2,\t:upper16:$end_r7\n" +
+                "\tldr\tr7,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$end_lr\n" +
+                "\tmovt\tr2,\t:upper16:$end_lr\n" +
+                "\tldr\tlr,\t[r2]\n" +
+                "    bx  lr";
         ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
         if (!gVs.isEmpty()) {
             arm += "\n\n.data\n";
@@ -693,6 +758,25 @@ public class CodeGenManager {
 
             }
         }
+        arm+=".global $start_r7\n" +
+                "$start_r7:\t\n" +
+                "\t\t.word\t0\n" +
+                "\n" +
+                "\n" +
+                ".global $start_lr\n" +
+                "$start_lr:\t\n" +
+                "\t\t.word\t0\n" +
+                "\n" +
+                ".global $start_r5\n" +
+                "$start_r5:\t\n" +
+                "\t\t.word\t0\n" +
+                "\n" +
+                "\n" +
+                ".global $end_r7\n" +
+                "$end_r7:\t.word\t0\n" +
+                "\n" +
+                ".global $end_lr\n" +
+                "$end_lr:\t.word\t0";
 
         return arm;
     }
