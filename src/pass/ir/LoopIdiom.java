@@ -1,5 +1,6 @@
 package pass.ir;
 
+import driver.Config;
 import ir.Analysis.LoopInfo;
 import ir.Loop;
 import ir.MyFactoryBuilder;
@@ -221,6 +222,8 @@ public class LoopIdiom implements IRPass {
 
     // 删除循环
     currLoopInfo.removeLoop(loop);
+
+    Config.getInstance().runStableRegAlloc = true;
   }
 
   public BinaryInst buildCeilDiv(BasicBlock bb, Value lhs, Value rhs) {
