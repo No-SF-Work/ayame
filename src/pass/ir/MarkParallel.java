@@ -5,6 +5,7 @@ import ir.Analysis.LoopInfo;
 import ir.Loop;
 import ir.MyFactoryBuilder;
 import ir.MyModule;
+import ir.types.ArrayType;
 import ir.types.IntegerType;
 import ir.types.PointerType;
 import ir.types.Type;
@@ -17,19 +18,16 @@ import ir.values.Value;
 import ir.values.instructions.BinaryInst;
 import ir.values.instructions.Instruction;
 import ir.values.instructions.Instruction.TAG_;
-import ir.values.instructions.MemInst.AllocaInst;
-import ir.values.instructions.MemInst.GEPInst;
-import ir.values.instructions.MemInst.LoadInst;
-import ir.values.instructions.MemInst.Phi;
-import ir.values.instructions.MemInst.StoreInst;
+import ir.values.instructions.MemInst.*;
 import ir.values.instructions.TerminatorInst.CallInst;
+import pass.Pass.IRPass;
+import util.LoopUtils;
+import util.Mylogger;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.logging.Logger;
-import pass.Pass.IRPass;
-import util.LoopUtils;
-import util.Mylogger;
 
 // 识别到可并行循环后，在循环头基本块处标记
 public class MarkParallel implements IRPass {
@@ -78,11 +76,11 @@ public class MarkParallel implements IRPass {
       return;
     }
 
-    // 如果有 call，不并行
+    // 如果有副作用 call，不并行
     for (var bb : loop.getBlocks()) {
       for (var instNode : bb.getList()) {
         var inst = instNode.getVal();
-        if (inst instanceof CallInst) {
+        if (inst instanceof CallInst && ((CallInst) inst).getFunc().isHasSideEffect()) {
           return;
         }
       }
@@ -102,11 +100,10 @@ public class MarkParallel implements IRPass {
     var latchCmpInst = loop.getLatchCmpInst();
     var indVarCondInst = loop.getIndVarCondInst();
     var stepInst = loop.getStepInst();
-    if (indVar == null || indVarInit == null || indVarEnd == null || indVarCondInst == null || stepInst == null || indVarCondInst != stepInst || latchCmpInst == null) {
+    if (indVar == null || indVarInit == null || indVarEnd == null || indVarCondInst == null
+        || stepInst == null || indVarCondInst != stepInst || latchCmpInst == null) {
       return;
     }
-
-
 
     // 如果 exit 有 phi，不并行
     if (exit.getList().getEntry().getVal() instanceof Phi) {
@@ -143,7 +140,7 @@ public class MarkParallel implements IRPass {
     // 指向 global i32，退出
     if (onlyPointer.getAimTo() instanceof GlobalVariable) {
       GlobalVariable gv = (GlobalVariable) onlyPointer.getAimTo();
-      if (gv.init instanceof ConstantInt) {
+      if (((PointerType) gv.getType()).getContained() instanceof IntegerType) {
         return;
       }
     }
@@ -153,13 +150,16 @@ public class MarkParallel implements IRPass {
     if (ArrayAliasAnalysis.getArrayValue(onlyPointer) instanceof GlobalVariable) {
       // 普通全局数组
       GlobalVariable gv = (GlobalVariable) ArrayAliasAnalysis.getArrayValue(onlyPointer);
-      pointToType = ((PointerType) (gv.getType())).getContained();
+      pointToType = ((PointerType) (gv.getType())).getContained();//ARRTY
+      if (pointToType instanceof ArrayType) {
+        pointToType = ((ArrayType) pointToType).getELeType();
+      }
     } else {
       // 传参进函数的全局数组
       AllocaInst alloca = (AllocaInst) ArrayAliasAnalysis.getArrayValue(onlyPointer);
       if (alloca.getAllocatedType().isPointerTy()) {
         PointerType allocatedType = (PointerType) alloca.getAllocatedType();
-        pointToType = allocatedType.getContained();
+        pointToType = allocatedType.getContained();//ARRTY
 
         for (var instNode : currFunc.getList_().getEntry().getVal().getList()) {
           var inst = instNode.getVal();
@@ -247,18 +247,21 @@ public class MarkParallel implements IRPass {
         .buildFuncCall(parallelStartFunc, new ArrayList<>(), parallelStartBB);
     ArrayList<Value> args = new ArrayList<>();
     args.add(callParallelStart);
-    var multInst = factory.buildBinaryAfter(TAG_.Mul, callParallelStart, indVarEnd, callParallelStart);
-    var divInst = factory.buildBinaryAfter(TAG_.Div, multInst, ConstantInt.newOne(factory.getI32Ty(), parallelFactor), multInst);
+    var multInst = factory
+        .buildBinaryAfter(TAG_.Mul, callParallelStart, indVarEnd, callParallelStart);
+    var divInst = factory.buildBinaryAfter(TAG_.Div, multInst,
+        ConstantInt.newOne(factory.getI32Ty(), parallelFactor), multInst);
     var initIndex = indVar.getOperands().indexOf(indVarInit);
     indVar.CoReplaceOperandByIndex(initIndex, divInst);
-    var addInst2 = factory.buildBinaryBefore(latchCmpInst,TAG_.Add,ConstantInt.newOne(factory.getI32Ty(),1),callParallelStart);
-    var multInst2 = factory.buildBinaryAfter(TAG_.Mul,addInst2,indVarEnd,addInst2);
-    var divInst2 = factory.buildBinaryAfter(TAG_.Div,multInst2,ConstantInt.newOne(factory.getI32Ty(), parallelFactor),multInst2);
-    latchCmpInst.COReplaceOperand(indVarEnd,divInst2);
-
+    var addInst2 = factory
+        .buildBinaryBefore(latchCmpInst, TAG_.Add, ConstantInt.newOne(factory.getI32Ty(), 1),
+            callParallelStart);
+    var multInst2 = factory.buildBinaryAfter(TAG_.Mul, addInst2, indVarEnd, addInst2);
+    var divInst2 = factory.buildBinaryAfter(TAG_.Div, multInst2,
+        ConstantInt.newOne(factory.getI32Ty(), parallelFactor), multInst2);
+    latchCmpInst.COReplaceOperand(indVarEnd, divInst2);
 
     factory.buildFuncCall(parallelEndFunc, args, parallelEndBB);
-
 
     factory.buildBr(header, parallelStartBB);
     factory.buildBr(exit, parallelEndBB);
