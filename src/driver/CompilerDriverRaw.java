@@ -92,14 +92,10 @@ public class CompilerDriverRaw {
         pm.openedPasses_.add("constantLoopUnroll");
         pm.openedPasses_.add("MergeMachineBlock");
         pm.openedPasses_.add("redundantLoop");
-        pm.openedPasses_.add("loopIdiom");
+//        pm.openedPasses_.add("loopIdiom");
         pm.openedPasses_.add("loopMergeLastBreak");
         pm.openedPasses_.add("promotion");
-        pm.openedPasses_.add("loopFusion");
-      }
-
-      if (source.contains("register_alloc")) {
-        pm.openedPasses_.removeIf(s -> s.equals("gvngcm"));
+//        pm.openedPasses_.add("loopFusion");
       }
 
       pm.runIRPasses(MyModule.getInstance());
