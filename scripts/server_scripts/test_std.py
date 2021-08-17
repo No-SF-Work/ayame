@@ -8,17 +8,21 @@ ustc_compiler = "build/bin/ustc_compiler "
 ustc_compiler_no_vec = "build/bin/ustc_compiler_no_vec "
 ayame_compiler = "java -classpath src:lib/antlr4-runtime-4.8.jar:lib/argparse4j-0.9.0.jar Compiler "
 
-clang_llvm_scheme = {"scheme": "clang_llvm",
-                     "frontend_instr": "clang -x c -c -Ofast -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -emit-llvm -include {header} {sy} -o {ir}",
-                     "emit_llvm_ir": True}
+clang_llvm_o2_scheme = {"scheme": "clang_llvm",
+                        "frontend_instr": "clang -x c -c -O2 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
+                        "emit_llvm_ir": False}
 
-thu_llvm_scheme = {"scheme": "thu_llvm",
-                   "frontend_instr": thu_compiler + "-l {ir} {sy}",
-                   "emit_llvm_ir": True}
+clang_llvm_o3_scheme = {"scheme": "clang_llvm",
+                     "frontend_instr": "clang -x c -c -O3 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
+                     "emit_llvm_ir": False}
 
-thu_thu_scheme = {"scheme": "thu_thu",
-                  "frontend_instr": thu_compiler + "-o {asm} {sy}",
-                  "emit_llvm_ir": False}
+# thu_llvm_scheme = {"scheme": "thu_llvm",
+#                    "frontend_instr": thu_compiler + "-l {ir} {sy}",
+#                    "emit_llvm_ir": True}
+
+# thu_thu_scheme = {"scheme": "thu_thu",
+#                   "frontend_instr": thu_compiler + "-o {asm} {sy}",
+#                   "emit_llvm_ir": False}
 
 ayame_ayame_scheme = {"scheme": "ayame_ayame",
                 "frontend_instr": ayame_compiler + "-S {sy} -o {asm} -O2",
@@ -33,16 +37,20 @@ ayame_ayame_scheme = {"scheme": "ayame_ayame",
 #                     "frontend_instr": ustc_compiler_no_vec + "-o {asm} {sy}",
 #                     "emit_llvm_ir": False}
 
-# gcc_gcc_scheme = {"scheme": "gcc_gcc",
-#                   "frontend_instr": "gcc -x c -c -Ofast -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
-#                   "emit_llvm_ir": False}
+gcc_gcc_o2_scheme = {"scheme": "gcc_gcc",
+                     "frontend_instr": "gcc -x c -c -O2 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
+                     "emit_llvm_ir": False}
+
+gcc_gcc_o3_scheme = {"scheme": "gcc_gcc",
+                  "frontend_instr": "gcc -x c -c -O3 -mcpu=cortex-a72 -mfpu=neon -mfloat-abi=hard -S -include {header} {sy} -o {asm}",
+                  "emit_llvm_ir": False}
 
 # ustc_llvm_scheme = {"scheme": "ustc_llvm", # generate ir only
 #                     "frontend_instr": ustc_compiler + "-emit -o {ir} {sy}",
 #                     "emit_llvm_ir": True}
 
 # all_schemes = [ayame_ayame_scheme, clang_llvm_scheme, thu_thu_scheme] # gcc_gcc_scheme, ustc_ustc_scheme, ustc_ustc_no_vec_scheme]
-all_schemes = [ayame_ayame_scheme]
+all_schemes = [clang_llvm_o2_scheme, clang_llvm_o3_scheme, gcc_gcc_o2_scheme, gcc_gcc_o3_scheme, ayame_ayame_scheme]
 testers = []
 
 Print_C.print_header("[Removing old data...]\n\n")
