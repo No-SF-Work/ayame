@@ -11,6 +11,7 @@ import ir.values.instructions.Instruction.TAG_;
 public class SimplifyInstruction {
 
   public static MyFactoryBuilder factory = MyFactoryBuilder.getInstance();
+  private static int midInstUserLimit = 2;
 
   public static Value simplifyInstruction(Instruction instruction) {
     return switch (instruction.tag) {

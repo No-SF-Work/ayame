@@ -1598,7 +1598,7 @@ public class CodeGenManager {
         return res;
     }
 
-    private CondType getOppoCond(CondType t) {
+    public static CondType getOppoCond(CondType t) {
         if (t == CondType.Lt) {
             return CondType.Ge;
         } else if (t == CondType.Le) {
