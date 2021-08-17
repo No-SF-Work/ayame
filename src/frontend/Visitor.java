@@ -170,6 +170,10 @@ public class Visitor extends SysYBaseVisitor<Void> {
     scope_
         .put("stoptime",
             f.buildFunction("_sysy_stoptime", f.getFuncTy(voidType, params_int), true));
+    scope_.put("parallel_start",
+        f.buildFunction("parallel_start", f.getFuncTy(i32Type, params_empty), true));
+    scope_.put("parallel_end",
+        f.buildFunction("parallel_end", f.getFuncTy(voidType, params_int), true));
 
     return super.visitProgram(ctx);
   }
@@ -1154,13 +1158,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
             assert ty instanceof ArrayType;
             val = tmp_;
             var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
-            offset = f.buildBinary(TAG_.Mul, add,
-                ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
-            ty = ((ArrayType) ty).getELeType();
             t = f.buildGEP(t, new ArrayList<>() {{
               add(CONST0);
               add(CONST0);
             }}, curBB_);
+            offset = f.buildBinary(TAG_.Mul, add,
+                ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
+            ty = ((ArrayType) ty).getELeType();
 
           }
 
@@ -1203,13 +1207,13 @@ public class Visitor extends SysYBaseVisitor<Void> {
           visit(ctx.exp(i));
           var val = tmp_;
           var add = f.buildBinary(TAG_.Add, offset, val, curBB_);
-          offset = f.buildBinary(TAG_.Mul, add,
-              ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
-          ty = ((ArrayType) ty).getELeType();
           t = f.buildGEP(t, new ArrayList<>() {{
             add(CONST0);
             add(CONST0);
           }}, curBB_);
+          offset = f.buildBinary(TAG_.Mul, add,
+              ConstantInt.newOne(i32Type_, ((ArrayType) ty).getNumEle()), curBB_);
+          ty = ((ArrayType) ty).getELeType();
         }
         visit(ctx.exp(ctx.exp().size() - 1));
         var val = tmp_;

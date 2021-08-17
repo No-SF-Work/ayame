@@ -26,7 +26,7 @@ public class PassManager {
     irPasses.add(new BBPredSucc());
 //        irPasses.add(new EmitLLVM("tt.ll"));
     irPasses.add(new InterproceduralAnalysis());
-    irPasses.add(new GlobalVariableLocalize());
+//    irPasses.add(new GlobalVariableLocalize());
     irPasses.add(new Mem2reg());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
@@ -40,6 +40,14 @@ public class PassManager {
     irPasses.add(new ConstantLoopUnroll());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
+    irPasses.add(new MarkArgs());
+
+    irPasses.add(new LCSSA());
+//    irPasses.add(new EmitLLVM("beforeMarkParallel.ll"));
+    irPasses.add(new MarkParallel());
+//    irPasses.add(new EmitLLVM("afterMarkParallel.ll"));
+    irPasses.add(new BranchOptimization());
+    irPasses.add(new GVNGCM());
 
     irPasses.add(new LCSSA());
 //    irPasses.add(new EmitLLVM("beforeFusion.ll"));
@@ -50,9 +58,10 @@ public class PassManager {
     irPasses.add(new LCSSA());
     irPasses.add(new LoopUnroll());
 //    irPasses.add(new EmitLLVM("afterFirstUnroll.ll"));
-    irPasses.add(new InterProceduralDCE());
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM());
+    irPasses.add(new InterProceduralDCE());
+//    irPasses.add(new StoreGlobalArrayPointer());
 
     irPasses.add(new LCSSA());
 //    irPasses.add(new EmitLLVM("beforeUnroll.ll"));
@@ -62,7 +71,6 @@ public class PassManager {
     irPasses.add(new GVNGCM(true));
 
     irPasses.add(new FunctionInline());
-    irPasses.add(new InterProceduralDCE());
 
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
@@ -74,7 +82,6 @@ public class PassManager {
     irPasses.add(new BranchOptimization());
     irPasses.add(new GVNGCM(true));
 
-    irPasses.add(new InterProceduralDCE());
     irPasses.add(new LCSSA());
     irPasses.add(new LoopMergeLastBreak());
     irPasses.add(new BranchOptimization());
@@ -83,7 +90,6 @@ public class PassManager {
     irPasses.add(new LCSSA());
     irPasses.add(new GVNGCM(true));
     irPasses.add(new EmitLLVM());
-    
     mcPasses.add(new RegAllocator());
     mcPasses.add(new RegAllocatorStable());
     mcPasses.add(new PeepholeOptimization());

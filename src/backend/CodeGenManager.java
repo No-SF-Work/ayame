@@ -20,6 +20,7 @@ import backend.machinecodes.MachineFunction;
 import backend.reg.MachineOperand;
 import backend.reg.Reg;
 import backend.reg.VirtualReg;
+import ir.Loop;
 import ir.MyModule;
 import ir.types.ArrayType;
 import ir.types.IntegerType;
@@ -37,7 +38,6 @@ import ir.values.instructions.Instruction;
 import ir.values.instructions.MemInst;
 import ir.values.instructions.MemInst.Phi;
 import ir.values.instructions.TerminatorInst;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,7 +45,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Stack;
 import java.util.logging.Logger;
-
 import util.IList;
 import util.IList.INode;
 import util.Mylogger;
@@ -64,7 +63,7 @@ public class CodeGenManager {
 
     private boolean isO2 = true;
 
-    private boolean isAggressive = false;
+    private boolean isAggressive = true;
 
     private boolean ifPrintIR = false;
 
@@ -130,6 +129,23 @@ public class CodeGenManager {
     interface DFSSerialize {
         void dfsSerialize();
     }
+
+    //线性化时如果mb两个后继都没被访问过，在此函数中判断是否交换True和False后继
+//    private boolean ifSwop(MachineBlock mb){
+//        if(mb.getPrefer()== MachineBlock.Prefer.True){
+//            return true;
+//        }else if(mb.getPrefer()==MachineBlock.Prefer.False){
+//            return false;
+//        }else{
+//            if(mb.getTrueSucc().getLoopDepth()>mb.getFalseSucc().getLoopDepth()){
+//                return true;
+//            }else if(mb.getTrueSucc().getLoopDepth()<mb.getFalseSucc().getLoopDepth()){
+//                return false;
+//            }else{
+//                return true;
+//            }
+//        }
+//    }
 
     //优先把false块放到当前块之后
     public void dfsFalseSerial(MachineBlock mb, MachineFunction mf, HashMap<MachineBlock, Boolean> isVisit) {
@@ -288,18 +304,31 @@ public class CodeGenManager {
                 dfsTrueSerial(mb.getTrueSucc(), mf, isVisit);
             }
         } else {
-            //和dfsFalseSerial不同，如果True块和False块都没被访问，也要交换，合并条件之后，条件变成
-            //只要True块没被访问，那就交换
-            //还有一种情况，如果True块和False块都被访问过，但是本块和True块之间有waiting，本块和False之间没有，
-            //也交换
-            if (!isVisit.containsKey(mb.getTrueSucc())
-                    || (isVisit.containsKey(mb.getTrueSucc())&&isVisit.containsKey(mb.getFalseSucc())&&
-                            waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()&&
-                            (!waiting.containsKey(falsePair)||waiting.get(falsePair).isEmpty()))
-            ) {
+            //如果True块和False块都没被访问过，根据ifSwop函数判断是否交换（依据mb的Prefer和两个后继的循环深度）
+            //如果True块和False块都被访问过，但是本块和True块之间有waiting，本块和False之间没有，则交换
+            //如果True块未被访问，False块被访问过了，那么交换
+            //剩下情况不换
+            boolean ifNeedSwop = false;
+            if((!isVisit.containsKey(mb.getTrueSucc()))&&(!isVisit.containsKey(mb.getFalseSucc()))){
+                ifNeedSwop = true;
+            }else if(isVisit.containsKey(mb.getTrueSucc()) && isVisit.containsKey(mb.getFalseSucc())){
+                if(waiting.containsKey(truePair) && !waiting.get(truePair).isEmpty()&&
+                        (!waiting.containsKey(falsePair)||waiting.get(falsePair).isEmpty())){
+                    ifNeedSwop = true;
+                }
+            }else if(!isVisit.containsKey(mb.getTrueSucc())){
+                ifNeedSwop = true;
+            }
+            if (ifNeedSwop)
+            {
                 MachineBlock temp = mb.getTrueSucc();
                 mb.setTrueSucc(mb.getFalseSucc());
                 mb.setFalseSucc(temp);
+//                if(mb.getPrefer()==MachineBlock.Prefer.True){
+//                    mb.setPrefer(MachineBlock.Prefer.False);
+//                }else if(mb.getPrefer()==MachineBlock.Prefer.False){
+//                    mb.setPrefer(MachineBlock.Prefer.True);
+//                }
                 assert (mb.getmclist().getLast().getVal() instanceof MCBranch);
                 CondType cond = mb.getmclist().getLast().getVal().getCond();
                 ((MCBranch) mb.getmclist().getLast().getVal()).setCond(getOppoCond(cond));
@@ -518,6 +547,14 @@ public class CodeGenManager {
                 if (mb.getFalseSucc() != null) {
                     arm += "@falseSucc: " + mb.getFalseSucc().getName() + "\n";
                 }
+//                if(mb.getPrefer()!= MachineBlock.Prefer.Default){
+//                    arm+="@Prefer:";
+//                    if(mb.getPrefer()==MachineBlock.Prefer.True){
+//                        arm+="tureSucc\n";
+//                    }else{
+//                        arm+="falseSucc\n";
+//                    }
+//                }
                 strOffset = arm.length();
                 Iterator<INode<MachineCode, MachineBlock>> mcIte = mb.getmclist().iterator();
                 while (mcIte.hasNext()) {
@@ -588,6 +625,71 @@ public class CodeGenManager {
             }
             arm += "\n";
         }
+        arm+="parallel_start:\n" +
+                "\tmovw\tr2,\t:lower16:$start_r7\n" +
+                "\tmovt\tr2,\t:upper16:$start_r7\n" +
+                "\tstr\tr7,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$start_r5\n" +
+                "\tmovt\tr2,\t:upper16:$start_r5\n" +
+                "\tstr\tr5,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$start_lr\n" +
+                "\tmovt\tr2,\t:upper16:$start_lr\n" +
+                "\tstr\tlr,\t[r2]\n" +
+                "\tmov r5, #4   @4代表总共4个进程，因为处理器有4个核心\n" +
+                ".parallel_start1:\n" +
+                "\tsub r5, r5, #1\n" +
+                "\tcmp r5, #0   \n" +
+                "\tbeq .parallel_start2+0 @r2每次减一，到0的时候就跳到.__mtstart2\n" +
+                "\tmov r7, #120   @系统调用号\n" +
+                "\tmov r0, #273   @系统调用的第一个参数值\n" +
+                "\tmov r1, sp\n" +
+                "\tswi #0   @根据寄存器r7的值进行系统调用，r7中为120，所以进行120号系统调用，为clone\n" +
+                "\tcmp r0, #0 @clone调用者进程返回创建的子进程号，在创建的子进程里返回0\n" +
+                "\tbne .parallel_start1+0 @如果是clone出来的进程就继续执行.parallel_start2，主进程跳到.parallel_start1，继续开启下一个进程\n" +
+                ".parallel_start2:\n" +
+                "\tmov r0, r5\n" +
+                "\tmovw\tr2,\t:lower16:$start_r7\n" +
+                "\tmovt\tr2,\t:upper16:$start_r7\n" +
+                "\tldr\tr7,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$start_r5\n" +
+                "\tmovt\tr2,\t:upper16:$start_r5\n" +
+                "\tldr\tr5,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$start_lr\n" +
+                "\tmovt\tr2,\t:upper16:$start_lr\n" +
+                "\tldr\tlr,\t[r2]\n" +
+                "\tbx  lr\n" +
+                "\n" +
+                "parallel_end:\n" +
+                "\tcmp r0, #0 @主进程的r10为0，其余三个进程为3,2,1\n" +
+                "\tbeq .parallel_end2+0 @子进程到.parallel_end1，主进程到.parallel_end2\n" +
+                ".parallel_end1:\n" +
+                "\tmov r7, #1\n" +
+                "\tswi #0 @子进程调用1号系统调用，结束进程\n" +
+                ".parallel_end2:\n" +
+                "\tmovw\tr2,\t:lower16:$end_r7\n" +
+                "\tmovt\tr2,\t:upper16:$end_r7\n" +
+                "\tstr\tr7,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$end_lr\n" +
+                "\tmovt\tr2,\t:upper16:$end_lr\n" +
+                "\tstr\tlr,\t[r2]\n" +
+                "\tmov r7, #4\n" +
+                ".parallel_end3:\n" +
+                "\tsub r7, r7, #1\n" +
+                "\tcmp r7, #0\n" +
+                "\tbeq .parallel_end4+0\n" +
+                "\tsub r0, sp, #4\n" +
+                "\tsub sp, sp, #4\n" +
+                "\tbl wait\n" +
+                "\tadd sp, sp, #4\n" +
+                "\tb .parallel_end3+0\n" +
+                ".parallel_end4:\n" +
+                "\tmovw\tr2,\t:lower16:$end_r7\n" +
+                "\tmovt\tr2,\t:upper16:$end_r7\n" +
+                "\tldr\tr7,\t[r2]\n" +
+                "\tmovw\tr2,\t:lower16:$end_lr\n" +
+                "\tmovt\tr2,\t:upper16:$end_lr\n" +
+                "\tldr\tlr,\t[r2]\n" +
+                "\tbx  lr\n";
         ArrayList<GlobalVariable> gVs = myModule.__globalVariables;
         if (!gVs.isEmpty()) {
             arm += "\n\n.data\n";
@@ -653,6 +755,25 @@ public class CodeGenManager {
 
             }
         }
+        arm+=".global $start_r7\n" +
+                "$start_r7:\t\n" +
+                "\t\t.word\t0\n" +
+                "\n" +
+                "\n" +
+                ".global $start_lr\n" +
+                "$start_lr:\t\n" +
+                "\t\t.word\t0\n" +
+                "\n" +
+                ".global $start_r5\n" +
+                "$start_r5:\t\n" +
+                "\t\t.word\t0\n" +
+                "\n" +
+                "\n" +
+                ".global $end_r7\n" +
+                "$end_r7:\t.word\t0\n" +
+                "\n" +
+                ".global $end_lr\n" +
+                "$end_lr:\t.word\t0\n";
 
         return arm;
     }
@@ -980,7 +1101,12 @@ public class CodeGenManager {
 
     private void processBB(BasicBlock bb) {
         MachineBlock mb = bMap.get(bb);
-//        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
+        if(bb.isParallelLoopHeader()){
+            Loop loop = bb.getParent().getLoopInfo().getLoopForBB(bb);
+            Value indVarInit = loop.getIndVarInit();
+            Value indVarEnd = loop.getIndVarEnd();
+        }
+        MCComment bc = new MCComment("bb:" + bb.getName(), mb);
         for (Iterator<INode<Instruction, BasicBlock>> iIt = bb.getList().iterator(); iIt.hasNext(); ) {
             Instruction ir = iIt.next().getVal();
             if (ifPrintIR) {
@@ -1302,9 +1428,18 @@ public class CodeGenManager {
                     }
                     CondType cond = dealCond((BinaryInst) (ir.getOperands().get(0)), mb, false);
                     MachineCode br = new MCBranch(mb);
-                    ((MCBranch) br).setCond(cond);
                     int trueT = 1;
                     int falseT = 2;
+                    //如果此条跳转倾向于跳false块，那条件取补（比如小于变大于等于），true块和false块交换
+//                    if(((TerminatorInst.BrInst)ir).getPrefer()== TerminatorInst.BrInst.prefer.F){
+//                        cond=getOppoCond(cond);
+//                        trueT = 2;
+//                        falseT = 1;
+//                        mb.setPrefer(MachineBlock.Prefer.True);
+//                    }else if(((TerminatorInst.BrInst)ir).getPrefer()== TerminatorInst.BrInst.prefer.T){
+//                        mb.setPrefer(MachineBlock.Prefer.True);
+//                    }
+                    ((MCBranch) br).setCond(cond);
                     //set trueblock to branch target
                     ((MCBranch) br).setTarget(bMap.get(ir.getOperands().get(trueT)));
                     mb.setFalseSucc(bMap.get(ir.getOperands().get(falseT)));

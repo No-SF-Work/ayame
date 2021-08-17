@@ -21,6 +21,16 @@ public class Function extends Value {
 
     private int rank;//排第几,非负
 
+    public boolean isMustBeGlobal() {
+      return mustBeGlobal;
+    }
+
+    public void setMustBeGlobal(boolean mustBeGlobal) {
+      this.mustBeGlobal = mustBeGlobal;
+    }
+
+    private boolean mustBeGlobal = true;
+
     public int rank() {
       return this.rank;
     }

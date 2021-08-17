@@ -66,6 +66,10 @@ public class RedundantLoop implements IRPass {
       return;
     }
 
+    if (loop.getLoopHeader().isParallelLoopHeader()) {
+      return;
+    }
+
     var latchBr = latchBlock.getList().getLast().getVal();
     if (latchBr.getOperands().size() == 1) {
       return;
