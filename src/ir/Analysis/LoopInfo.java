@@ -264,8 +264,6 @@ public class LoopInfo {
 
       var header = loop.getLoopHeader();
 
-      // FIXME: 找 stepInst 有 bug，如 while (i + 1 < 100) { i = i + 1; }，找到的 stepInst 是 { i + 1 < 100 } 中的 i + 1
-
       // indVarCondInst
       for (var i = 0; i <= 1; i++) {
         var op = latchCmpInst.getOperands().get(i);

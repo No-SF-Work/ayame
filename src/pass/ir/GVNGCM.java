@@ -486,20 +486,6 @@ public class GVNGCM implements IRPass {
         }
       }
 
-      // Load 的 useStore
-//      if (inst.tag == TAG_.Load) {
-//        LoadInst loadInst = (LoadInst) inst;
-//        Value value = loadInst.getUseStore();
-//        if (value instanceof Instruction) {
-//          Instruction valueInst = (Instruction) value;
-//          scheduleEarly(valueInst, func);
-//          if (valueInst.getBB().getDomLevel() > inst.getBB().getDomLevel()) {
-//            inst.node.removeSelf();
-//            inst.node.insertAtEnd(valueInst.getBB().getList());
-//          }
-//        }
-//      }
-
       if (inst.tag == TAG_.Call && ((CallInst) inst).isPureCall()) {
         for (var i = 1; i < inst.getNumOP(); i++) {
           Value value = inst.getOperands().get(i);
@@ -537,9 +523,7 @@ public class GVNGCM implements IRPass {
               }
               idx++;
             }
-          }
-          // FIXME maybe problem here
-          else if (userInst.tag == TAG_.MemPhi) {
+          } else if (userInst.tag == TAG_.MemPhi) {
             int idx = 0;
             for (Value value : ((MemPhi) userInst).getIncomingVals()) {
               if (value.getUsesList().contains(use)) {
@@ -580,7 +564,6 @@ public class GVNGCM implements IRPass {
           if (tmpInst.getOperands().contains(inst)) {
             inst.node.removeSelf();
             inst.node.insertBefore(tmpInst.node);
-            // 找到第一个就已经插在了最前面了，直接退出
             break;
           }
         }

@@ -120,7 +120,6 @@ public class ArrayAliasAnalysis {
     return !gv.isConst && ((PointerType) gv.getType()).getContained().isArrayTy();
   }
 
-  // TODO: 我裂了
   public static boolean aliasGlobalParam(Value globalArray, Value paramArray) {
     if (!isGlobal(globalArray) || !isParam(paramArray)) {
       return false;
@@ -163,7 +162,6 @@ public class ArrayAliasAnalysis {
     return allSame;
   }
 
-  // TODO: 可能有问题，还不太懂
   public static boolean alias(Value arr1, Value arr2) {
     // 都是param: 名字相等
     // param - glob: dim_alias
@@ -182,9 +180,7 @@ public class ArrayAliasAnalysis {
     return false;
   }
 
-  // TODO: 可能有问题，还不太懂
   public static boolean callAlias(Value arr, CallInst callinst) {
-    // 条件宽泛到了不是 local array 就可能 alias，不管是 Global 还是 Param，都是外来的，都有可能被 call 改变
     if (isParam(arr)) {
       return true;
     }
@@ -295,7 +291,6 @@ public class ArrayAliasAnalysis {
       }
     }
 
-    // variable renaming (set mem-token)
     ArrayList<Value> values = new ArrayList<>();
     for (int i = 0; i < arrays.size(); i++) {
       values.add(new UndefValue());
@@ -393,7 +388,7 @@ public class ArrayAliasAnalysis {
       }
     }
 
-    // variable renaming (construct LoadDepInst)
+    // construct LoadDepInst
     ArrayList<Value> values = new ArrayList<>();
     for (int i = 0; i < loads.size(); i++) {
       values.add(new UndefValue());
