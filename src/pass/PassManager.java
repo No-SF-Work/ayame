@@ -8,7 +8,6 @@ import pass.ir.*;
 import pass.mc.MergeMachineBlock;
 import pass.mc.PeepholeOptimization;
 import pass.mc.RegAllocator;
-import pass.mc.RegAllocatorStable;
 import util.Mylogger;
 
 import java.util.ArrayList;
@@ -85,7 +84,6 @@ public class PassManager {
     irPasses.add(new EmitLLVM());
     
     mcPasses.add(new RegAllocator());
-    mcPasses.add(new RegAllocatorStable());
     mcPasses.add(new PeepholeOptimization());
     mcPasses.add(new MergeMachineBlock());
     mcPasses.add(new MergeMachineBlock());
