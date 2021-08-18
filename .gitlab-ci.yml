@@ -46,7 +46,7 @@ run_perf_1:
     - bash scripts/send_to_pi_performance.sh
   tags:
     - x86
-  timeout: 15m
+  timeout: 120m
 
 run_perf_1_comp:
   when: manual
